@@ -1,21 +1,20 @@
 
-import React, { useState, useEffect } from 'react';
-import { Maximize2, AlertCircle, Loader2, Download, Image as ImageIcon, Lock, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Maximize2, AlertCircle, Loader2, Download, Image as ImageIcon, Lock, Eye, EyeOff, X } from 'lucide-react';
 
 // --- UTILS: HIGH-PERFORMANCE IMAGE COMPRESSION ---
 
 /**
  * Compresses image to WebP format, max 800px dimension.
- * Maintains aspect ratio and handles safe memory cleanup.
- * Optimized for P2P Data Channels (Target < 100KB).
+ * Ensures output is a clean Base64 string without data URI prefix for transmission efficiency.
  */
-export const compressImage = (file: File): Promise<{base64: string, size: number, width: number, height: number}> => {
+export const compressImage = (file: File): Promise<{base64: string, size: number, width: number, height: number, mimeType: string}> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
         const objectUrl = URL.createObjectURL(file);
         
         img.onload = () => {
-            // 1. Calculate Dimensions (Max 800px for speed/stability)
+            // 1. Calculate Dimensions (Max 800px for robust P2P)
             const MAX_DIM = 800; 
             let width = img.width;
             let height = img.height;
@@ -51,14 +50,23 @@ export const compressImage = (file: File): Promise<{base64: string, size: number
             
             URL.revokeObjectURL(objectUrl);
 
-            // 3. Compress to WebP (Quality 0.7 is sweet spot for P2P)
-            const base64 = canvas.toDataURL('image/webp', 0.7); 
+            // 3. Compress to WebP (Quality 0.75 is safe balance)
+            // Fallback to jpeg if webp not supported (rare)
+            let mimeType = 'image/webp';
+            let dataUrl = canvas.toDataURL(mimeType, 0.75);
             
-            // Calculate approximate size in bytes
-            const head = 'data:image/webp;base64,';
-            const size = Math.round((base64.length - head.length) * 3 / 4);
+            if (dataUrl.length < 100 || !dataUrl.includes('image/webp')) {
+                mimeType = 'image/jpeg';
+                dataUrl = canvas.toDataURL(mimeType, 0.75);
+            }
+            
+            // Extract raw base64
+            const base64 = dataUrl.split(',')[1];
+            
+            // Calculate size
+            const size = Math.round((base64.length) * 3 / 4);
 
-            resolve({ base64, size, width, height });
+            resolve({ base64, size, width, height, mimeType });
         };
         
         img.onerror = (err) => {
@@ -73,27 +81,52 @@ export const compressImage = (file: File): Promise<{base64: string, size: number
 // --- COMPONENT: ROBUST IMAGE BUBBLE ---
 
 interface ImageMessageProps {
-    content: string; // Base64 Data URL
+    content: string; // Base64 Data (Raw)
     size?: number;
+    mimeType?: string; // Optional, defaults to image/webp if missing
     onClick: () => void;
-    onReveal?: () => void; // Trigger for Burn-on-View
+    onReveal?: () => void;
 }
 
-export const ImageMessage = React.memo(({ content, size, onClick, onReveal }: ImageMessageProps) => {
+export const ImageMessage = React.memo(({ content, size, mimeType = 'image/webp', onClick, onReveal }: ImageMessageProps) => {
     const [status, setStatus] = useState<'LOADING' | 'LOADED' | 'ERROR'>('LOADING');
     const [isRevealed, setIsRevealed] = useState(false);
+    const [objectUrl, setObjectUrl] = useState<string | null>(null);
 
+    // Convert Base64 to Blob URL for stable rendering
     useEffect(() => {
-        const img = new Image();
-        img.src = content;
-        img.onload = () => setStatus('LOADED');
-        img.onerror = () => setStatus('ERROR');
-    }, [content]);
+        let url: string | null = null;
+        try {
+            // Check if content already has data prefix, if not add it
+            const fullDataUri = content.startsWith('data:') 
+                ? content 
+                : `data:${mimeType};base64,${content}`;
+
+            fetch(fullDataUri)
+                .then(res => res.blob())
+                .then(blob => {
+                    url = URL.createObjectURL(blob);
+                    setObjectUrl(url);
+                    setStatus('LOADED');
+                })
+                .catch(err => {
+                    console.error("Image Blob Error", err);
+                    setStatus('ERROR');
+                });
+        } catch (e) {
+            console.error("Image Parse Error", e);
+            setStatus('ERROR');
+        }
+
+        return () => {
+            if (url) URL.revokeObjectURL(url);
+        };
+    }, [content, mimeType]);
 
     const handleReveal = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsRevealed(true);
-        if (onReveal) onReveal(); // Trigger burner only when revealed
+        if (onReveal) onReveal();
     };
 
     return (
@@ -101,10 +134,10 @@ export const ImageMessage = React.memo(({ content, size, onClick, onReveal }: Im
             className={`
                 relative overflow-hidden rounded-xl border border-white/10 group cursor-pointer transition-all duration-300
                 ${status === 'LOADING' ? 'bg-white/5 animate-pulse w-48 h-48' : 'bg-black'}
-                ${status === 'ERROR' ? 'bg-red-500/10 border-red-500/30' : 'hover:border-emerald-500/50'}
+                ${status === 'ERROR' ? 'bg-red-500/10 border-red-500/30 w-48 h-32' : 'hover:border-emerald-500/50'}
                 max-w-[280px] md:max-w-[320px]
             `}
-            onClick={() => { if(isRevealed) onClick(); }}
+            onClick={() => { if(isRevealed && objectUrl) onClick(); }}
         >
             {/* 1. LOADING STATE */}
             {status === 'LOADING' && (
@@ -116,36 +149,37 @@ export const ImageMessage = React.memo(({ content, size, onClick, onReveal }: Im
 
             {/* 2. ERROR STATE */}
             {status === 'ERROR' && (
-                <div className="flex flex-col items-center justify-center p-6 gap-2 text-red-500 min-w-[200px]">
-                    <AlertCircle size={32} strokeWidth={1.5} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">DATA CORRUPTED</span>
+                <div className="flex flex-col items-center justify-center h-full w-full gap-2 text-red-500 p-4 text-center">
+                    <AlertCircle size={24} strokeWidth={1.5} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">CORRUPTED DATA</span>
                 </div>
             )}
 
             {/* 3. SUCCESS STATE */}
-            <div className="relative">
-                <img 
-                    src={content} 
-                    alt="Secure Transmission" 
-                    className={`
-                        w-full h-auto max-h-[300px] object-cover transition-all duration-500 block
-                        ${isRevealed ? 'filter-none' : 'blur-xl scale-110 opacity-50'}
-                        ${status === 'LOADED' ? 'opacity-100' : 'opacity-0'}
-                    `}
-                    loading="lazy"
-                />
+            {objectUrl && status === 'LOADED' && (
+                <div className="relative">
+                    <img 
+                        src={objectUrl} 
+                        alt="Secure Transmission" 
+                        className={`
+                            w-full h-auto max-h-[300px] object-cover transition-all duration-500 block
+                            ${isRevealed ? 'filter-none' : 'blur-xl scale-110 opacity-50'}
+                        `}
+                        loading="lazy"
+                    />
 
-                {/* SECURITY BLUR OVERLAY */}
-                {!isRevealed && status === 'LOADED' && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/40 backdrop-blur-sm" onClick={handleReveal}>
-                        <div className="p-3 rounded-full bg-black/60 border border-white/10 text-emerald-500 mb-2 shadow-lg">
-                            <EyeOff size={24} />
+                    {/* SECURITY BLUR OVERLAY */}
+                    {!isRevealed && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/40 backdrop-blur-sm" onClick={handleReveal}>
+                            <div className="p-3 rounded-full bg-black/60 border border-white/10 text-emerald-500 mb-2 shadow-lg">
+                                <EyeOff size={24} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">CONFIDENTIAL</span>
+                            <span className="text-[8px] font-mono text-neutral-400 mt-1">TAP TO DECRYPT</span>
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">CONFIDENTIAL</span>
-                        <span className="text-[8px] font-mono text-neutral-400 mt-1">TAP TO DECRYPT</span>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             {/* 4. METADATA FOOTER (Only visible when revealed) */}
             {isRevealed && status === 'LOADED' && (

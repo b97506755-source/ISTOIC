@@ -64,7 +64,6 @@ const triggerHaptic = (ms: number | number[]) => {
     }
 };
 
-// ... (Other Utils: Notification, Sound, ICE Servers same as original)
 const sendSmartNotification = (title: string, body: string, peerId: string, currentTargetId: string) => {
     const isAppVisible = document.visibilityState === 'visible';
     const isChattingWithSender = isAppVisible && currentTargetId === peerId;
@@ -158,40 +157,63 @@ const getIceServers = async (): Promise<any[]> => {
     ];
 };
 
-// ... (Sub-components: BurnerTimer, FileMessageBubble, MessageBubble, etc. - Kept compact for brevity, assume they exist as before)
-const BurnerTimer = ({ ttl, onBurn }: any) => { /* ... */ return <div/> }; 
-// (For the sake of the diff limit, assuming UI components are same as previous unless changes needed.
-//  Since no logic change in bubbles, skipping re-definition in this XML block to save tokens, 
-//  but in real file keep them.)
-// ... Restoring full content for safety ...
+// ... Sub Components ...
+const BurnerTimer = ({ ttl, onBurn }: any) => { return <div/> }; 
+
 const MessageBubble = React.memo(({ msg, setViewImage, onBurn }: any) => (
     <div className={`flex ${msg.sender === 'ME' ? 'justify-end' : 'justify-start'} mb-4`}>
         <div className={`max-w-[85%] flex flex-col ${msg.sender === 'ME' ? 'items-end' : 'items-start'}`}>
             <div className={`p-2 rounded-2xl text-sm border ${msg.sender === 'ME' ? 'bg-blue-600/20 border-blue-500/30 text-blue-100' : 'bg-[#1a1a1a] text-neutral-200 border-white/10'} ${msg.type === 'TEXT' ? 'px-4 py-3' : 'p-1'}`}>
-                {msg.type === 'IMAGE' ? <ImageMessage content={msg.content} size={msg.size} onClick={() => setViewImage(msg.content)} onReveal={() => {}} /> : 
-                 msg.type === 'AUDIO' ? <AudioMessagePlayer src={msg.content} duration={msg.duration} /> :
+                {msg.type === 'IMAGE' ? 
+                    <ImageMessage 
+                        content={msg.content} 
+                        size={msg.size} 
+                        mimeType={msg.mimeType} 
+                        onClick={() => setViewImage(msg.content)} 
+                    /> : 
+                 msg.type === 'AUDIO' ? 
+                    <AudioMessagePlayer 
+                        src={msg.content} 
+                        duration={msg.duration} 
+                        mimeType={msg.mimeType}
+                        isMasked={msg.isMasked}
+                    /> :
                  msg.content}
             </div>
+            {msg.status === 'PENDING' && <span className="text-[8px] text-neutral-500 mt-1">SENDING...</span>}
         </div>
     </div>
 ));
 
-const IStokInput = React.memo(({ onSend, onTyping, disabled }: any) => {
+const IStokInput = React.memo(({ onSend, onTyping, disabled, isRecording, recordingTime, onStartRecord, onStopRecord, onAttach }: any) => {
     const [text, setText] = useState('');
     return (
         <div className="bg-[#09090b] border-t border-white/10 p-3 z-20 pb-[max(env(safe-area-inset-bottom),1rem)]">
             <div className="flex gap-2 items-end">
+                <button onClick={onAttach} className="p-3 rounded-full text-neutral-400 hover:text-white bg-white/5"><UploadCloud size={20}/></button>
                 <div className="flex-1 bg-white/5 rounded-2xl px-4 py-3 border border-white/5">
                     <input 
                         value={text} 
                         onChange={e=>{setText(e.target.value); onTyping();}} 
                         onKeyDown={e=>e.key==='Enter'&&text.trim()&&(onSend(text),setText(''))} 
-                        placeholder="Message..." 
+                        placeholder={isRecording ? `Recording... ${recordingTime}s` : "Message..."}
                         className="w-full bg-transparent outline-none text-white text-sm" 
-                        disabled={disabled}
+                        disabled={disabled || isRecording}
                     />
                 </div>
-                <button onClick={()=>{onSend(text);setText('');}} className="p-3 bg-blue-600 rounded-full text-white"><Send size={20}/></button>
+                {text.trim() ? (
+                    <button onClick={()=>{onSend(text);setText('');}} className="p-3 bg-blue-600 rounded-full text-white"><Send size={20}/></button>
+                ) : (
+                    <button 
+                        onMouseDown={onStartRecord} 
+                        onMouseUp={onStopRecord} 
+                        onTouchStart={onStartRecord} 
+                        onTouchEnd={onStopRecord} 
+                        className={`p-3 rounded-full transition-all ${isRecording ? 'bg-red-500 text-white shadow-[0_0_15px_red] animate-pulse' : 'bg-white/5 text-neutral-400'}`}
+                    >
+                        {isRecording ? <Square size={20} fill="currentColor" /> : <Mic size={20} />}
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -217,6 +239,13 @@ export const IStokView: React.FC = () => {
     const pinRef = useRef(accessPin); 
     const isMounted = useRef(true);
     const msgEndRef = useRef<HTMLDivElement>(null);
+    const chunkBuffer = useRef<Record<string, { chunks: string[], count: number, total: number }>>({});
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Recording Refs
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const recordingIntervalRef = useRef<any>(null);
     
     // States
     const [messages, setMessages] = useState<Message[]>([]);
@@ -225,6 +254,8 @@ export const IStokView: React.FC = () => {
     const [errorMsg, setErrorMsg] = useState<string>('');
     const [isRelayActive, setIsRelayActive] = useState(false);
     const [showShare, setShowShare] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
 
     // --- ZOMBIE KILLER ---
     const nukeConnection = () => {
@@ -242,7 +273,6 @@ export const IStokView: React.FC = () => {
         const key = pin || accessPin;
         if (!target || !key) return;
 
-        // Sync Refs
         if (pin) pinRef.current = pin;
         setAccessPin(key);
 
@@ -262,10 +292,8 @@ export const IStokView: React.FC = () => {
             conn.on('open', () => {
                 console.log("[ISTOK_NET] Data Channel Open. Initiating Handshake...");
                 setStage('HANDSHAKE_INIT');
-                // V2 HANDSHAKE: Send PING immediately to wake up other side and confirm channel health
                 conn.send({ type: 'PING' });
                 
-                // Then send encrypted auth request
                 setTimeout(async () => {
                     setStage('VERIFYING_KEYS');
                     const payload = JSON.stringify({ type: 'CONNECTION_REQUEST', identity: myProfile.username });
@@ -292,16 +320,33 @@ export const IStokView: React.FC = () => {
     };
 
     const handleData = async (data: any, incomingConn?: any) => {
-        // --- HANDSHAKE V2 ---
+        // --- CHUNK HANDLER ---
+        if (data.type === 'CHUNK') {
+            const { transferId, idx, total, data: chunkData } = data;
+            
+            if (!chunkBuffer.current[transferId]) {
+                chunkBuffer.current[transferId] = { chunks: new Array(total), count: 0, total };
+            }
+            const buffer = chunkBuffer.current[transferId];
+            
+            if (!buffer.chunks[idx]) {
+                buffer.chunks[idx] = chunkData;
+                buffer.count++;
+            }
+            
+            if (buffer.count === total) {
+                const fullPayload = buffer.chunks.join('');
+                delete chunkBuffer.current[transferId];
+                handleData({ type: 'MSG', payload: fullPayload });
+            }
+            return;
+        }
+
         if (data.type === 'PING') {
-            // Echo back PONG to confirm aliveness
             (incomingConn || connRef.current)?.send({ type: 'PONG' });
             return;
         }
-        if (data.type === 'PONG') {
-            // Connection is alive, waiting for Auth...
-            return;
-        }
+        if (data.type === 'PONG') return;
 
         const currentKey = pinRef.current;
 
@@ -310,8 +355,6 @@ export const IStokView: React.FC = () => {
             if (json) {
                 const req = JSON.parse(json);
                 if (req.type === 'CONNECTION_REQUEST') {
-                    // Check if peer is already known/trusted for Auto-Accept? 
-                    // For now, always prompt.
                     setShowShare(false);
                     setIncomingConnectionRequest({ 
                         peerId: incomingConn.peer, 
@@ -333,7 +376,6 @@ export const IStokView: React.FC = () => {
                     playSound('CONNECT');
                     triggerHaptic(200);
                     
-                    // Update session list
                     const now = Date.now();
                     setSessions(prev => {
                         const existing = prev.find(s => s.id === connRef.current.peer);
@@ -357,7 +399,6 @@ export const IStokView: React.FC = () => {
                  const msg = JSON.parse(json);
                  setMessages(prev => [...prev, { ...msg, sender: 'THEM', status: 'READ' }]);
                  playSound('MSG_IN');
-                 // Scroll to bottom
                  setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
              }
         }
@@ -393,7 +434,6 @@ export const IStokView: React.FC = () => {
             setIncomingConnectionRequest(null);
             setIsPeerOnline(true);
             
-            // Save session
             const now = Date.now();
             setSessions(prev => {
                  const existing = prev.find(s => s.id === peerId);
@@ -410,7 +450,7 @@ export const IStokView: React.FC = () => {
         }
     };
 
-    const sendMessage = async (type: string, content: string) => {
+    const sendMessage = async (type: string, content: string, extraData: any = {}) => {
         if (!connRef.current || !content) return;
         const msgId = crypto.randomUUID();
         const payload = {
@@ -418,14 +458,99 @@ export const IStokView: React.FC = () => {
             sender: 'THEM',
             type,
             content,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            ...extraData
         };
+
+        // --- Optimistic Update ---
+        setMessages(prev => [...prev, { ...payload, sender: 'ME', status: 'PENDING' } as any]);
+
         const encrypted = await encryptData(JSON.stringify(payload), pinRef.current);
+        
         if (encrypted) {
-            connRef.current.send({ type: 'MSG', payload: encrypted });
-            setMessages(prev => [...prev, { ...payload, sender: 'ME', status: 'SENT' } as any]);
+            if (encrypted.length > CHUNK_SIZE) {
+                 const transferId = crypto.randomUUID();
+                 const total = Math.ceil(encrypted.length / CHUNK_SIZE);
+                 
+                 for (let i = 0; i < total; i++) {
+                     const chunk = encrypted.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                     connRef.current.send({
+                         type: 'CHUNK',
+                         transferId,
+                         idx: i,
+                         total,
+                         data: chunk
+                     });
+                     await new Promise(r => setTimeout(r, 5)); // Throttle
+                 }
+            } else {
+                 connRef.current.send({ type: 'MSG', payload: encrypted });
+            }
+            
+            // Mark Sent
+            setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'SENT' } : m));
             playSound('MSG_OUT');
             setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+    };
+
+    // --- MEDIA RECORDING (DYNAMIC MIME) ---
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Detect best supported mime type
+            const mimeType = getSupportedMimeType();
+            
+            const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64Audio = reader.result as string;
+                    // Extract Base64 cleanly
+                    const cleanBase64 = base64Audio.split(',')[1];
+                    sendMessage('AUDIO', cleanBase64, { duration: recordingTime, mimeType: mediaRecorder.mimeType });
+                };
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+            recordingIntervalRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+        } catch (e) {
+            console.error("Mic error", e);
+            alert("Microphone access denied.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            clearInterval(recordingIntervalRef.current);
+        }
+    };
+
+    // --- FILE HANDLING (IMAGE) ---
+    const handleFileSelect = (e: any) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (file.type.startsWith('image/')) {
+            compressImage(file).then(compressed => {
+                sendMessage('IMAGE', compressed.base64, { size: compressed.size, mimeType: compressed.mimeType });
+            }).catch(err => {
+                alert("Image compression failed.");
+            });
         }
     };
 
@@ -452,17 +577,13 @@ export const IStokView: React.FC = () => {
                     console.log(`[ISTOK_NET] Peer Online: ${id}`);
                     setStage('IDLE');
                     
-                    // DEEP LINK TRAP CHECK
-                    // Check URL params again if we missed it
                     const params = new URLSearchParams(window.location.search);
                     const connectId = params.get('connect');
                     const key = params.get('key');
                     if (connectId && key) {
                         setTargetPeerId(connectId);
                         setAccessPin(key);
-                        // Delay slightly to ensure peer ready
                         setTimeout(() => joinSession(connectId, key), 500);
-                        // Clean URL
                         window.history.replaceState({}, '', window.location.pathname);
                     }
                 });
@@ -577,12 +698,27 @@ export const IStokView: React.FC = () => {
 
              <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll bg-noise pb-4">
                  {messages.map((msg) => (
-                    <MessageBubble key={msg.id} msg={msg} setViewImage={() => {}} onBurn={() => {}} />
+                    <MessageBubble 
+                        key={msg.id} 
+                        msg={msg} 
+                        setViewImage={() => {}} // Could be wired to a modal
+                        onBurn={() => {}} // Could wire deletion
+                    />
                  ))}
                  <div ref={msgEndRef} />
              </div>
 
-             <IStokInput onSend={(t: string) => sendMessage('TEXT', t)} onTyping={() => {}} disabled={!isPeerOnline} />
+             <IStokInput 
+                onSend={(t: string) => sendMessage('TEXT', t)} 
+                onTyping={() => {}} 
+                disabled={!isPeerOnline}
+                isRecording={isRecording}
+                recordingTime={recordingTime}
+                onStartRecord={startRecording}
+                onStopRecord={stopRecording}
+                onAttach={() => fileInputRef.current?.click()}
+             />
+             <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} accept="image/*" />
         </div>
     );
 };

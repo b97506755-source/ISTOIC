@@ -1,13 +1,13 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Loader2, Ghost, AlertCircle, Lock } from 'lucide-react';
 
-// --- UTILS: AUDIO RECORDING ---
-export const getSupportedMimeType = () => {
+// --- UTILS: ROBUST MIME TYPE DETECTION ---
+export const getSupportedMimeType = (): string => {
     const types = [
         'audio/webm;codecs=opus',
         'audio/webm',
-        'audio/mp4', // Safari / iOS priority
+        'audio/mp4', // Critical for iOS/Safari
         'audio/ogg;codecs=opus',
         'audio/aac'
     ];
@@ -17,8 +17,16 @@ export const getSupportedMimeType = () => {
     return ''; // Browser default
 };
 
-// --- COMPONENT: 60FPS AUDIO PLAYER (ROBUST VER.) ---
-export const AudioMessagePlayer = React.memo(({ src, duration, isMasked, mimeType }: { src: string, duration?: number, isMasked?: boolean, mimeType?: string }) => {
+// --- COMPONENT: SECURE AUDIO BUBBLE ---
+
+interface AudioMessagePlayerProps {
+    src: string; // Base64 or Blob URL
+    duration?: number;
+    isMasked?: boolean;
+    mimeType?: string;
+}
+
+export const AudioMessagePlayer = React.memo(({ src, duration, isMasked, mimeType = 'audio/webm' }: AudioMessagePlayerProps) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(false);
@@ -28,90 +36,71 @@ export const AudioMessagePlayer = React.memo(({ src, duration, isMasked, mimeTyp
     const rafRef = useRef<number | null>(null);
     const blobUrlRef = useRef<string | null>(null);
 
-    // Cleanup memory strict
+    // Initialize Audio Object safely
     useEffect(() => {
+        let url = src;
+
+        // If it's raw base64 (not a data URI or blob URL), fix it
+        if (!src.startsWith('blob:') && !src.startsWith('data:')) {
+             url = `data:${mimeType};base64,${src}`;
+        }
+        
+        // Convert to Blob for stability if it's a data URI
+        if (url.startsWith('data:')) {
+             fetch(url)
+                .then(res => res.blob())
+                .then(blob => {
+                    const blobUrl = URL.createObjectURL(blob);
+                    blobUrlRef.current = blobUrl;
+                    if (audioRef.current) audioRef.current.src = blobUrl;
+                })
+                .catch(() => setError(true));
+        } else {
+             if (audioRef.current) audioRef.current.src = url;
+        }
+
         return () => {
             if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.src = "";
-                audioRef.current = null;
-            }
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
-    }, []);
+    }, [src, mimeType]);
 
     const togglePlay = async () => {
-        if (error) return;
+        if (error || !audioRef.current) return;
 
-        if (!audioRef.current) {
+        if (isPlaying) {
+            audioRef.current.pause();
+            setIsPlaying(false);
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        } else {
             setIsLoading(true);
             try {
-                let url = src;
-                
-                // 1. Handle Base64 Data URI efficiently
-                if (src.startsWith('data:')) {
-                    // Convert Data URI to Blob for better browser compatibility
-                    const res = await fetch(src);
-                    const blob = await res.blob();
-                    url = URL.createObjectURL(blob);
-                    blobUrlRef.current = url;
-                }
-
-                const audio = new Audio();
-                audioRef.current = audio;
-                audio.src = url;
-                
-                // Critical for iOS/Safari playback
-                audio.preload = 'auto'; 
-
-                // Event Listeners
-                audio.onended = () => {
-                    setIsPlaying(false);
-                    if (progressRef.current) progressRef.current.style.width = '0%';
-                    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-                };
-                
-                audio.oncanplaythrough = () => setIsLoading(false);
-                
-                audio.onerror = (e) => { 
-                    console.error("Audio Error:", e);
-                    setIsLoading(false);
-                    setError(true);
-                };
-                
-                await audio.play();
+                await audioRef.current.play();
                 setIsPlaying(true);
+                setIsLoading(false);
             } catch (e) {
-                console.error("Playback Exception:", e);
+                console.error("Playback Failed", e);
                 setIsLoading(false);
                 setError(true);
-            }
-        } else {
-            if (isPlaying) {
-                audioRef.current.pause();
-                setIsPlaying(false);
-                if (rafRef.current) cancelAnimationFrame(rafRef.current);
-            } else {
-                try {
-                    await audioRef.current.play();
-                    setIsPlaying(true);
-                } catch(e) {
-                    setIsPlaying(false);
-                }
             }
         }
     };
 
-    // 60FPS Animation Loop (Bypasses React Render Cycle)
+    // Visualization Loop
     useEffect(() => {
         if (isPlaying) {
             const animate = () => {
                 if (audioRef.current && progressRef.current) {
                     const currentTime = audioRef.current.currentTime;
-                    const duration = audioRef.current.duration || 1; // Prevent div by zero
-                    const pct = (currentTime / duration) * 100;
+                    const totalDuration = audioRef.current.duration || duration || 1;
+                    const pct = Math.min((currentTime / totalDuration) * 100, 100);
                     progressRef.current.style.width = `${pct}%`;
+                    
+                    if (audioRef.current.ended) {
+                        setIsPlaying(false);
+                        progressRef.current.style.width = '100%';
+                        return; // Stop loop
+                    }
                 }
                 rafRef.current = requestAnimationFrame(animate);
             };
@@ -119,14 +108,17 @@ export const AudioMessagePlayer = React.memo(({ src, duration, isMasked, mimeTyp
         } else {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
         }
-    }, [isPlaying]);
+    }, [isPlaying, duration]);
 
     return (
         <div className={`
-            flex items-center gap-3 p-3 pr-4 rounded-[18px] min-w-[180px] transition-all
+            flex items-center gap-3 p-3 pr-4 rounded-[18px] min-w-[180px] transition-all select-none
             ${error ? 'bg-red-500/10 border-red-500/30' : (isMasked ? 'bg-purple-900/20 border-purple-500/30' : 'bg-[#1a1a1a] border-white/10')}
-            border select-none
+            border
         `}>
+            {/* Audio Element Hidden */}
+            <audio ref={audioRef} onEnded={() => setIsPlaying(false)} onError={() => setError(true)} preload="metadata" />
+
             <button 
                 onClick={togglePlay} 
                 disabled={isLoading || error}
@@ -142,7 +134,7 @@ export const AudioMessagePlayer = React.memo(({ src, duration, isMasked, mimeTyp
             </button>
             
             <div className="flex flex-col flex-1 gap-1.5 min-w-0">
-                {/* Visualizer Track */}
+                {/* Progress Bar */}
                 <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
                     <div 
                         ref={progressRef}
@@ -154,7 +146,7 @@ export const AudioMessagePlayer = React.memo(({ src, duration, isMasked, mimeTyp
                      <div className="flex items-center gap-1.5">
                         {isMasked ? <Ghost size={10} className="text-purple-400 animate-pulse" /> : <Lock size={10} className="text-emerald-500" />}
                         <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${error ? 'text-red-400' : (isMasked ? 'text-purple-300' : 'text-neutral-400')}`}>
-                            {error ? 'CORRUPTED' : (isMasked ? 'ENCRYPTED_VOICE' : 'SECURE_AUDIO')}
+                            {error ? 'DATA_ERR' : (mimeType.includes('mp4') ? 'M4A_AUDIO' : 'OPUS_AUDIO')}
                         </span>
                     </div>
                     {duration ? <span className="text-[9px] font-mono text-neutral-500">{duration}s</span> : null}
