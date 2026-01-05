@@ -21,7 +21,7 @@ export const CallNotification: React.FC<CallNotificationProps> = ({ identity, on
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[11000] bg-[#050505]/95 backdrop-blur-3xl flex flex-col font-sans overflow-hidden pointer-events-auto">
+        <div className="fixed inset-0 z-[99999] bg-[#050505]/95 backdrop-blur-3xl flex flex-col font-sans overflow-hidden pointer-events-auto touch-none">
             
             {/* Top SafeArea Spacer */}
             <div className="h-[env(safe-area-inset-top)] w-full bg-black/20"></div>
@@ -59,26 +59,26 @@ export const CallNotification: React.FC<CallNotificationProps> = ({ identity, on
                      </div>
                 </div>
 
-                {/* Actions - Pushed up from bottom safe area */}
-                <div className="w-full max-w-xs grid grid-cols-2 gap-6 relative z-10 pb-[calc(env(safe-area-inset-bottom)+40px)]">
+                {/* Actions - Pushed up from bottom safe area - Force pointer-events-auto */}
+                <div className="w-full max-w-xs grid grid-cols-2 gap-6 relative z-50 pb-[calc(env(safe-area-inset-bottom)+40px)] pointer-events-auto">
                     <button 
                         onClick={onDecline}
-                        className="flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform"
+                        className="flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform group"
                     >
-                        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all pointer-events-auto">
+                        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 border border-red-500/20 group-hover:bg-red-500 group-hover:text-white group-hover:border-red-500 transition-all pointer-events-auto shadow-lg">
                             <PhoneOff size={28} />
                         </div>
-                        <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">DECLINE</span>
+                        <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest group-hover:text-red-500 transition-colors">TOLAK</span>
                     </button>
 
                     <button 
                         onClick={onAnswer}
-                        className="flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform"
+                        className="flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform group"
                     >
-                        <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-bounce hover:bg-emerald-400 transition-all pointer-events-auto">
+                        <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-bounce group-hover:bg-emerald-400 transition-all pointer-events-auto border-4 border-transparent group-hover:border-emerald-200">
                             <Phone size={28} fill="currentColor" />
                         </div>
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest">ACCEPT</span>
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest group-hover:text-emerald-400 transition-colors">TERIMA</span>
                     </button>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import Peer from 'peerjs'; // Ensure Peer is imported
 import { 
     encryptData, decryptData
 } from '../../utils/crypto'; 
@@ -26,7 +27,7 @@ import { IStokWalkieTalkie } from './components/IStokWalkieTalkie';
 import { v4 as uuidv4 } from 'uuid';
 
 // --- CONSTANTS ---
-const CHUNK_SIZE = 12 * 1024; 
+const CHUNK_SIZE = 16 * 1024; // 16KB Chunks for robust transport
 const HEARTBEAT_INTERVAL = 3000; 
 const HEARTBEAT_TIMEOUT = 15000; 
 
@@ -53,7 +54,6 @@ type ConnectionStage = 'IDLE' | 'FETCHING_ICE' | 'LOCATING_PEER' | 'HANDSHAKE_IN
 const generateAnomalyIdentity = () => `ANOMALY-${Math.floor(Math.random() * 9000) + 1000}`;
 const generateStableId = () => `ISTOK-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-// ... (Sound & Haptic Utils kept same) ...
 const triggerHaptic = (ms: number | number[]) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(ms);
@@ -263,7 +263,11 @@ export const IStokView: React.FC = () => {
     const pinRef = useRef(accessPin); 
     const isMounted = useRef(true);
     const msgEndRef = useRef<HTMLDivElement>(null);
+    
+    // --- CHUNKING BUFFER ---
+    // Stores incomplete chunks: { [msgId]: { chunks: [], count: 0, total: 0 } }
     const chunkBuffer = useRef<Record<string, { chunks: string[], count: number, total: number }>>({});
+    
     const fileInputRef = useRef<HTMLInputElement>(null);
     const lastPongRef = useRef<number>(Date.now());
     const heartbeatRef = useRef<any>(null);
@@ -276,6 +280,7 @@ export const IStokView: React.FC = () => {
     // States
     const [messages, setMessages] = useState<Message[]>([]);
     const [incomingConnectionRequest, setIncomingConnectionRequest] = useState<{ peerId: string, identity: string, conn: any } | null>(null);
+    const [isHandshaking, setIsHandshaking] = useState(false); // NEW: Handshake loading state
     const [isPeerOnline, setIsPeerOnline] = useState(false);
     const [isPeerTyping, setIsPeerTyping] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string>('');
@@ -306,14 +311,81 @@ export const IStokView: React.FC = () => {
     // Sync Access Pin Ref
     useEffect(() => { pinRef.current = accessPin; }, [accessPin]);
 
+    // --- PEER INITIALIZATION WITH TURN SERVER (CRITICAL) ---
+    useEffect(() => {
+        const initPeer = async () => {
+            if (peerRef.current) return; // Prevent double init
+
+            console.log("[ISTOK_INIT] Fetching ICE Credentials...");
+            const iceServers = await getIceServers();
+            
+            // Determine if using Relay (Titanium)
+            const hasTurn = iceServers.some(s => s.urls.toString().includes('turn:'));
+            setIsRelayActive(hasTurn);
+
+            const peer = new Peer(myProfile.id, {
+                config: {
+                    iceServers: iceServers,
+                    iceTransportPolicy: 'all', // Use 'all' for best compatibility, 'relay' if super strict
+                    sdpSemantics: 'unified-plan'
+                },
+                debug: 1 // Errors only
+            });
+
+            peer.on('open', (id) => {
+                console.log("[ISTOK_NET] Peer Online:", id);
+            });
+
+            peer.on('connection', (conn) => {
+                handleIncomingConnection(conn);
+            });
+
+            peer.on('call', (call) => {
+                console.log("[ISTOK_NET] Incoming Call...", call.peer);
+                
+                // Ring tone
+                playSound('CALL_RING');
+                triggerHaptic([500, 1000, 500]);
+                
+                // Show Fullscreen UI or Notification
+                setIncomingMediaCall(call);
+                
+                sendSystemNotification('INCOMING CALL', `Secure Call from ${call.peer}`, 'istok_call', { peerId: call.peer });
+            });
+
+            peer.on('error', (err) => {
+                console.error("[ISTOK_ERR]", err);
+                if (err.type === 'peer-unavailable') {
+                    setErrorMsg("Target Peer Offline / ID Not Found.");
+                    setStage('IDLE');
+                } else if (err.type === 'disconnected') {
+                    // Auto-reconnect handled by PeerJS usually, but we can force it
+                    peer.reconnect();
+                } else {
+                    setErrorMsg(`Network Error: ${err.type}`);
+                }
+            });
+
+            peerRef.current = peer;
+        };
+
+        initPeer();
+
+        // Cleanup
+        return () => {
+            if (peerRef.current) {
+                peerRef.current.destroy();
+                peerRef.current = null;
+            }
+        };
+    }, [myProfile.id]);
+
     // REQUEST NOTIFICATION PERMISSION ON MOUNT
     useEffect(() => {
         if ('Notification' in window && Notification.permission !== 'granted') {
             Notification.requestPermission();
         }
     }, []);
-
-    // ... (Service Worker Bridge, Focus Listener same) ...
 
     // --- IDENTITY MANAGEMENT ---
     const regenerateProfile = () => {
@@ -498,11 +570,64 @@ export const IStokView: React.FC = () => {
     };
 
     const handleData = async (data: any, incomingConn?: any) => {
-        // ... (Processing logic remains same) ...
-
         // Use current session key
         const currentKey = pinRef.current;
 
+        // --- 1. CHUNK REASSEMBLY (PRIORITY) ---
+        if (data.type === 'CHUNK') {
+            const { msgId, index, total, data: chunkData } = data;
+            
+            // Init buffer if new
+            if (!chunkBuffer.current[msgId]) {
+                chunkBuffer.current[msgId] = { chunks: new Array(total), count: 0, total };
+            }
+            
+            const buffer = chunkBuffer.current[msgId];
+            if (!buffer.chunks[index]) {
+                buffer.chunks[index] = chunkData;
+                buffer.count++;
+            }
+
+            // Check completion
+            if (buffer.count === buffer.total) {
+                const fullEncryptedPayload = buffer.chunks.join('');
+                delete chunkBuffer.current[msgId]; // Cleanup memory
+                
+                // Process the reassembled payload as a standard MSG
+                // We construct a synthetic data packet to feed into the MSG handler
+                const syntheticData = {
+                    type: 'MSG',
+                    payload: fullEncryptedPayload
+                };
+                
+                // Recursively call handleData with reassembled msg
+                handleData(syntheticData, incomingConn);
+            }
+            return; // Stop processing the chunk itself
+        }
+
+        // --- 2. PING/PONG (Keep-Alive) ---
+        if (data.type === 'PING') {
+            if (connRef.current) connRef.current.send({ type: 'PONG' });
+            return;
+        }
+        if (data.type === 'PONG') {
+            lastPongRef.current = Date.now();
+            return;
+        }
+
+        // --- 3. CALL SIGNALS ---
+        if (data.type === 'CALL_SIGNAL') {
+            console.log("Pre-call signal received. Waking up UI.");
+            return;
+        }
+
+        // --- 4. TYPING INDICATORS ---
+        if (data.type === 'TYPING_START') { setIsPeerTyping(true); return; }
+        if (data.type === 'TYPING_STOP') { setIsPeerTyping(false); return; }
+
+        // --- 5. ENCRYPTED PAYLOADS ---
+        
         // --- HANDSHAKE: REQUEST ---
         if (data.type === 'REQ') {
             const json = await decryptData(data.payload, currentKey);
@@ -537,6 +662,7 @@ export const IStokView: React.FC = () => {
                     startHeartbeat();
                     playSound('CONNECT');
                     triggerHaptic(200);
+                    setIsHandshaking(false); // Stop loading if any
                     
                     const now = Date.now();
                     setSessions(prev => {
@@ -558,7 +684,47 @@ export const IStokView: React.FC = () => {
                 if (connRef.current) connRef.current.close();
             }
         } 
-        // ... (Other msg types) ...
+        
+        // --- STANDARD MESSAGE ---
+        else if (data.type === 'MSG') {
+            const json = await decryptData(data.payload, currentKey);
+            if (json) {
+                const msg = JSON.parse(json);
+                msg.sender = 'THEM';
+                msg.status = 'READ'; 
+                
+                // De-duplication check
+                setMessages(prev => {
+                    if (prev.some(m => m.id === msg.id)) return prev;
+                    return [...prev, msg];
+                });
+                
+                setStoredMessages(prev => {
+                    if (prev.some(m => m.id === msg.id)) return prev;
+                    return [...prev, msg];
+                });
+
+                if (msg.type === 'AUDIO') setLatestAudioMessage(msg);
+
+                sendAck(msg.id, 'READ');
+                playSound('MSG_IN');
+                triggerHaptic(50);
+                
+                // Notify if in background
+                if (document.hidden) {
+                    sendSystemNotification('IStok Secure', 'New Encrypted Message', 'istok_msg');
+                }
+            }
+        }
+
+        // --- ACKNOWLEDGEMENT ---
+        else if (data.type === 'ACK') {
+            const json = await decryptData(data.payload, currentKey);
+            if (json) {
+                const ack = JSON.parse(json);
+                setMessages(prev => prev.map(m => m.id === ack.id ? { ...m, status: ack.status } : m));
+            }
+        }
     };
 
     const handleIncomingConnection = (conn: any) => {
@@ -571,6 +737,7 @@ export const IStokView: React.FC = () => {
     const handleDisconnect = () => {
         setIsPeerOnline(false);
         setIsPeerTyping(false);
+        setIsHandshaking(false);
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);
         if (mode === 'CHAT') {
             setStage('RECONNECTING');
@@ -580,16 +747,11 @@ export const IStokView: React.FC = () => {
 
     // --- CONTACT DIALING ---
     const handleCallContact = (contact: IStokContact) => {
-        // Prompt for PIN if not saved in session? 
-        // For simplicity in this P2P model, we assume a "Contact" implies we know the shared PIN 
-        // or we use a default if previously connected.
-        
         // Find if we have a session for this contact to get the PIN
         const session = sessions.find(s => s.id === contact.id);
         const pinToUse = session?.pin || accessPin; // Fallback to current pin if none found
 
         if (!pinToUse) {
-             // If no pin, maybe prompt user? For now, we just rely on last used.
              alert("PIN Keamanan tidak ditemukan untuk kontak ini. Silakan masukkan PIN manual di menu Join.");
              setTargetPeerId(contact.id);
              setMode('JOIN');
@@ -619,11 +781,11 @@ export const IStokView: React.FC = () => {
         if (targetPeerId === id) setMessages([]); 
     };
 
-    // MISSING HELPER FUNCTIONS IMPLEMENTATION
-
     const acceptConnection = async () => {
         const req = incomingConnectionRequest;
         if (!req) return;
+
+        setIsHandshaking(true); // Start loading UI on notification
 
         const currentKey = pinRef.current;
         const responsePayload = JSON.stringify({
@@ -634,40 +796,46 @@ export const IStokView: React.FC = () => {
         const encrypted = await encryptData(responsePayload, currentKey);
 
         if (encrypted && req.conn) {
-            req.conn.send({ type: 'RESP', payload: encrypted });
+            // Artificial delay to show processing feedback
+            setTimeout(() => {
+                req.conn.send({ type: 'RESP', payload: encrypted });
 
-            connRef.current = req.conn;
-            setTargetPeerId(req.peerId);
-            setAccessPin(currentKey);
-            setMode('CHAT');
-            setStage('SECURE');
-            setIsPeerOnline(true);
+                connRef.current = req.conn;
+                setTargetPeerId(req.peerId);
+                setAccessPin(currentKey);
+                setMode('CHAT');
+                setStage('SECURE');
+                setIsPeerOnline(true);
 
-            const now = Date.now();
-            setSessions(prev => {
-                const existing = prev.find(s => s.id === req.peerId);
-                const newSession: IStokSession = {
-                    id: req.peerId,
-                    name: req.identity,
-                    lastSeen: now,
-                    status: 'ONLINE',
-                    pin: currentKey,
-                    createdAt: existing ? existing.createdAt : now
-                };
+                const now = Date.now();
+                setSessions(prev => {
+                    const existing = prev.find(s => s.id === req.peerId);
+                    const newSession: IStokSession = {
+                        id: req.peerId,
+                        name: req.identity,
+                        lastSeen: now,
+                        status: 'ONLINE',
+                        pin: currentKey,
+                        createdAt: existing ? existing.createdAt : now
+                    };
 
-                if (existing) {
-                    return prev.map(s => s.id === req.peerId ? newSession : s);
-                }
-                return [...prev, newSession];
-            });
+                    if (existing) {
+                        return prev.map(s => s.id === req.peerId ? newSession : s);
+                    }
+                    return [...prev, newSession];
+                });
 
-            startHeartbeat();
-            setIncomingConnectionRequest(null);
+                startHeartbeat();
+                setIncomingConnectionRequest(null);
+                setIsHandshaking(false);
+            }, 800);
         } else {
             console.error("Failed to encrypt Accept response");
+            setIsHandshaking(false);
         }
     };
 
+    // --- SEND MESSAGE WITH CHUNKING ---
     const sendMessage = async (type: 'TEXT' | 'IMAGE' | 'AUDIO' | 'FILE', content: string, extra: any = {}) => {
         const msg: Message = {
             id: uuidv4(),
@@ -687,7 +855,29 @@ export const IStokView: React.FC = () => {
             const encrypted = await encryptData(payload, pinRef.current);
 
             if (encrypted) {
-                connRef.current.send({ type: 'MSG', payload: encrypted });
+                // Determine if we need chunking (>16KB)
+                if (encrypted.length > CHUNK_SIZE) {
+                    // Chunk it
+                    const chunks = [];
+                    for (let i = 0; i < encrypted.length; i += CHUNK_SIZE) {
+                        chunks.push(encrypted.slice(i, i + CHUNK_SIZE));
+                    }
+                    
+                    // Send chunks sequentially
+                    chunks.forEach((chunk, index) => {
+                        connRef.current.send({
+                            type: 'CHUNK',
+                            msgId: msg.id, // Using message ID for correlation
+                            index,
+                            total: chunks.length,
+                            data: chunk
+                        });
+                    });
+                } else {
+                    // Send directly
+                    connRef.current.send({ type: 'MSG', payload: encrypted });
+                }
+                
                 setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, status: 'SENT' } : m));
                 playSound('MSG_OUT');
             } else {
@@ -836,6 +1026,7 @@ export const IStokView: React.FC = () => {
                         peerId={incomingConnectionRequest.peerId}
                         onAccept={acceptConnection}
                         onDecline={() => setIncomingConnectionRequest(null)}
+                        isProcessing={isHandshaking} // Pass loading state
                      />
                  )}
 
@@ -876,7 +1067,15 @@ export const IStokView: React.FC = () => {
         return (
             <div className="h-[100dvh] w-full bg-[#050505] flex flex-col items-center justify-center px-6 relative font-sans">
                  {/* Global Connection Request Overlay */}
-                 {incomingConnectionRequest && <ConnectionNotification identity={incomingConnectionRequest.identity} peerId={incomingConnectionRequest.peerId} onAccept={acceptConnection} onDecline={() => setIncomingConnectionRequest(null)} />}
+                 {incomingConnectionRequest && (
+                    <ConnectionNotification 
+                        identity={incomingConnectionRequest.identity} 
+                        peerId={incomingConnectionRequest.peerId} 
+                        onAccept={acceptConnection} 
+                        onDecline={() => setIncomingConnectionRequest(null)}
+                        isProcessing={isHandshaking} 
+                    />
+                 )}
                  
                  {showShare && <ShareConnection peerId={myProfile.id} pin={accessPin} onClose={() => setShowShare(false)} />}
 
@@ -922,8 +1121,16 @@ export const IStokView: React.FC = () => {
     return (
         <div className="h-[100dvh] w-full bg-[#050505] flex flex-col font-sans relative overflow-hidden">
              
-             {/* Global Connection Request Overlay (Even in chat, for multi-peer future proofing) */}
-             {incomingConnectionRequest && <ConnectionNotification identity={incomingConnectionRequest.identity} peerId={incomingConnectionRequest.peerId} onAccept={acceptConnection} onDecline={() => setIncomingConnectionRequest(null)} />}
+             {/* Global Connection Request Overlay */}
+             {incomingConnectionRequest && (
+                <ConnectionNotification 
+                    identity={incomingConnectionRequest.identity} 
+                    peerId={incomingConnectionRequest.peerId} 
+                    onAccept={acceptConnection} 
+                    onDecline={() => setIncomingConnectionRequest(null)}
+                    isProcessing={isHandshaking} 
+                />
+             )}
 
              {showWalkieTalkie && (
                  <IStokWalkieTalkie 
