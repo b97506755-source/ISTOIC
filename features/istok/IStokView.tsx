@@ -11,7 +11,7 @@ import {
     Mic, MicOff, Square,
     Menu, Skull, Activity,
     PhoneCall, QrCode, User, Shield, AlertTriangle, History, ArrowRight,
-    X, RefreshCw, Lock, Flame, ShieldAlert, Image as ImageIcon, Loader2, ArrowLeft, Wifi, WifiOff, UploadCloud, Users, Radio as RadioIcon, Globe, Phone
+    X, RefreshCw, Lock, Flame, ShieldAlert, Image as ImageIcon, Loader2, ArrowLeft, Wifi, WifiOff, UploadCloud, Users, Radio as RadioIcon, Globe, Phone, Paperclip
 } from 'lucide-react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { useIDB } from '../../hooks/useIDB'; 
@@ -19,12 +19,10 @@ import { SidebarIStokContact, IStokSession, IStokProfile } from './components/Si
 import { ShareConnection } from './components/ShareConnection'; 
 import { ConnectionNotification } from './components/ConnectionNotification';
 import { CallNotification } from './components/CallNotification';
-import { MessageNotification } from './components/MessageNotification';
 import { AudioMessagePlayer, getSupportedMimeType } from './components/vn';
 import { compressImage, ImageMessage } from './components/gambar';
 import { IStokAuth } from './components/IStokAuth';
 import { IStokWalkieTalkie } from './components/IStokWalkieTalkie';
-import { MediaDrawer } from './components/MediaDrawer';
 
 // --- CONSTANTS ---
 const CHUNK_SIZE = 16384; 
@@ -131,50 +129,71 @@ const getIceServers = async (): Promise<any[]> => {
 };
 
 // ... Sub Components ...
-const MessageBubble = React.memo(({ msg, setViewImage }: any) => (
-    <div className={`flex ${msg.sender === 'ME' ? 'justify-end' : 'justify-start'} mb-4 animate-slide-up`}>
-        <div className={`max-w-[85%] flex flex-col ${msg.sender === 'ME' ? 'items-end' : 'items-start'}`}>
-            <div className={`p-2 rounded-2xl text-sm border shadow-sm ${msg.sender === 'ME' ? 'bg-blue-600/20 border-blue-500/30 text-blue-100' : 'bg-[#1a1a1a] text-neutral-200 border-white/10'} ${msg.type === 'TEXT' ? 'px-4 py-3' : 'p-1'}`}>
-                {msg.type === 'IMAGE' ? 
-                    <ImageMessage 
-                        content={msg.content} 
-                        size={msg.size} 
-                        mimeType={msg.mimeType} 
-                        onClick={() => setViewImage(msg.content)} 
-                    /> : 
-                 msg.type === 'AUDIO' ? 
-                    <AudioMessagePlayer 
-                        src={msg.content} 
-                        duration={msg.duration} 
-                        mimeType={msg.mimeType}
-                        isMasked={msg.isMasked}
-                    /> :
-                 <span className="whitespace-pre-wrap leading-relaxed">{msg.content}</span>}
-            </div>
-            <div className="flex items-center gap-1 mt-1 opacity-50">
-                 <span className="text-[8px] font-mono">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                 {msg.sender === 'ME' && (
-                     msg.status === 'READ' ? <CheckCheck size={10} className="text-blue-400" /> : 
-                     msg.status === 'DELIVERED' ? <CheckCheck size={10} /> : <Check size={10} />
-                 )}
+const MessageBubble = React.memo(({ msg, setViewImage }: any) => {
+    return (
+        <div className={`flex ${msg.sender === 'ME' ? 'justify-end' : 'justify-start'} mb-2 animate-slide-up group`}>
+            <div className={`max-w-[85%] flex flex-col ${msg.sender === 'ME' ? 'items-end' : 'items-start'}`}>
+                <div className={`p-2 rounded-2xl text-sm border shadow-sm relative ${msg.sender === 'ME' ? 'bg-blue-600/20 border-blue-500/30 text-blue-100 rounded-tr-none' : 'bg-[#1a1a1a] text-neutral-200 border-white/10 rounded-tl-none'} ${msg.type === 'TEXT' ? 'px-4 py-2' : 'p-1'}`}>
+                    {msg.type === 'IMAGE' ? 
+                        <ImageMessage 
+                            content={msg.content} 
+                            size={msg.size} 
+                            mimeType={msg.mimeType} 
+                            onClick={() => setViewImage(msg.content)} 
+                        /> : 
+                     msg.type === 'AUDIO' ? 
+                        <AudioMessagePlayer 
+                            src={msg.content} 
+                            duration={msg.duration} 
+                            mimeType={msg.mimeType}
+                            isMasked={msg.isMasked}
+                        /> :
+                     <span className="whitespace-pre-wrap leading-relaxed break-words">{msg.content}</span>}
+                </div>
+                
+                {/* Meta Data Footer */}
+                <div className="flex items-center gap-1.5 mt-1 px-1">
+                     <span className="text-[9px] font-mono text-neutral-500">{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                     {msg.sender === 'ME' && (
+                         <div className="flex items-center">
+                             {/* STATUS ICONS LOGIC */}
+                             {msg.status === 'PENDING' && <Clock size={10} className="text-neutral-500" />}
+                             {msg.status === 'SENT' && <Check size={12} className="text-neutral-500" />}
+                             {msg.status === 'DELIVERED' && <CheckCheck size={12} className="text-neutral-500" />}
+                             {msg.status === 'READ' && <CheckCheck size={12} className="text-blue-400" />}
+                         </div>
+                     )}
+                </div>
             </div>
         </div>
-    </div>
-));
+    );
+});
 
 const IStokInput = React.memo(({ onSend, onTyping, disabled, isRecording, recordingTime, onStartRecord, onStopRecord, onAttach, onTogglePTT }: any) => {
     const [text, setText] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
+    const typingTimeoutRef = useRef<any>(null);
+
+    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setText(e.target.value);
+        
+        // Typing Logic
+        onTyping(true);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+            onTyping(false);
+        }, 1500); // Stop typing status after 1.5s idle
+    };
 
     return (
         <div className="bg-[#09090b] border-t border-white/10 p-3 z-20 pb-[max(env(safe-area-inset-bottom),1rem)]">
             <div className="flex gap-2 items-end">
-                <button onClick={onAttach} className="p-3 rounded-full text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"><UploadCloud size={20}/></button>
+                <button onClick={onAttach} className="p-3 rounded-full text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"><Paperclip size={20}/></button>
                 <div className="flex-1 bg-white/5 rounded-2xl px-4 py-3 border border-white/5 focus-within:border-emerald-500/50 transition-colors">
                     <input 
                         ref={inputRef}
                         value={text} 
-                        onChange={e=>{setText(e.target.value); onTyping();}} 
+                        onChange={handleInput} 
                         onKeyDown={e=>e.key==='Enter'&&text.trim()&&(onSend(text),setText(''))} 
                         placeholder={isRecording ? `Recording... ${recordingTime}s` : "Encrypted Message..."}
                         className="w-full bg-transparent outline-none text-white text-sm placeholder:text-neutral-600" 
@@ -253,6 +272,7 @@ export const IStokView: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [incomingConnectionRequest, setIncomingConnectionRequest] = useState<{ peerId: string, identity: string, conn: any } | null>(null);
     const [isPeerOnline, setIsPeerOnline] = useState(false);
+    const [isPeerTyping, setIsPeerTyping] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string>('');
     const [isRelayActive, setIsRelayActive] = useState(false);
     const [showShare, setShowShare] = useState(false);
@@ -260,20 +280,15 @@ export const IStokView: React.FC = () => {
     const [recordingTime, setRecordingTime] = useState(0);
     const [showContactSidebar, setShowContactSidebar] = useState(false);
     const [showWalkieTalkie, setShowWalkieTalkie] = useState(false);
-    const [showMediaDrawer, setShowMediaDrawer] = useState(false);
     const [viewImage, setViewImage] = useState<string | null>(null);
     const [latestAudioMessage, setLatestAudioMessage] = useState<Message | null>(null);
     
-    // NOTIFICATION STATES
-    const [latestMessageNotif, setLatestMessageNotif] = useState<{sender: string, text: string} | null>(null);
-
     // CALLING STATE
     const [incomingMediaCall, setIncomingMediaCall] = useState<any>(null);
     const [activeTeleponan, setActiveTeleponan] = useState(false);
     const [outgoingCallTarget, setOutgoingCallTarget] = useState<string | null>(null);
 
     // --- REFS FOR EVENT LISTENERS ---
-    // Needed to access latest state inside SW event listener
     const incomingMediaCallRef = useRef<any>(null);
     const incomingReqRef = useRef<any>(null);
     
@@ -305,11 +320,6 @@ export const IStokView: React.FC = () => {
                     if (action === 'answer') handleAnswerCall();
                     else if (action === 'decline') handleDeclineCall();
                 }
-
-                // Handle Connection Request Focus
-                if (incomingReqRef.current && incomingReqRef.current.peerId === peerId) {
-                     // Just focusing handles the view as the overlay is persistent
-                }
             }
         };
 
@@ -336,6 +346,23 @@ export const IStokView: React.FC = () => {
         }
     }, [messages, targetPeerId]);
 
+    // Focus Listener for Read Receipts
+    useEffect(() => {
+        const handleFocus = () => {
+            // Send READ ack for all unread messages
+            if (isPeerOnline && connRef.current) {
+                const unreadMsgs = messages.filter(m => m.sender === 'THEM' && m.status !== 'READ');
+                if (unreadMsgs.length > 0) {
+                    // Send batch ACK (simplified here to individual calls for robustness)
+                    unreadMsgs.forEach(m => sendAck(m.id, 'READ'));
+                }
+            }
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [messages, isPeerOnline]);
+
+
     // --- IDENTITY MANAGEMENT ---
     const regenerateProfile = () => {
         const now = Date.now();
@@ -361,6 +388,7 @@ export const IStokView: React.FC = () => {
             connRef.current = null;
         }
         setIsPeerOnline(false);
+        setIsPeerTyping(false);
         setStage('IDLE');
     };
 
@@ -490,6 +518,18 @@ export const IStokView: React.FC = () => {
         }
     };
 
+    const sendAck = async (msgId: string, status: 'DELIVERED' | 'READ') => {
+        if (!connRef.current) return;
+        const payload = JSON.stringify({
+            id: msgId,
+            status: status
+        });
+        const encrypted = await encryptData(payload, pinRef.current);
+        if (encrypted) {
+            connRef.current.send({ type: 'ACK', payload: encrypted });
+        }
+    };
+
     const handleData = async (data: any, incomingConn?: any) => {
         // --- CHUNK HANDLER ---
         if (data.type === 'CHUNK') {
@@ -520,21 +560,36 @@ export const IStokView: React.FC = () => {
             if (!isPeerOnline && mode === 'CHAT') setIsPeerOnline(true);
             return;
         }
+        
+        // --- TYPING INDICATOR ---
+        if (data.type === 'TYPING') {
+            setIsPeerTyping(data.isTyping);
+            return;
+        }
 
         // --- CALL SIGNALING ---
         if (data.type === 'CALL_SIGNAL') {
             // Wake up UI even before media connection arrives
             playSound('CALL_RING');
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-            // Background Notification
-            if (document.hidden) {
-                sendSystemNotification('INCOMING CALL', 'Encrypted Voice Uplink...', 'istok_call', { peerId: (incomingConn || connRef.current)?.peer });
-            }
+            
+            // Background Notification (Force System)
+            sendSystemNotification('INCOMING CALL', 'Encrypted Voice Uplink...', 'istok_call', { peerId: (incomingConn || connRef.current)?.peer });
             return;
         }
 
         // Use current session key
         const currentKey = pinRef.current;
+
+        // --- ACKNOWLEDGMENT (CHECKMARKS) ---
+        if (data.type === 'ACK') {
+            const json = await decryptData(data.payload, currentKey);
+            if (json) {
+                const ack = JSON.parse(json);
+                setMessages(prev => prev.map(m => m.id === ack.id ? { ...m, status: ack.status } : m));
+            }
+            return;
+        }
 
         // --- HANDSHAKE: REQUEST ---
         if (data.type === 'REQ') {
@@ -551,14 +606,11 @@ export const IStokView: React.FC = () => {
                     playSound('MSG_IN');
                     triggerHaptic([100, 50, 100]);
                     
-                    // Background Notification
-                    if (document.hidden) {
-                        sendSystemNotification('CONNECTION REQUEST', `${req.identity} wants to connect.`, 'istok_req', { peerId: incomingConn.peer });
-                    }
+                    // Background Notification (Force System)
+                    sendSystemNotification('CONNECTION REQUEST', `${req.identity} wants to connect.`, 'istok_req', { peerId: incomingConn.peer });
                 }
             } else {
                 console.warn("[ISTOK_SEC] Decryption Failed for REQ. PIN Mismatch or Tampering.");
-                // Optionally send back a generic error frame if protocol allows, but silence is safer.
             }
         } 
         
@@ -611,14 +663,19 @@ export const IStokView: React.FC = () => {
 
                  playSound('MSG_IN');
                  
-                 // NOTIFICATIONS
+                 // NOTIFICATIONS: FORCE SYSTEM NOTIFICATION ONLY
                  const peerName = sessions.find(s => s.id === (incomingConn || connRef.current)?.peer)?.name || "Unknown";
                  const preview = incomingMsg.type === 'TEXT' ? incomingMsg.content : `[${incomingMsg.type}]`;
                  
-                 if (document.hidden) {
-                     sendSystemNotification(peerName, preview, 'istok_msg', { peerId: (incomingConn || connRef.current)?.peer });
-                 } else {
-                     setLatestMessageNotif({ sender: peerName, text: preview });
+                 sendSystemNotification(peerName, preview, 'istok_msg', { peerId: (incomingConn || connRef.current)?.peer });
+
+                 // ACKNOWLEDGMENT PROTOCOL
+                 // 1. Send DELIVERED immediately
+                 sendAck(msg.id, 'DELIVERED');
+                 
+                 // 2. If app is visible, Send READ
+                 if (!document.hidden) {
+                     sendAck(msg.id, 'READ');
                  }
 
                  setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -637,6 +694,7 @@ export const IStokView: React.FC = () => {
 
     const handleDisconnect = () => {
         setIsPeerOnline(false);
+        setIsPeerTyping(false);
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);
         if (mode === 'CHAT') {
             setStage('RECONNECTING');
@@ -682,11 +740,21 @@ export const IStokView: React.FC = () => {
         }
     };
 
+    // --- TYPING INDICATOR SEND ---
+    const handleTyping = (isTyping: boolean) => {
+        if (connRef.current) {
+            connRef.current.send({ type: 'TYPING', isTyping });
+        }
+    };
+
     const sendMessage = async (type: string, content: string, extraData: any = {}) => {
         if (!connRef.current || !content) {
             if (!connRef.current) setErrorMsg("NO_CONNECTION");
             return;
         }
+        
+        // Stop typing status immediately
+        handleTyping(false);
 
         const msgId = crypto.randomUUID();
         const payload = {
@@ -698,7 +766,8 @@ export const IStokView: React.FC = () => {
             ...extraData
         };
 
-        const myMsg = { ...payload, sender: 'ME', status: 'PENDING' };
+        // Status starts as SENT (Check 1)
+        const myMsg = { ...payload, sender: 'ME', status: 'SENT' };
         setMessages(prev => [...prev, myMsg as any]);
 
         const encrypted = await encryptData(JSON.stringify(payload), pinRef.current);
@@ -717,13 +786,13 @@ export const IStokView: React.FC = () => {
                          total,
                          data: chunk
                      });
-                     await new Promise(r => setTimeout(r, 5)); 
+                     // INCREASED DELAY FOR STABILITY (prev 5ms -> 20ms)
+                     await new Promise(r => setTimeout(r, 20)); 
                  }
             } else {
                  connRef.current.send({ type: 'MSG', payload: encrypted });
             }
             
-            setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'SENT' } : m));
             playSound('MSG_OUT');
             setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         }
@@ -732,8 +801,11 @@ export const IStokView: React.FC = () => {
     // --- RECORDING & FILES (Same as before) ---
     const startRecording = async () => {
         try {
+            // Robust MIME detection for cross-browser support
+            const types = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg'];
+            const mimeType = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+            
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mimeType = getSupportedMimeType();
             
             const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
             mediaRecorderRef.current = mediaRecorder;
@@ -747,9 +819,13 @@ export const IStokView: React.FC = () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    const base64Audio = reader.result as string;
-                    const cleanBase64 = base64Audio.split(',')[1];
-                    sendMessage('AUDIO', cleanBase64, { duration: recordingTime, mimeType: mediaRecorder.mimeType });
+                    const result = reader.result as string;
+                    // CRITICAL: Strip the data: prefix to send raw base64 payload
+                    const base64Audio = result.includes(',') ? result.split(',')[1] : result;
+                    sendMessage('AUDIO', base64Audio, { 
+                        duration: recordingTime, 
+                        mimeType: mediaRecorder.mimeType || 'audio/webm' 
+                    });
                 };
                 reader.readAsDataURL(audioBlob);
                 stream.getTracks().forEach(track => track.stop());
@@ -850,10 +926,8 @@ export const IStokView: React.FC = () => {
                     setIncomingMediaCall(call);
                     playSound('CALL_RING');
                     
-                    // Trigger Service Worker Notification if Hidden
-                    if (document.hidden) {
-                        sendSystemNotification('INCOMING SECURE CALL', 'Encrypted Voice Uplink Request...', 'istok_call', { peerId: call.peer });
-                    }
+                    // Trigger Service Worker Notification if Hidden (System Notif)
+                    sendSystemNotification('INCOMING SECURE CALL', 'Encrypted Voice Uplink Request...', 'istok_call', { peerId: call.peer });
                 });
 
                 peer.on('error', (err: any) => {
@@ -928,16 +1002,6 @@ export const IStokView: React.FC = () => {
                     onRegenerateProfile={regenerateProfile}
                     currentPeerId={null}
                  />
-
-                 {/* TOAST: Incoming Message while in menu */}
-                 {latestMessageNotif && (
-                     <MessageNotification 
-                         senderName={latestMessageNotif.sender}
-                         messagePreview={latestMessageNotif.text}
-                         onDismiss={() => setLatestMessageNotif(null)}
-                         onClick={() => { setLatestMessageNotif(null); /* Could navigate to specific chat if needed */ }}
-                     />
-                 )}
 
                  {/* Global Connection Request Overlay (High Priority) */}
                  {incomingConnectionRequest && (
@@ -1032,16 +1096,6 @@ export const IStokView: React.FC = () => {
     return (
         <div className="h-[100dvh] w-full bg-[#050505] flex flex-col font-sans relative overflow-hidden">
              
-             {/* TOAST: Incoming Message from other tab/context */}
-             {latestMessageNotif && (
-                 <MessageNotification 
-                     senderName={latestMessageNotif.sender}
-                     messagePreview={latestMessageNotif.text}
-                     onDismiss={() => setLatestMessageNotif(null)}
-                     onClick={() => setLatestMessageNotif(null)}
-                 />
-             )}
-             
              {/* Global Connection Request Overlay (Even in chat, for multi-peer future proofing) */}
              {incomingConnectionRequest && <ConnectionNotification identity={incomingConnectionRequest.identity} peerId={incomingConnectionRequest.peerId} onAccept={acceptConnection} onDecline={() => setIncomingConnectionRequest(null)} />}
 
@@ -1052,13 +1106,6 @@ export const IStokView: React.FC = () => {
                     latestMessage={latestAudioMessage}
                  />
              )}
-
-             <MediaDrawer 
-                isOpen={showMediaDrawer} 
-                onClose={() => setShowMediaDrawer(false)} 
-                messages={messages} 
-                onViewImage={setViewImage} 
-             />
 
              {/* Top Bar */}
              <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-[#09090b]/80 backdrop-blur-md z-10 pt-[calc(env(safe-area-inset-top)+1rem)]">
@@ -1071,7 +1118,9 @@ export const IStokView: React.FC = () => {
                                  {sessions.find(s=>s.id === targetPeerId)?.customName || sessions.find(s=>s.id === targetPeerId)?.name || 'UNKNOWN'}
                              </span>
                          </div>
-                         <p className="text-[8px] text-neutral-500 font-mono mt-0.5">{isPeerOnline ? 'ENCRYPTED_LINK_ACTIVE' : 'OFFLINE'}</p>
+                         <p className="text-[8px] text-neutral-500 font-mono mt-0.5 animate-fade-in">
+                            {isPeerTyping ? 'MENGETIK...' : (isPeerOnline ? 'ONLINE' : 'OFFLINE')}
+                         </p>
                      </div>
                  </div>
                  <div className="flex gap-2">
@@ -1083,7 +1132,6 @@ export const IStokView: React.FC = () => {
                              <Phone size={18} fill="currentColor" />
                          </button>
                      )}
-                     <button onClick={() => setShowMediaDrawer(true)} className="p-2 text-neutral-400 hover:text-white rounded-full hover:bg-white/5"><UploadCloud size={18}/></button>
                      <button onClick={() => { if(confirm("Clear Chat?")) { setMessages([]); setStoredMessages([]); } }} className="p-2 text-neutral-400 hover:text-red-500 rounded-full hover:bg-red-500/10"><Skull size={18} /></button>
                  </div>
              </div>
@@ -1117,7 +1165,7 @@ export const IStokView: React.FC = () => {
 
              <IStokInput 
                 onSend={(t: string) => sendMessage('TEXT', t)} 
-                onTyping={() => {}} 
+                onTyping={(isTyping: boolean) => handleTyping(isTyping)} 
                 disabled={!isPeerOnline}
                 isRecording={isRecording}
                 recordingTime={recordingTime}

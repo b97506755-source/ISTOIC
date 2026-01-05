@@ -41,6 +41,7 @@ export const AudioMessagePlayer = React.memo(({ src, duration, isMasked, mimeTyp
         let url = src;
 
         // If it's raw base64 (not a data URI or blob URL), fix it
+        // IMPORTANT: We use the passed mimeType to construct the Data URI correctly
         if (!src.startsWith('blob:') && !src.startsWith('data:')) {
              url = `data:${mimeType};base64,${src}`;
         }
