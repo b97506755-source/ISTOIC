@@ -1,6 +1,6 @@
 
 /**
- * PRIVACY SHIELD PROTOCOL v1.0
+ * PRIVACY SHIELD PROTOCOL v1.1
  * blocks geolocation access at the browser level.
  */
 
@@ -23,6 +23,13 @@ export const activatePrivacyShield = () => {
             }
         };
 
+        // Safety check: Don't crash if property is not configurable (e.g., protected by browser/extensions)
+        const descriptor = Object.getOwnPropertyDescriptor(navigator, 'geolocation');
+        if (descriptor && !descriptor.configurable) {
+            console.warn("[PRIVACY_SHIELD] Geolocation property locked by environment. Interception skipped to prevent crash.");
+            return; 
+        }
+
         // Attempt to override the navigator.geolocation property
         try {
             Object.defineProperty(navigator, 'geolocation', {
@@ -34,15 +41,19 @@ export const activatePrivacyShield = () => {
                 configurable: false,
                 writable: false
             });
+            console.log("%c[PRIVACY SHIELD] GEOLOCATION FIREWALL ACTIVE", "background: #000; color: #0f0; padding: 4px; font-weight: bold;");
         } catch (e) {
-            // Fallback for older browsers or strict environments
-            (navigator as any).geolocation.getCurrentPosition = deny;
-            (navigator as any).geolocation.watchPosition = (s: any, e: any) => { deny(s, e); return 0; };
+            // Fallback for strict environments where defineProperty fails silently or throws
+            try {
+                (navigator as any).geolocation.getCurrentPosition = deny;
+                (navigator as any).geolocation.watchPosition = (s: any, e: any) => { deny(s, e); return 0; };
+                console.log("[PRIVACY_SHIELD] Fallback interception active.");
+            } catch(err) {
+                console.error("[PRIVACY_SHIELD] Failed to attach hooks:", err);
+            }
         }
 
-        console.log("%c[PRIVACY SHIELD] GEOLOCATION FIREWALL ACTIVE", "background: #000; color: #0f0; padding: 4px; font-weight: bold;");
-
     } catch (e) {
-        console.error("[PRIVACY SHIELD] Initialization failed:", e);
+        console.error("[PRIVACY_SHIELD] Initialization failed:", e);
     }
 };

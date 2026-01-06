@@ -46,8 +46,10 @@ export const IstokIdentityService = {
                 } as IStokUserIdentity;
             }
         } catch (error: any) {
+            console.error("[ISTOK_AUTH] Detailed Error:", error);
+            
             const errCode = error.code || '';
-            const errMsg = error.message || '';
+            const errMsg = error.message || String(error);
 
             // Handle User Cancellation Gracefully
             if (errCode === 'auth/popup-closed-by-user' || errMsg.includes('closed-by-user')) {
@@ -55,14 +57,23 @@ export const IstokIdentityService = {
                 return null;
             }
 
-            debugService.log('ERROR', 'ISTOK_AUTH', 'LOGIN_FAIL', errMsg);
+            debugService.log('ERROR', 'ISTOK_AUTH', 'LOGIN_FAIL', `${errCode}: ${errMsg}`);
             
             // Handle Unauthorized Domain (Common Dev Error)
             let friendlyMsg = errMsg;
-            if (errCode === 'auth/unauthorized-domain' || errMsg.includes('unauthorized-domain')) {
-                friendlyMsg = "Domain ini belum diizinkan. Tambahkan domain ini ke Firebase Console > Authentication > Settings > Authorized Domains.";
+            
+            // Robust check for domain error
+            if (
+                errCode === 'auth/unauthorized-domain' || 
+                errMsg.includes('auth/unauthorized-domain') ||
+                errMsg.includes('unauthorized-domain')
+            ) {
+                const currentDomain = window.location.hostname;
+                friendlyMsg = `Domain "${currentDomain}" belum diizinkan di Firebase. \n\nSOLUSI DEVELOPER:\n1. Buka Firebase Console\n2. Menu Authentication > Settings > Authorized Domains\n3. Tambahkan: ${currentDomain}`;
             } else if (errCode === 'auth/popup-blocked') {
                 friendlyMsg = "Popup login diblokir oleh browser. Izinkan popup untuk situs ini.";
+            } else if (errCode === 'auth/network-request-failed') {
+                friendlyMsg = "Koneksi jaringan gagal. Periksa internet Anda.";
             }
 
             alert(`Login Gagal: ${friendlyMsg}`);
