@@ -6,33 +6,29 @@ import { TeleponanView } from '../teleponan/TeleponanView';
 import { activatePrivacyShield } from '../../utils/privacyShield';
 import { 
     Send, Zap, ScanLine, Server,
-    Mic, Square, Menu, PhoneCall, 
+    Mic, Menu, PhoneCall, 
     QrCode, Lock, Flame, 
     ShieldAlert, ArrowLeft, BrainCircuit, Sparkles,
-    Wifi, WifiOff, Paperclip
+    Wifi, WifiOff, Paperclip, Camera
 } from 'lucide-react';
 
 // --- HOOKS & SERVICES ---
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { OMNI_KERNEL } from '../../services/omniRace'; 
-import { SidebarIStokContact, IStokSession } from './components/SidebarIStokContact';
+import { SidebarIStokContact, IStokSession, IStokProfile } from './components/SidebarIStokContact';
 import { ShareConnection } from './components/ShareConnection'; 
 import { ConnectionNotification } from './components/ConnectionNotification';
 import { CallNotification } from './components/CallNotification';
-import { AudioMessagePlayer } from './components/vn';
-import { compressImage, ImageMessage } from './components/gambar';
+import { MessageBubble } from './components/MessageBubble';
+import { IStokAuth } from './components/IStokAuth';
+import { QRScanner } from './components/QRScanner'; // Pastikan file ini ada
+import { compressImage } from './components/gambar';
 
 // --- CONSTANTS ---
 const CHUNK_SIZE = 16384; 
 const HEARTBEAT_MS = 5000;
 
 // --- TYPES ---
-interface IStokProfile {
-    id: string;        
-    username: string;  
-    created: number;
-}
-
 interface Message {
     id: string;
     sender: 'ME' | 'THEM';
@@ -115,53 +111,7 @@ const getIceServers = async (): Promise<any[]> => {
     }
 };
 
-// --- SUB-COMPONENTS ---
-
-const BurnerTimer = ({ ttl, onBurn }: { ttl: number, onBurn: () => void }) => {
-    const [timeLeft, setTimeLeft] = useState(ttl);
-    useEffect(() => {
-        if (timeLeft <= 0) { onBurn(); return; }
-        const timer = setInterval(() => setTimeLeft(p => p - 1), 1000);
-        return () => clearInterval(timer);
-    }, [timeLeft, onBurn]);
-    return (
-        <div className="flex items-center gap-2 mt-1 select-none">
-            <Flame size={10} className="text-red-500 animate-pulse" />
-            <div className="w-full h-0.5 bg-red-900/50 rounded-full overflow-hidden">
-                <div className="h-full bg-red-500 transition-all duration-1000 ease-linear" style={{width: `${(timeLeft/ttl)*100}%`}}></div>
-            </div>
-        </div>
-    );
-};
-
-const MessageBubble = React.memo(({ msg, setViewImage, onBurn }: { msg: Message, setViewImage: (img: string) => void, onBurn: (id: string) => void }) => {
-    const [burnStarted, setBurnStarted] = useState(msg.type !== 'IMAGE'); 
-
-    return (
-        <div className={`flex ${msg.sender === 'ME' ? 'justify-end' : 'justify-start'} animate-fade-in mb-3`}>
-            <div className={`max-w-[85%] flex flex-col ${msg.sender === 'ME' ? 'items-end' : 'items-start'}`}>
-                <div className={`rounded-2xl text-sm border shadow-sm relative overflow-hidden ${msg.sender === 'ME' ? 'bg-emerald-900/40 border-emerald-500/30 text-emerald-100 rounded-tr-none' : 'bg-[#1a1a1a] text-neutral-200 border-white/10 rounded-tl-none'} ${msg.type === 'TEXT' ? 'px-4 py-2' : 'p-1'}`}>
-                    {msg.type === 'IMAGE' ? 
-                        <ImageMessage content={msg.content} size={msg.size} onClick={() => setViewImage(msg.content)} onReveal={() => setBurnStarted(true)} /> : 
-                     msg.type === 'AUDIO' ? <AudioMessagePlayer src={msg.content} duration={msg.duration} /> :
-                     msg.type === 'FILE' ? (
-                        <a href={`data:${msg.mimeType};base64,${msg.content}`} download={msg.fileName} className="flex items-center gap-3 p-3 hover:bg-white/5 transition-colors rounded-xl">
-                            <div className="p-2 bg-white/10 rounded-lg"><ScanLine size={16}/></div>
-                            <div className="overflow-hidden"><p className="text-xs font-bold truncate max-w-[150px]">{msg.fileName}</p><p className="text-[9px] text-neutral-400">{(msg.size ? msg.size/1024 : 0).toFixed(1)} KB</p></div>
-                        </a>
-                     ) : <span className="whitespace-pre-wrap leading-relaxed">{msg.content}</span>}
-                    
-                    {msg.ttl && burnStarted && <BurnerTimer ttl={msg.ttl} onBurn={() => onBurn(msg.id)} />}
-                </div>
-                <div className="flex items-center gap-1 mt-1 px-1 opacity-60">
-                    {msg.ttl && <ShieldAlert size={8} className="text-red-500" />}
-                    <span className="text-[9px] font-mono">{new Date(msg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
-                </div>
-            </div>
-        </div>
-    );
-});
-
+// --- SUB-COMPONENT: INPUT ---
 const IStokInput = React.memo(({ onSend, onTyping, disabled, isRecording, recordingTime, isVoiceMasked, onToggleMask, onStartRecord, onStopRecord, onAttach, ttlMode, onToggleTtl, onAiAssist, isAiThinking }: any) => {
     const [text, setText] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -243,6 +193,7 @@ export const IStokView: React.FC = () => {
     const [showShare, setShowShare] = useState(false);
     const [showCall, setShowCall] = useState(false);
     const [viewImage, setViewImage] = useState<string|null>(null);
+    const [showScanner, setShowScanner] = useState(false);
     
     // CHAT & MEDIA
     const [messages, setMessages] = useState<Message[]>([]);
@@ -478,6 +429,35 @@ export const IStokView: React.FC = () => {
         conn.on('error', () => { setStage('IDLE'); setErrorMsg("Conn Error"); });
     };
 
+    // --- LOGIC: SCANNER ---
+    const handleQRScan = (data: string) => {
+        setShowScanner(false);
+        playSound('CONNECT'); // Bunyi 'bip'
+        
+        // Coba parse URL dulu (jika bentuknya link)
+        try {
+            const url = new URL(data);
+            const connect = url.searchParams.get('connect');
+            const key = url.searchParams.get('key');
+            if (connect && key) {
+                joinSession(connect, key);
+                return;
+            }
+        } catch(e) {}
+
+        // Jika data mentah (JSON atau string biasa)
+        try {
+           const parsed = JSON.parse(data);
+           if(parsed.id && parsed.pin) {
+               joinSession(parsed.id, parsed.pin);
+               return;
+           }
+        } catch(e) {}
+
+        // Fallback: Jika cuma ID
+        setTargetPeerId(data);
+    };
+
     // --- LOGIC: OMNI RACE AI ---
     const handleAiAssist = async (currentText: string, setTextCallback: (t: string) => void) => {
         setIsAiThinking(true);
@@ -584,7 +564,7 @@ export const IStokView: React.FC = () => {
                         <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500 relative"><ScanLine size={24}/></div>
                         <div className="text-left relative">
                             <h3 className="text-white font-bold tracking-wide">JOIN TARGET</h3>
-                            <p className="text-[10px] text-neutral-500">Scan QR Code / Enter ID</p>
+                            <p className="text-[10px] text-neutral-500">Scan QR / Enter ID</p>
                         </div>
                     </button>
                     
@@ -605,6 +585,9 @@ export const IStokView: React.FC = () => {
     if (mode === 'HOST' || mode === 'JOIN') {
         return (
             <div className="h-[100dvh] bg-black flex flex-col items-center justify-center p-6 relative">
+                {/* QR Scanner Overlay */}
+                {showScanner && <QRScanner onScan={handleQRScan} onClose={()=>setShowScanner(false)} />}
+
                 <button onClick={()=>{setMode('SELECT'); setStage('IDLE');}} className="absolute top-6 left-6 text-neutral-500 hover:text-white flex items-center gap-2 text-xs font-bold"><ArrowLeft size={16}/> ABORT</button>
                 
                 {mode === 'HOST' ? (
@@ -626,15 +609,21 @@ export const IStokView: React.FC = () => {
                 ) : (
                     <div className="w-full max-w-sm space-y-4 animate-slide-up">
                         <div className="text-center mb-8">
-                            <ScanLine className="text-blue-500 mx-auto mb-4" size={40}/>
+                            <div onClick={()=>setShowScanner(true)} className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-blue-500/20 transition border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+                                <ScanLine className="text-blue-500" size={32}/>
+                            </div>
                             <h2 className="text-xl font-bold text-white">ESTABLISH UPLINK</h2>
-                            <p className="text-xs text-neutral-500">{stage === 'IDLE' ? 'Scan QR Code via Camera' : stage}</p>
+                            <p className="text-xs text-neutral-500">Tap icon to scan Neural Code</p>
                         </div>
+                        
                         {stage === 'IDLE' ? (
                             <>
                                 <input value={targetPeerId} onChange={e=>setTargetPeerId(e.target.value)} placeholder="TARGET ID" className="w-full bg-[#09090b] p-4 rounded-xl text-white border border-white/10 outline-none text-center font-mono focus:border-blue-500 transition-colors"/>
                                 <input value={accessPin} onChange={e=>setAccessPin(e.target.value)} placeholder="PIN" className="w-full bg-[#09090b] p-4 rounded-xl text-white border border-white/10 outline-none text-center font-mono tracking-widest focus:border-blue-500 transition-colors"/>
-                                <button onClick={()=>joinSession()} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-900/20">CONNECT</button>
+                                <div className="flex gap-3">
+                                    <button onClick={()=>setShowScanner(true)} className="p-4 bg-white/5 hover:bg-white/10 rounded-xl text-white border border-white/5"><Camera size={20}/></button>
+                                    <button onClick={()=>joinSession()} className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-900/20">CONNECT</button>
+                                </div>
                             </>
                         ) : (
                             <div className="flex justify-center"><div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div></div>
@@ -676,7 +665,7 @@ export const IStokView: React.FC = () => {
             {/* MESSAGES */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scroll bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-95">
                 {messages.map(m => (
-                    <MessageBubble key={m.id} msg={m} setViewImage={setViewImage} onBurn={(id)=>setMessages(p=>p.filter(x=>x.id!==id))} />
+                    <MessageBubble key={m.id} msg={m} setViewImage={setViewImage} onBurn={(id: string)=>setMessages(p=>p.filter(x=>x.id!==id))} />
                 ))}
                 {!isPeerOnline && <div className="flex justify-center mt-4"><span className="bg-red-500/20 text-red-500 text-[10px] px-3 py-1 rounded-full flex items-center gap-2"><WifiOff size={10}/> RECONNECTING...</span></div>}
                 <div ref={msgEndRef} />
