@@ -17,7 +17,7 @@ import {
 
 // --- HOOKS & SERVICES ---
 import useLocalStorage from '../../hooks/useLocalStorage';
-import { SidebarIStokContact, IStokSession, IStokProfile } from './components/SidebarIStokContact';
+import { SidebarIStokContact, IStokSession, IStokProfile, IStokContact } from './components/SidebarIStokContact';
 import { ShareConnection } from './components/ShareConnection'; 
 import { ConnectionNotification } from './components/ConnectionNotification';
 import { CallNotification } from './components/CallNotification';
@@ -434,6 +434,27 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
         }
     };
 
+    // --- SIDEBAR HANDLERS ---
+    const handleContactSelect = (contactOrSession: IStokSession | IStokContact) => {
+        setTargetPeerId(contactOrSession.id);
+        if ('pin' in contactOrSession && contactOrSession.pin) {
+            setAccessPin(contactOrSession.pin);
+        }
+        setShowSidebar(false);
+    };
+
+    const handleContactCall = (contact: IStokContact) => {
+        // Explicit call to connect from Contacts list
+        setTargetPeerId(contact.id);
+        setShowSidebar(false);
+        // Prompt for PIN if not stored, otherwise use logic to retrieve it (usually stored in session history, here we might need user input if fresh contact)
+        // For MVP, we pre-fill ID and focus the PIN input
+        setTimeout(() => {
+            const pinInput = document.querySelector('input[placeholder="PIN (6)"]') as HTMLInputElement;
+            if(pinInput) pinInput.focus();
+        }, 300);
+    };
+
     // --- RENDERERS ---
 
     // 1. DASHBOARD MODE (Not Connected)
@@ -461,7 +482,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                  </div>
 
                  {/* Main Dashboard Grid */}
-                 <div className="flex-1 overflow-y-auto custom-scroll space-y-6 z-10 max-w-4xl mx-auto w-full">
+                 <div className="flex-1 overflow-y-auto custom-scroll space-y-6 z-10 max-w-4xl mx-auto w-full pb-safe">
                      
                      {/* Identity Card */}
                      <div className="bg-[#09090b] border border-white/10 rounded-[32px] p-6 relative overflow-hidden group">
@@ -497,8 +518,8 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                              <div className="relative">
                                 <input 
                                     value={targetPeerId} 
-                                    onChange={e=>setTargetPeerId(e.target.value)} 
-                                    placeholder="ENTER TARGET ID OR LINK" 
+                                    onChange={e=>setTargetPeerId(e.target.value.toUpperCase())} 
+                                    placeholder="MASUKKAN ID TARGET / LINK" 
                                     className="w-full bg-[#121214] border border-white/10 p-4 rounded-2xl text-white text-center text-sm font-mono focus:border-blue-500 outline-none uppercase placeholder:text-neutral-700 transition-all focus:shadow-[0_0_20px_rgba(59,130,246,0.2)]"
                                 />
                                 <button onClick={()=>setShowScanner(true)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-white bg-white/5 rounded-xl transition-all hover:scale-110">
@@ -519,7 +540,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                                     disabled={!targetPeerId || accessPin.length < 4}
                                     className="flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2 group active:scale-95"
                                 >
-                                    {stage === 'IDLE' ? 'CONNECT (HYDRA)' : <><Loader2 size={14} className="animate-spin"/> {stage}...</>} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform"/>
+                                    {stage === 'IDLE' ? 'SAMBUNGKAN' : <><Loader2 size={14} className="animate-spin"/> {stage}...</>} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform"/>
                                 </button>
                              </div>
                          </div>
@@ -527,11 +548,11 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                          <div className="grid grid-cols-2 gap-3">
                              <button onClick={()=>setShowShare(true)} className="py-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-neutral-300 hover:text-white transition-all flex flex-col items-center gap-2 group active:scale-95">
                                  <QrCode size={20} className="text-emerald-500 group-hover:scale-110 transition-transform"/>
-                                 <span className="text-[10px] font-bold uppercase tracking-wider">SHARE MY ID</span>
+                                 <span className="text-[10px] font-bold uppercase tracking-wider">BAGIKAN ID</span>
                              </button>
                              <button onClick={()=>setShowSidebar(true)} className="py-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-neutral-300 hover:text-white transition-all flex flex-col items-center gap-2 group active:scale-95">
                                  <Users size={20} className="text-purple-500 group-hover:scale-110 transition-transform"/>
-                                 <span className="text-[10px] font-bold uppercase tracking-wider">CONTACTS</span>
+                                 <span className="text-[10px] font-bold uppercase tracking-wider">KONTAK</span>
                              </button>
                          </div>
                      </div>
@@ -552,12 +573,24 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                  {/* Modals */}
                  {showScanner && <QRScanner onScan={(val: string) => { 
                     try {
-                        const url = new URL(val);
+                        // Support full URL or just the payload
+                        const urlStr = val.startsWith('http') ? val : `https://dummy.com?${val}`;
+                        const url = new URL(urlStr);
                         const c = url.searchParams.get('connect');
                         const k = url.searchParams.get('key');
-                        if(c && k) { setTargetPeerId(c); setAccessPin(k); connectToPeer(c, k); }
-                        else { setTargetPeerId(val); }
-                    } catch { setTargetPeerId(val); }
+                        
+                        if(c && k) { 
+                            setTargetPeerId(c); 
+                            setAccessPin(k); 
+                            // Auto connect? maybe too aggressive, better to fill and let user click connect
+                            // connectToPeer(c, k); 
+                        } else { 
+                            // Raw ID scan
+                            setTargetPeerId(val); 
+                        }
+                    } catch { 
+                        setTargetPeerId(val); 
+                    }
                     setShowScanner(false);
                 }} onClose={()=>setShowScanner(false)} />}
 
@@ -568,9 +601,9 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                     onClose={()=>setShowSidebar(false)} 
                     sessions={sessions} 
                     profile={myProfile}
-                    onSelect={(s)=>{setTargetPeerId(s.id); if(s.pin) setAccessPin(s.pin); setShowSidebar(false);}}
+                    onSelect={handleContactSelect}
                     onDeleteSession={()=>{}} 
-                    onCallContact={()=>{}} 
+                    onCallContact={handleContactCall} 
                     onLogout={onLogout} 
                     onRenameSession={()=>{}} 
                     currentPeerId={null}
