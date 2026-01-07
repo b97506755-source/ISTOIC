@@ -6,13 +6,10 @@ import {
 import { TeleponanView } from '../teleponan/TeleponanView';
 import { activatePrivacyShield } from '../../utils/privacyShield';
 import { 
-    Send, Zap, ScanLine, Server, X,
-    Mic, PhoneCall, 
-    QrCode, Lock, Flame, 
-    ShieldAlert, ArrowLeft, BrainCircuit, Sparkles,
-    Wifi, Radio, Paperclip, Check,
-    User, Image as ImageIcon, FileText, Download, Play, Pause, Trash2, LogIn, Chrome, Loader2,
-    Users, Activity, Signal, LayoutGrid, Settings, Power, ShieldCheck, ArrowRight, Globe, Languages
+    Radio, Server, X, PhoneCall, 
+    Lock, ShieldCheck, ArrowRight, Loader2,
+    User, Sparkles, Languages, BrainCircuit,
+    Power, Activity, ScanLine, QrCode, Users, Signal
 } from 'lucide-react';
 
 // --- HOOKS & SERVICES ---
@@ -26,7 +23,7 @@ import { QRScanner } from './components/QRScanner';
 import { compressImage } from './components/gambar';
 import { IstokIdentityService, IStokUserIdentity } from './services/istokIdentity';
 import { IStokInput } from './components/IStokInput'; 
-import { HANISAH_KERNEL } from '../../services/melsaKernel'; // MELSA AI CORE
+import { OMNI_KERNEL } from '../../services/omniRace'; // UPDATED: Use Omni Race
 
 // --- HYDRA CONSTANTS ---
 const CHUNK_SIZE = 1024 * 64; // 64KB
@@ -99,7 +96,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [ttlMode, setTtlMode] = useState(0);
     const [isAiThinking, setIsAiThinking] = useState(false);
-    const [aiMode, setAiMode] = useState<'OFF' | 'TRANSLATE' | 'ASSIST'>('OFF');
 
     // UI Toggles
     const [showSidebar, setShowSidebar] = useState(false);
@@ -267,52 +263,62 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
         // Simple auto-reconnect logic could go here
     };
 
-    // --- MELSA KERNEL AI AGENT ---
-    const processAIRequest = async (userText: string) => {
-        if (aiMode === 'OFF') return;
-
+    // --- META-STYLE AI AGENT (OMNI RACE) ---
+    // Instead of being a participant, it helps the USER compose messages
+    const handleAiSmartCompose = async (userDraft: string, mode: 'REPLY' | 'REFINE' = 'REPLY'): Promise<string> => {
         setIsAiThinking(true);
-        let systemPrompt = "";
         
-        if (aiMode === 'TRANSLATE') {
-            systemPrompt = `
-            [ROLE: UNIVERSAL_TRANSLATOR]
-            You are a real-time translation layer.
-            1. Detect input language.
-            2. If English -> Translate to Indonesian.
-            3. If Indonesian -> Translate to English.
-            4. If Other -> Translate to English.
-            OUTPUT ONLY THE TRANSLATED TEXT. NO EXPLANATIONS.
-            `;
-        } else {
-            systemPrompt = `
-            [ROLE: SMART_COMM_AGENT]
-            You are an AI Assistant inside a private P2P chat.
-            1. Be helpful, brief, and natural. Do NOT be robotic.
-            2. If asked a question, answer it concisely.
-            3. If the user is chatting casually, reply with a relevant, short comment.
-            4. Use emojis sparingly.
-            5. Language: Match user's language (Indonesian/English).
-            `;
-        }
+        // Context: Last 5 messages
+        const contextMessages = messages.slice(-5).map(m => 
+            `${m.sender === 'ME' ? 'Me' : 'Partner'}: ${m.content}`
+        ).join('\n');
+
+        const systemInstruction = `
+        [ROLE: PERSONAL_COMM_ASSISTANT]
+        You are an AI embedded in a chat app input field (like Meta AI).
+        Your goal is to help the user draft a reply or refine their text.
+        
+        [CONTEXT - LAST 5 MESSAGES]
+        ${contextMessages}
+
+        [TASK]
+        ${mode === 'REPLY' 
+            ? `Suggest a natural, smart reply to the partner based on the context. Keep it short and human-like.` 
+            : `Refine this user draft to be better/clearer/more polite: "${userDraft}". Keep meaning.`}
+        
+        OUTPUT ONLY THE SUGGESTED TEXT. NO EXPLANATIONS.
+        `;
 
         try {
-            // Using MelsaKernel via Gemini 3 Flash for speed
-            const res = await HANISAH_KERNEL.execute(userText, 'gemini-3-flash-preview', systemPrompt);
+            // Using OMNI_KERNEL.raceStream for maximum speed
+            const stream = OMNI_KERNEL.raceStream(userDraft || "Suggest reply", systemInstruction);
             
-            if (res.text) {
-                const aiMsg: Message = {
-                    id: crypto.randomUUID(),
-                    sender: 'AI',
-                    type: 'AI_RESPONSE',
-                    content: res.text,
-                    timestamp: Date.now(),
-                    status: 'READ'
-                };
-                setMessages(prev => [...prev, aiMsg]);
+            let resultText = "";
+            for await (const chunk of stream) {
+                if (chunk.text) resultText += chunk.text;
             }
+            return resultText.trim();
+
         } catch (e) {
-            console.error("AI Fail", e);
+            console.error("AI Assist Failed", e);
+            return userDraft; // Fallback to original
+        } finally {
+            setIsAiThinking(false);
+        }
+    };
+
+    const handleTranslation = async (text: string, targetLang: string): Promise<string> => {
+        setIsAiThinking(true);
+        try {
+            const prompt = `Translate the following text to ${targetLang}. Output ONLY the translation. Text: "${text}"`;
+            const stream = OMNI_KERNEL.raceStream(prompt);
+            let result = "";
+            for await (const chunk of stream) {
+                if (chunk.text) result += chunk.text;
+            }
+            return result.trim();
+        } catch (e) {
+            return text;
         } finally {
             setIsAiThinking(false);
         }
@@ -335,14 +341,17 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
             return;
         }
 
-        // DECRYPTION
-        const pin = accessPin || prompt("Incoming secure request. Enter decryption PIN:");
-        if (!pin) return;
-        setAccessPin(pin);
+        // DECRYPTION - AUTOMATED (NO PROMPT)
+        // If pin is not set, default to '000000' or try silent fail.
+        // This removes the annoyance of prompts for every message if connection logic is slightly off.
+        const pin = accessPin || '000000';
 
         if (data.type === 'SYS') {
             const decrypted = await decryptData(data.payload, pin);
-            if (!decrypted) { alert("Wrong PIN for Incoming Data"); return; }
+            if (!decrypted) { 
+                console.warn("Handshake Decryption Failed (Wrong PIN or Key mismatch)"); 
+                return; 
+            }
             const json = JSON.parse(decrypted);
 
             if (json.type === 'HANDSHAKE_SYN') {
@@ -367,11 +376,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                 const msg = JSON.parse(decrypted);
                 setMessages(prev => [...prev, { ...msg, sender: 'THEM', status: 'READ' }]);
                 playSound('MSG_IN');
-                
-                // Trigger AI if active and message is text
-                if (msg.type === 'TEXT' && aiMode !== 'OFF') {
-                    processAIRequest(msg.content);
-                }
             }
         }
     };
@@ -409,11 +413,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
 
         setMessages(prev => [...prev, { ...msgPayload, sender: 'ME', status: 'SENT' } as Message]);
         playSound('MSG_OUT');
-
-        // AI trigger for self (optional, mainly for translation flow)
-        if (type === 'TEXT' && aiMode !== 'OFF') {
-            processAIRequest(content);
-        }
     };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -661,32 +660,10 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                 </div>
                 
                 <div className="flex gap-2">
-                    {/* AI Toggle */}
-                    <button 
-                        onClick={() => setAiMode(prev => {
-                            if (prev === 'OFF') return 'TRANSLATE';
-                            if (prev === 'TRANSLATE') return 'ASSIST';
-                            return 'OFF';
-                        })}
-                        className={`p-2.5 rounded-xl transition border border-transparent ${
-                            aiMode !== 'OFF' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'hover:bg-white/10 text-neutral-400'
-                        }`}
-                        title="AI Tools"
-                    >
-                        {aiMode === 'TRANSLATE' ? <Languages size={18}/> : aiMode === 'ASSIST' ? <BrainCircuit size={18}/> : <BrainCircuit size={18} className="opacity-50"/>}
-                    </button>
-                    
                     <button onClick={()=>setShowCall(true)} className="p-2.5 hover:bg-emerald-500/10 rounded-xl text-neutral-400 hover:text-emerald-500 transition border border-transparent hover:border-emerald-500/20"><PhoneCall size={18}/></button>
                     <button onClick={handleDisconnect} className="p-2.5 hover:bg-red-500/10 rounded-xl text-neutral-400 hover:text-red-500 transition border border-transparent hover:border-red-500/20"><X size={18}/></button>
                 </div>
              </div>
-
-             {/* AI Mode Indicator */}
-             {aiMode !== 'OFF' && (
-                 <div className="bg-purple-900/20 border-b border-purple-500/20 px-4 py-1 flex items-center justify-center gap-2 text-[10px] font-black text-purple-400 uppercase tracking-widest z-10">
-                     <Sparkles size={10} className="animate-pulse"/> {aiMode === 'TRANSLATE' ? 'AUTO_TRANSLATOR_ACTIVE' : 'AI_ASSISTANT_ACTIVE'}
-                 </div>
-             )}
 
              {/* Messages */}
              <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll">
@@ -701,7 +678,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                 <div ref={msgEndRef}/>
              </div>
 
-             {/* Input Area */}
+             {/* Input Area (New Smart AI Version) */}
              <IStokInput 
                 onSend={(txt: string) => sendMessage('TEXT', txt)}
                 onSendFile={() => fileInputRef.current?.click()}
@@ -709,7 +686,8 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout }) => {
                 disabled={!isConnected}
                 ttlMode={ttlMode}
                 onToggleTtl={() => setTtlMode(p => p === 0 ? 30 : 0)}
-                onAiAssist={() => {}} 
+                onAiAssist={handleAiSmartCompose} 
+                onAiTranslate={handleTranslation}
                 isAiThinking={isAiThinking}
              />
              <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />

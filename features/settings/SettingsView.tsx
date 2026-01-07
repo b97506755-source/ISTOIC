@@ -5,7 +5,7 @@ import {
     User, UserCheck, Database, Palette, Globe, Shield, 
     X, Check, LogOut, ChevronRight, Moon, Sun, Monitor,
     Save, RefreshCw, Cpu, Zap, Wifi, Activity, Layers, Download, Upload,
-    Fingerprint, Lock, Key, Brain, Mic, Terminal, Sparkles, Server, ToggleLeft, ToggleRight, Edit3
+    Fingerprint, Lock, Key, Brain, Mic, Terminal, Sparkles, Server, ToggleLeft, ToggleRight, Edit3, CheckCircle2
 } from 'lucide-react';
 import { TRANSLATIONS, getLang } from '../../services/i18n';
 import { IstokIdentityService } from '../istok/services/istokIdentity';
@@ -23,6 +23,20 @@ import { type FeatureID } from '../../constants';
 interface SettingsViewProps {
     onNavigate: (feature: FeatureID) => void;
 }
+
+// --- CONSTANTS ---
+const THEME_COLORS: Record<string, string> = {
+  cyan: '#00F0FF',
+  lime: '#CCFF00',
+  purple: '#BF00FF',
+  orange: '#FF5F00',
+  silver: '#94a3b8', // Slightly darker for visibility in selector
+  blue: '#0066FF',
+  green: '#00FF94',
+  red: '#FF003C',
+  pink: '#FF0099',
+  gold: '#FFD700'
+};
 
 // --- SUB-COMPONENTS ---
 
@@ -259,8 +273,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onNavigate }) => {
 
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-skin-border pb-6 shrink-0 gap-4">
-                <div>
-                    <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase">
+                <div className="w-full">
+                    {/* Fixed: Responsive Font Size and wrapping for small screens (XR) */}
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase break-words leading-[0.85]">
                         SYSTEM <span className="text-accent">CONFIG</span>
                     </h1>
                     <p className="text-[10px] tech-mono font-bold text-skin-muted uppercase tracking-[0.3em] mt-2">
@@ -270,7 +285,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onNavigate }) => {
                 <button 
                     onClick={handleSavePersona}
                     disabled={isSaving}
-                    className="px-6 py-3 bg-skin-text text-skin-card hover:bg-accent hover:text-black rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                    className="px-6 py-3 bg-skin-text text-skin-card hover:bg-accent hover:text-black rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-50 shrink-0"
                 >
                     {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} {isSaving ? t.saved : t.save}
                 </button>
@@ -318,6 +333,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({ onNavigate }) => {
                                 ))}
                             </div>
                         </div>
+
+                        {/* ACCENT PALETTE - RESTORED */}
+                        <div className="space-y-3 col-span-1 md:col-span-2 border-t border-skin-border pt-4">
+                            <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest pl-1">NEURAL ACCENT (PALETTE)</label>
+                            <div className="flex flex-wrap gap-3 p-3 bg-skin-surface rounded-xl border border-skin-border">
+                                {Object.entries(THEME_COLORS).map(([key, color]) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => setAppTheme(key)}
+                                        className={`relative w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${appTheme === key ? 'border-skin-text scale-110 shadow-lg' : 'border-transparent hover:scale-105'}`}
+                                        style={{ backgroundColor: color }}
+                                        aria-label={`Select ${key} theme`}
+                                    >
+                                        {appTheme === key && <CheckCircle2 size={16} className="text-black/50 mix-blend-hard-light" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                     </div>
                 </SettingsSection>
 
