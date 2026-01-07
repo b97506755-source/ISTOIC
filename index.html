@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id" class="dark">
   <head>
@@ -6,8 +7,6 @@
     <link rel="manifest" href="/manifest.json" />
     
     <!-- CSP: Security Policy (Hardened) -->
-    <!-- Removed 'unsafe-eval' requirement unless absolutely necessary for specific libraries in dev mode -->
-    <!-- Added strict-dynamic for script loading control where possible -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://webrtc.github.io https://apis.google.com https://accounts.google.com https://*.firebaseapp.com https://www.googletagmanager.com;
@@ -47,16 +46,17 @@
     <!-- CRITICAL FOR IOS PWA: viewport-fit=cover removes white bars on notch devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
+    <!-- Status Bar Style for iOS -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#000000" />
     <meta name="color-scheme" content="dark light" />
 
     <!-- PWA Settings -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="IStoicAI" />
     
-    <!-- iOS Icons (Add specific sizes if needed, here using fallback) -->
+    <!-- iOS Icons -->
     <link rel="apple-touch-icon" href="https://grainy-gradients.vercel.app/noise.svg" />
 
     <title>IStoicAI v13.5 | Personal OS</title>

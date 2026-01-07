@@ -61,11 +61,12 @@ export const ConnectionNotification: React.FC<ConnectionNotificationProps> = ({
     return (
         // WRAPPER UTAMA: Z-INDEX TERTINGGI (999999) - ABSOLUTE TOP PRIORITY
         // Uses fixed position to escape any overflow containers
+        // Added top padding to respect Notch/Dynamic Island
         <div 
             className={`
                 fixed top-0 left-0 right-0 z-[999999] 
                 flex justify-center items-start 
-                pt-[max(env(safe-area-inset-top),1rem)] px-4 pb-4
+                pt-[max(env(safe-area-inset-top)+0.5rem,1rem)] px-4 pb-4
                 transition-all duration-500 cubic-bezier(0.34, 1.56, 0.64, 1) transform
                 ${isVisible ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-full opacity-0 scale-95'}
                 pointer-events-none 

@@ -9,7 +9,7 @@ import {
     Radio, Server, X, PhoneCall, 
     Lock, ShieldCheck, ArrowRight, Loader2,
     User, Sparkles, Languages, BrainCircuit,
-    Power, Activity, ScanLine, QrCode, Users, Signal
+    Power, Activity, ScanLine, QrCode, Users, Signal, RefreshCw
 } from 'lucide-react';
 
 // --- HOOKS & SERVICES ---
@@ -48,8 +48,8 @@ type ConnectionStage = 'IDLE' | 'LOCATING' | 'HANDSHAKE' | 'SECURE' | 'RECONNECT
 
 interface IStokViewProps {
     onLogout: () => void;
-    globalPeer?: any; // New Prop
-    initialAcceptedConnection?: any; // New Prop
+    globalPeer?: any; 
+    initialAcceptedConnection?: any;
 }
 
 // --- UTILS ---
@@ -93,6 +93,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const [targetPeerId, setTargetPeerId] = useState('');
     const [accessPin, setAccessPin] = useState('');
     const [isConnected, setIsConnected] = useState(false);
+    const [isPeerAlive, setIsPeerAlive] = useState(false); // Local check for UI
     
     // Chat Data
     const [messages, setMessages] = useState<Message[]>([]);
@@ -111,7 +112,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const [incomingCall, setIncomingCall] = useState<any>(null);
 
     // REFS
-    const peerRef = useRef<any>(globalPeer || null);
     const connRef = useRef<any>(null);
     const heartbeatRef = useRef<any>(null);
     const msgEndRef = useRef<HTMLDivElement>(null);
@@ -123,7 +123,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         activatePrivacyShield();
         
         if (!identity || !identity.istokId) {
-            console.warn("IStok Access Denied: No Global Identity Found.");
             onLogout();
             return;
         }
@@ -135,238 +134,177 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             photoURL: identity.photoURL,
             created: Date.now()
         });
+
+        // --- GLOBAL PEER SYNC ---
+        // Monitor global peer status constantly
+        const checkPeerStatus = () => {
+            if (globalPeer && !globalPeer.destroyed && !globalPeer.disconnected) {
+                setIsPeerAlive(true);
+            } else {
+                setIsPeerAlive(false);
+            }
+        };
+
+        const interval = setInterval(checkPeerStatus, 1000);
+        checkPeerStatus(); // Immediate check
         
-        // If not global peer provided, try to init (Fallback)
-        if (!globalPeer) {
-            initPeer(identity.istokId);
-        } else {
-            // Attach listeners to existing peer if not already
+        if (globalPeer) {
             setupPeerListeners(globalPeer);
         }
 
-        // Check if we entered via a notification click (Accepted Request)
+        // Handle Accepted Connection from Notification
         if (initialAcceptedConnection) {
-            const { conn } = initialAcceptedConnection;
-            connRef.current = conn;
-            setTargetPeerId(conn.peer);
-            
-            // Send ACK immediately since user already clicked Accept
-            const sendAck = async () => {
-                 const ack = JSON.stringify({ type: 'HANDSHAKE_ACK' });
-                 // Try default pin or prompt? For now assuming 000000 if not set
-                 const enc = await encryptData(ack, '000000'); 
-                 if (enc) conn.send({ type: 'SYS', payload: enc });
-                 
-                 setIsConnected(true);
-                 setStage('SECURE');
-                 playSound('CONNECT');
-                 
-                 // Attach listener
-                 conn.on('data', (d: any) => handleIncomingData(d, conn));
-                 conn.on('close', handleDisconnect);
-            };
-            sendAck();
+            handleAcceptedConnection(initialAcceptedConnection);
         }
 
+        // URL Params
         const urlParams = new URLSearchParams(window.location.search);
         if(urlParams.get('connect') && urlParams.get('key')) {
             setTargetPeerId(urlParams.get('connect')!);
             setAccessPin(urlParams.get('key')!);
         }
-    }, [identity]);
 
-    // Scroll to bottom
+        return () => clearInterval(interval);
+    }, [identity, globalPeer]);
+
     useEffect(() => {
         msgEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isAiThinking]);
 
-    // --- HYDRA OMNI-RACE NETWORK LAYER (PeerJS + TURN) ---
-    
-    const setupPeerListeners = (peer: any) => {
-        // Clear old listeners to avoid dupes
-        peer.off('connection');
-        peer.off('call');
+    const handleAcceptedConnection = async (data: any) => {
+        const { conn } = data;
+        connRef.current = conn;
+        setTargetPeerId(conn.peer);
         
-        peer.on('connection', (conn: any) => {
-             // Handle new connection while inside IStokView
-             conn.on('data', (data: any) => {
-                 // If we are already connected to someone else, we might want to alert?
-                 // For now, allow incoming handshake requests to override/alert
-                 if (data.type === 'SYS') {
-                     // Check payload type first? No, need decrypt.
-                     // Just pass to handler, handleIncomingData will check type
-                     // But we need to separate Handshake SYN from ongoing chat data
-                     // Assuming new conn object means new session
-                     // Peek data
-                 }
-                 handleIncomingData(data, conn);
-             });
-             conn.on('close', () => handleDisconnect());
-        });
+        // Setup listener explicitly
+        conn.on('data', (d: any) => handleIncomingData(d, conn));
+        conn.on('close', handleDisconnect);
 
+        const ack = JSON.stringify({ type: 'HANDSHAKE_ACK' });
+        const enc = await encryptData(ack, '000000'); 
+        if (enc) conn.send({ type: 'SYS', payload: enc });
+        
+        setIsConnected(true);
+        setStage('SECURE');
+        playSound('CONNECT');
+    };
+
+    // --- LISTENER SETUP ---
+    const setupPeerListeners = (peer: any) => {
+        peer.off('call'); // Clear previous to be safe
         peer.on('call', (call: any) => {
              setIncomingCall(call);
              playSound('MSG_IN');
         });
-    };
-
-    const initPeer = async (myId: string) => {
-        if (peerRef.current) return;
-
-        try {
-            const { Peer } = await import('peerjs');
-            
-            let iceServers = [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-            ];
-
-            const meteredKey = process.env.VITE_METERED_API_KEY;
-            const meteredDomain = process.env.VITE_METERED_DOMAIN || 'istoic.metered.live';
-
-            if (meteredKey) {
-                try {
-                    const response = await fetch(`https://${meteredDomain}/api/v1/turn/credentials?apiKey=${meteredKey}`);
-                    const ice = await response.json();
-                    if (Array.isArray(ice)) {
-                        iceServers = [...ice, ...iceServers]; 
-                        console.log("[ISTOK] HYDRA NETWORK: TURN RELAY ACTIVE");
-                    }
-                } catch (e) {
-                    console.warn("[ISTOK] TURN Fetch Failed.", e);
-                }
-            }
-            
-            const peer = new Peer(myId, {
-                debug: 0,
-                config: { 
-                    iceServers: iceServers,
-                    iceTransportPolicy: 'all', 
-                    iceCandidatePoolSize: 10   
-                },
-                pingInterval: 5000,
-            } as any);
-
-            peer.on('open', (id) => {
-                console.log('[ISTOK] Secure ID Active:', id);
-            });
-            
-            setupPeerListeners(peer);
-
-            peer.on('error', (err) => {
-                console.error("[ISTOK] Network Error:", err);
-                if (err.type === 'peer-unavailable') {
-                    setStage('IDLE');
-                    alert("Target tidak ditemukan atau offline.");
-                }
-            });
-
-            peerRef.current = peer;
-        } catch(e) {
-            console.error("[ISTOK] Peer Init Failed", e);
-        }
+        
+        peer.off('connection');
+        peer.on('connection', (conn: any) => {
+             conn.on('data', (data: any) => {
+                 if (data.type === 'SYS' && !isConnected) {
+                    // Logic handled by App.tsx for notification, but we can also react locally
+                 }
+                 if (isConnected && conn.peer === targetPeerId) {
+                     handleIncomingData(data, conn);
+                 }
+             });
+        });
     };
 
     // --- CONNECTION LOGIC ---
     const connectToPeer = (id: string, pin: string) => {
-        if(!peerRef.current || !identity) return;
+        if(!globalPeer || !identity) {
+            alert("Sistem Hydra belum siap. Tunggu sebentar...");
+            return;
+        }
+        
         setStage('LOCATING');
         
-        const conn = peerRef.current.connect(id, { 
-            reliable: true,
-            serialization: 'json'
-        });
-        
-        conn.on('open', async () => {
-            setStage('HANDSHAKE');
-            const handshake = JSON.stringify({ 
-                type: 'HANDSHAKE_SYN', 
-                identity: identity.displayName,
-                photo: identity.photoURL,
-                email: identity.email 
+        try {
+            const conn = globalPeer.connect(id, { 
+                reliable: true,
+                serialization: 'json'
             });
-            const encrypted = await encryptData(handshake, pin);
-            if(encrypted) conn.send({ type: 'SYS', payload: encrypted });
             
-            // Assign ref immediately so we track this connection
-            connRef.current = conn;
-        });
+            if (!conn) {
+                setStage('IDLE');
+                alert("Gagal membuat koneksi (PeerJS Error). Coba refresh.");
+                return;
+            }
+            
+            conn.on('open', async () => {
+                setStage('HANDSHAKE');
+                const handshake = JSON.stringify({ 
+                    type: 'HANDSHAKE_SYN', 
+                    identity: identity.displayName,
+                    photo: identity.photoURL,
+                    email: identity.email 
+                });
+                const encrypted = await encryptData(handshake, pin);
+                if(encrypted) conn.send({ type: 'SYS', payload: encrypted });
+                
+                connRef.current = conn;
+            });
 
-        // BIND DATA LISTENER IMMEDIATELY
-        conn.on('data', (d: any) => handleIncomingData(d, conn));
-        
-        conn.on('close', handleDisconnect);
-        conn.on('error', (e: any) => { 
-            console.error("Conn Error", e);
-            setStage('IDLE'); 
-        });
+            conn.on('data', (d: any) => handleIncomingData(d, conn));
+            
+            conn.on('close', handleDisconnect);
+            conn.on('error', (e: any) => { 
+                console.error("Conn Error", e);
+                setStage('IDLE'); 
+            });
+
+        } catch (e) {
+            console.error("Connect Exception", e);
+            setStage('IDLE');
+        }
     };
 
     const handleDisconnect = () => {
-        // Only disconnect if it matches active connection
         if (isConnected) {
             setIsConnected(false);
             setStage('RECONNECTING');
         }
     };
 
+    const handleForceReconnect = () => {
+        if (globalPeer && globalPeer.disconnected) {
+            globalPeer.reconnect();
+        } else if (!globalPeer) {
+            window.location.reload();
+        }
+    };
+
+    // ... (Smart Compose & Translation Logic - same as before) ...
     const handleAiSmartCompose = async (userDraft: string, mode: 'REPLY' | 'REFINE' = 'REPLY'): Promise<string> => {
         setIsAiThinking(true);
-        const contextMessages = messages.slice(-5).map(m => 
-            `${m.sender === 'ME' ? 'Me' : 'Partner'}: ${m.content}`
-        ).join('\n');
-
-        const systemInstruction = `
-        [ROLE: PERSONAL_COMM_ASSISTANT]
-        [CONTEXT - LAST 5 MESSAGES]
-        ${contextMessages}
-        [TASK]
-        ${mode === 'REPLY' 
-            ? `Suggest a natural, smart reply to the partner based on the context. Keep it short and human-like.` 
-            : `Refine this user draft to be better/clearer/more polite: "${userDraft}". Keep meaning.`}
-        OUTPUT ONLY THE SUGGESTED TEXT. NO EXPLANATIONS.
-        `;
-
+        const contextMessages = messages.slice(-5).map(m => `${m.sender === 'ME' ? 'Me' : 'Partner'}: ${m.content}`).join('\n');
+        const systemInstruction = `[ROLE: PERSONAL_COMM_ASSISTANT] [CONTEXT] ${contextMessages} [TASK] ${mode === 'REPLY' ? `Suggest reply.` : `Refine: "${userDraft}".`} OUTPUT ONLY TEXT.`;
         try {
             const stream = OMNI_KERNEL.raceStream(userDraft || "Suggest reply", systemInstruction);
             let resultText = "";
-            for await (const chunk of stream) {
-                if (chunk.text) resultText += chunk.text;
-            }
+            for await (const chunk of stream) if (chunk.text) resultText += chunk.text;
             return resultText.trim();
-        } catch (e) {
-            return userDraft;
-        } finally {
-            setIsAiThinking(false);
-        }
+        } catch (e) { return userDraft; } finally { setIsAiThinking(false); }
     };
 
     const handleTranslation = async (text: string, targetLang: string): Promise<string> => {
         setIsAiThinking(true);
         try {
-            const prompt = `Translate the following text to ${targetLang}. Output ONLY the translation. Text: "${text}"`;
+            const prompt = `Translate to ${targetLang}: "${text}". OUTPUT ONLY TRANSLATION.`;
             const stream = OMNI_KERNEL.raceStream(prompt);
             let result = "";
-            for await (const chunk of stream) {
-                if (chunk.text) result += chunk.text;
-            }
+            for await (const chunk of stream) if (chunk.text) result += chunk.text;
             return result.trim();
-        } catch (e) {
-            return text;
-        } finally {
-            setIsAiThinking(false);
-        }
+        } catch (e) { return text; } finally { setIsAiThinking(false); }
     };
 
     const handleIncomingData = async (data: any, conn: any) => {
-        // CHUNK HANDLING
         if (data.type === 'CHUNK') {
             const { id, idx, total, chunk } = data;
             if (!chunkBuffer.current[id]) chunkBuffer.current[id] = { chunks: new Array(total), count: 0, total };
             const buf = chunkBuffer.current[id];
             buf.chunks[idx] = chunk;
             buf.count++;
-            
             if (buf.count === total) {
                 const fullPayload = buf.chunks.join('');
                 delete chunkBuffer.current[id];
@@ -376,25 +314,15 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         }
 
         const pin = accessPin || '000000';
-
         if (data.type === 'SYS') {
             const decrypted = await decryptData(data.payload, pin);
-            if (!decrypted) { 
-                console.warn("Handshake Decryption Failed (Wrong PIN or Key mismatch)"); 
-                return; 
-            }
+            if (!decrypted) return;
             const json = JSON.parse(decrypted);
 
             if (json.type === 'HANDSHAKE_SYN') {
-                setIncomingRequest({ 
-                    peerId: conn.peer, 
-                    identity: json.identity, 
-                    conn 
-                });
+                setIncomingRequest({ peerId: conn.peer, identity: json.identity, conn });
                 playSound('MSG_IN');
             } else if (json.type === 'HANDSHAKE_ACK') {
-                // CALLER LOGIC: CONNECTED!
-                console.log("[ISTOK] Handshake ACK Received. Secure Channel Open.");
                 setIsConnected(true);
                 setStage('SECURE');
                 playSound('CONNECT');
@@ -413,37 +341,22 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         }
     };
 
-    // --- SENDING LOGIC ---
     const sendMessage = async (type: string, content: string, extraData: any = {}) => {
         if (!connRef.current || !isConnected) return;
-
-        const msgPayload = {
-            id: crypto.randomUUID(),
-            type,
-            content,
-            timestamp: Date.now(),
-            ttl: ttlMode,
-            ...extraData
-        };
-
+        const msgPayload = { id: crypto.randomUUID(), type, content, timestamp: Date.now(), ttl: ttlMode, ...extraData };
         const strPayload = JSON.stringify(msgPayload);
         const encrypted = await encryptData(strPayload, accessPin);
-        
         if (!encrypted) return;
 
         if (encrypted.length > CHUNK_SIZE) {
             const chunkId = crypto.randomUUID();
             const totalChunks = Math.ceil(encrypted.length / CHUNK_SIZE);
             for (let i = 0; i < totalChunks; i++) {
-                connRef.current.send({
-                    type: 'CHUNK', id: chunkId, idx: i, total: totalChunks,
-                    chunk: encrypted.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)
-                });
+                connRef.current.send({ type: 'CHUNK', id: chunkId, idx: i, total: totalChunks, chunk: encrypted.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE) });
             }
         } else {
             connRef.current.send({ type: 'MSG', payload: encrypted });
         }
-
         setMessages(prev => [...prev, { ...msgPayload, sender: 'ME', status: 'SENT' } as Message]);
         playSound('MSG_OUT');
     };
@@ -451,7 +364,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if(e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            if(file.size > 10 * 1024 * 1024) { alert("Max 10MB (Hydra Limit)"); return; }
+            if(file.size > 10 * 1024 * 1024) { alert("Max 10MB"); return; }
             if(file.type.startsWith('image/')) {
                 const compressed = await compressImage(file);
                 sendMessage('IMAGE', compressed.base64, { size: compressed.size, mimeType: compressed.mimeType });
@@ -466,29 +379,16 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         }
     };
 
-    // --- SIDEBAR HANDLERS ---
-    const handleContactSelect = (contactOrSession: IStokSession | IStokContact) => {
-        setTargetPeerId(contactOrSession.id);
-        if ('pin' in contactOrSession && contactOrSession.pin) {
-            setAccessPin(contactOrSession.pin);
-        }
-        setShowSidebar(false);
-    };
-
-    const handleContactCall = (contact: IStokContact) => {
-        setTargetPeerId(contact.id);
-        setShowSidebar(false);
-        setTimeout(() => {
-            const pinInput = document.querySelector('input[placeholder="PIN (6)"]') as HTMLInputElement;
-            if(pinInput) pinInput.focus();
-        }, 300);
-    };
+    // --- SIDEBAR HANDLERS (Same) ---
+    const handleContactSelect = (s: IStokSession | IStokContact) => { setTargetPeerId(s.id); if ('pin' in s && s.pin) setAccessPin(s.pin); setShowSidebar(false); };
+    const handleContactCall = (c: IStokContact) => { setTargetPeerId(c.id); setShowSidebar(false); setTimeout(() => { const p = document.querySelector('input[placeholder="PIN (6)"]') as HTMLInputElement; if(p) p.focus(); }, 300); };
 
     // --- RENDERERS ---
 
     // 1. DASHBOARD MODE (Not Connected)
     if (!isConnected) {
         return (
+            // Full height using dvh for mobile address bar fix
             <div className="h-[100dvh] bg-[#050505] flex flex-col p-4 md:p-8 relative font-sans text-white overflow-hidden">
                  
                  {/* Top Navigation */}
@@ -500,8 +400,8 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                          <div>
                              <h1 className="font-black text-xl italic tracking-tighter uppercase">ISTOK <span className="text-emerald-500">SECURE</span></h1>
                              <div className="flex items-center gap-2 text-[9px] font-mono text-neutral-500">
-                                <span className={`w-1.5 h-1.5 rounded-full ${peerRef.current?.id ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
-                                {peerRef.current?.id ? 'HYDRA_READY' : 'OFFLINE'}
+                                <span className={`w-1.5 h-1.5 rounded-full ${isPeerAlive ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                {isPeerAlive ? 'HYDRA_READY' : <span className="text-red-500 animate-pulse cursor-pointer" onClick={handleForceReconnect}>RECONNECTING...</span>}
                              </div>
                          </div>
                      </div>
@@ -566,7 +466,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                                 />
                                 <button 
                                     onClick={()=>connectToPeer(targetPeerId, accessPin)} 
-                                    disabled={!targetPeerId || accessPin.length < 4}
+                                    disabled={!targetPeerId || accessPin.length < 4 || !isPeerAlive}
                                     className="flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2 group active:scale-95"
                                 >
                                     {stage === 'IDLE' ? 'SAMBUNGKAN' : <><Loader2 size={14} className="animate-spin"/> {stage}...</>} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform"/>
@@ -589,7 +489,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                      {/* Radar / Status Footer */}
                      <div className="flex items-center justify-between px-2 opacity-50">
                          <div className="flex items-center gap-4 text-[9px] font-mono">
-                             <span className="flex items-center gap-1"><Signal size={10}/> P2P: {peerRef.current ? 'ACTIVE' : 'INIT'}</span>
+                             <span className="flex items-center gap-1"><Signal size={10}/> P2P: {isPeerAlive ? 'ACTIVE' : 'INIT'}</span>
                              <span className="flex items-center gap-1"><Server size={10}/> TURN: {process.env.VITE_METERED_API_KEY ? 'TITANIUM' : 'STANDARD'}</span>
                          </div>
                          <div className="text-[9px] font-black uppercase tracking-[0.2em]">V25.0_SECURE</div>
@@ -606,16 +506,8 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                         const url = new URL(urlStr);
                         const c = url.searchParams.get('connect');
                         const k = url.searchParams.get('key');
-                        
-                        if(c && k) { 
-                            setTargetPeerId(c); 
-                            setAccessPin(k); 
-                        } else { 
-                            setTargetPeerId(val); 
-                        }
-                    } catch { 
-                        setTargetPeerId(val); 
-                    }
+                        if(c && k) { setTargetPeerId(c); setAccessPin(k); } else { setTargetPeerId(val); }
+                    } catch { setTargetPeerId(val); }
                     setShowScanner(false);
                 }} onClose={()=>setShowScanner(false)} />}
 
@@ -634,7 +526,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                     currentPeerId={null}
                 />
 
-                {/* INCOMING CONNECTION NOTIFICATION (Fixed High Z-Index) */}
+                {/* INCOMING CONNECTION NOTIFICATION (Fixed High Z-Index) - Managed via App.tsx but also locally if needed */}
                 {incomingRequest && (
                     <ConnectionNotification 
                         identity={incomingRequest.identity} 
@@ -643,7 +535,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                             const { conn } = incomingRequest;
                             connRef.current = conn;
                             const ack = JSON.stringify({ type: 'HANDSHAKE_ACK' });
-                            // Force default PIN if not set to unblock flow?
                             const pin = accessPin || '000000';
                             const enc = await encryptData(ack, pin);
                             if(enc) conn.send({ type: 'SYS', payload: enc });
@@ -721,11 +612,10 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
              <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
 
             
-            {showCall && <TeleponanView onClose={()=>setShowCall(false)} existingPeer={peerRef.current} initialTargetId={targetPeerId} incomingCall={incomingCall} secretPin={accessPin} />}
+            {showCall && <TeleponanView onClose={()=>setShowCall(false)} existingPeer={globalPeer} initialTargetId={targetPeerId} incomingCall={incomingCall} secretPin={accessPin} />}
             
             {incomingCall && !showCall && <CallNotification identity="Secure Peer" onAnswer={()=>setShowCall(true)} onDecline={()=>{incomingCall.close(); setIncomingCall(null);}} />}
             
-            {/* Image Viewer */}
             {viewImage && (
                 <div className="fixed inset-0 z-[3000] bg-black/95 backdrop-blur flex items-center justify-center p-4 animate-fade-in" onClick={() => setViewImage(null)}>
                     <img src={viewImage} className="max-w-full max-h-full rounded-lg shadow-2xl border border-white/10" alt="Secure Content" />
