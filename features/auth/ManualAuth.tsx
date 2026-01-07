@@ -11,7 +11,7 @@ import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailA
 import { IstokIdentityService } from '../istok/services/istokIdentity';
 import { setSystemPin } from '../../utils/crypto';
 
-// --- SUB-COMPONENT: REGISTER MANUAL (CODE FLOW) ---
+// --- SUB-COMPONENT: REGISTER MANUAL (REAL EMAIL OTP) ---
 export const RegisterManual: React.FC<{ onBack: () => void, onSuccess: () => void }> = ({ onBack, onSuccess }) => {
     const [step, setStep] = useState<'EMAIL' | 'CODE' | 'PASSWORD'>('EMAIL');
     const [email, setEmail] = useState('');
@@ -19,27 +19,83 @@ export const RegisterManual: React.FC<{ onBack: () => void, onSuccess: () => voi
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    
+    // Server-side code simulation (In memory for client-side verify)
+    const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
 
     const handleSendCode = async () => {
-        if (!email.includes('@')) { setError("Email tidak valid"); return; }
+        if (!email.includes('@') || !email.includes('.')) { 
+            setError("Format email tidak valid"); 
+            return; 
+        }
+
         setLoading(true);
         setError('');
-        
-        // Simulasi pengiriman kode (Dalam production gunakan Firebase Email Link / Cloud Function)
-        setTimeout(() => {
+
+        // 1. Generate 6-Digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedOtp(otp);
+
+        // 2. Prepare EmailJS Payload
+        // Pastikan Anda sudah setup .env dengan:
+        // VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY
+        const serviceId = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID;
+        const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
+        const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
+
+        // Fallback untuk development jika env belum diset (Simulasi log)
+        if (!serviceId || !templateId || !publicKey) {
+            console.warn("DEV MODE: EmailJS keys missing. OTP logged to console:", otp);
+            setTimeout(() => {
+                setLoading(false);
+                setStep('CODE');
+                alert(`[DEV_MODE] EmailJS belum dikonfigurasi. Kode OTP Anda: ${otp}`);
+            }, 1500);
+            return;
+        }
+
+        try {
+            const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service_id: serviceId,
+                    template_id: templateId,
+                    user_id: publicKey,
+                    template_params: {
+                        to_email: email,
+                        otp_code: otp,
+                        company_name: "IStoicAI Secure Terminal"
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Gagal mengirim email. Cek koneksi atau kuota.");
+            }
+
             setLoading(false);
             setStep('CODE');
-            // Di real app, trigger firebase.auth().sendSignInLinkToEmail(email, ...)
-        }, 1500);
+        } catch (e: any) {
+            console.error(e);
+            setError("Gagal mengirim kode. " + e.message);
+            setLoading(false);
+        }
     };
 
     const handleVerifyCode = () => {
-        if (code.length < 4) { setError("Kode tidak valid"); return; }
+        if (code !== generatedOtp) { 
+            setError("Kode verifikasi salah!"); 
+            return; 
+        }
+        
         setLoading(true);
+        // Artificial delay for UX
         setTimeout(() => {
             setLoading(false);
             setStep('PASSWORD');
-        }, 1000);
+            setError('');
+        }, 800);
     };
 
     const handleRegister = async () => {
@@ -61,7 +117,9 @@ export const RegisterManual: React.FC<{ onBack: () => void, onSuccess: () => voi
 
             onSuccess();
         } catch (e: any) {
-            setError(e.message);
+            let msg = e.message;
+            if (msg.includes('email-already-in-use')) msg = "Email sudah terdaftar.";
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -74,7 +132,7 @@ export const RegisterManual: React.FC<{ onBack: () => void, onSuccess: () => voi
                 <p className="text-[10px] text-neutral-500 font-mono mt-1">SECURE ENCRYPTED REGISTRATION</p>
             </div>
 
-            {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center mb-4">{error}</div>}
+            {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center mb-4 flex items-center justify-center gap-2"><AlertTriangle size={12}/> {error}</div>}
 
             {step === 'EMAIL' && (
                 <div className="space-y-4">
@@ -89,30 +147,37 @@ export const RegisterManual: React.FC<{ onBack: () => void, onSuccess: () => voi
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
                         </div>
                     </div>
-                    <button onClick={handleSendCode} disabled={loading} className="w-full py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all">
-                        {loading ? <Loader2 className="animate-spin"/> : <Send size={16}/>} KIRIM KODE VERIFIKASI
+                    <button onClick={handleSendCode} disabled={loading} className="w-full py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-70">
+                        {loading ? <Loader2 className="animate-spin" size={16}/> : <Send size={16}/>} KIRIM KODE VERIFIKASI
                     </button>
+                    <p className="text-[9px] text-neutral-600 text-center leading-relaxed px-4">
+                        Kode 6-digit akan dikirim ke inbox email Anda untuk memverifikasi kepemilikan.
+                    </p>
                 </div>
             )}
 
             {step === 'CODE' && (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-fade-in">
                      <p className="text-xs text-center text-neutral-400">Kode dikirim ke <span className="text-white font-bold">{email}</span></p>
                      <div className="relative">
                         <input 
-                            type="text" maxLength={6} value={code} onChange={e => setCode(e.target.value)}
+                            type="text" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/[^0-9]/g, ''))}
                             className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 text-center text-2xl font-mono text-white focus:border-emerald-500 outline-none tracking-[0.5em]"
                             placeholder="000000"
+                            autoFocus
                         />
                     </div>
-                    <button onClick={handleVerifyCode} disabled={loading} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-                        {loading ? <Loader2 className="animate-spin"/> : <CheckCircle2 size={16}/>} VERIFIKASI
+                    <button onClick={handleVerifyCode} disabled={loading} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-70">
+                        {loading ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle2 size={16}/>} VERIFIKASI KODE
+                    </button>
+                    <button onClick={() => setStep('EMAIL')} className="w-full text-[9px] font-bold text-neutral-500 hover:text-white mt-2">
+                        SALAH EMAIL? UBAH
                     </button>
                 </div>
             )}
 
             {step === 'PASSWORD' && (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-fade-in">
                     <div className="space-y-2">
                         <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Setup Password</label>
                         <div className="relative">
@@ -120,12 +185,13 @@ export const RegisterManual: React.FC<{ onBack: () => void, onSuccess: () => voi
                                 type="password" value={password} onChange={e => setPassword(e.target.value)}
                                 className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 pl-12 text-sm font-bold text-white focus:border-emerald-500 outline-none transition-all"
                                 placeholder="••••••••"
+                                autoFocus
                             />
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
                         </div>
                     </div>
-                    <button onClick={handleRegister} disabled={loading} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-                        {loading ? <Loader2 className="animate-spin"/> : <ShieldCheck size={16}/>} SELESAI & MASUK
+                    <button onClick={handleRegister} disabled={loading} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-70">
+                        {loading ? <Loader2 className="animate-spin" size={16}/> : <ShieldCheck size={16}/>} SELESAI & MASUK
                     </button>
                 </div>
             )}

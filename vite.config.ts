@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
         'GEMINI', 'GROQ', 'DEEPSEEK', 'OPENAI', 
         'XAI', 'MISTRAL', 'OPENROUTER', 'ELEVENLABS', 
         'API_KEY', 'VAULT_PIN_HASH', 'GOOGLE',
-        'HF_TOKEN', 'METERED', 'FIREBASE'
+        'HF_TOKEN', 'METERED', 'FIREBASE', 'EMAILJS'
     ];
 
     const processEnv: Record<string, string> = {};
