@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { debugService } from "./debugService";
 import { HANISAH_BRAIN } from "./melsaBrain";
@@ -61,6 +62,9 @@ export class HanisahKernel {
     let currentModelId = initialModelId === 'auto-best' ? MODEL_IDS.GEMINI_FLASH : initialModelId;
 
     const plan = [...new Set([currentModelId, MODEL_IDS.GEMINI_FLASH, MODEL_IDS.GEMINI_PRO, MODEL_IDS.LLAMA_70B])];
+    
+    let attempts = 0;
+    let hasYielded = false;
 
     for (let i = 0; i < plan.length; i++) {
         if (signal?.aborted) break;
@@ -68,7 +72,12 @@ export class HanisahKernel {
         const model = MASTER_MODEL_CATALOG.find(m => m.id === modelId) || MASTER_MODEL_CATALOG[0];
         const key = GLOBAL_VAULT.getKey(model.provider as Provider);
 
-        if (!key) continue;
+        if (!key) {
+            // Skip logging every missing key to reduce noise, but track attempt
+            continue;
+        }
+
+        attempts++;
 
         try {
             const isThinking = model.specs.speed === 'THINKING';
@@ -86,28 +95,55 @@ export class HanisahKernel {
                 let fullText = "";
                 for await (const chunk of stream) {
                     if (signal?.aborted) break;
-                    if (chunk.text) { fullText += chunk.text; yield { text: chunk.text }; }
-                    if (chunk.functionCalls?.length) yield { functionCall: chunk.functionCalls[0] };
+                    if (chunk.text) { 
+                        fullText += chunk.text; 
+                        yield { text: chunk.text }; 
+                        hasYielded = true;
+                    }
+                    if (chunk.functionCalls?.length) {
+                        yield { functionCall: chunk.functionCalls[0] };
+                        hasYielded = true;
+                    }
                     if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) yield { groundingChunks: chunk.candidates[0].groundingMetadata.groundingChunks };
                 }
-                this.updateHistory(msg, fullText);
-                return;
+                if (hasYielded) {
+                    this.updateHistory(msg, fullText);
+                    return; // Success, exit loop
+                }
             } else {
                 const standardHistory = optimizedHistory.map(h => ({ role: h.role === 'model' ? 'assistant' : 'user', content: h.parts[0]?.text || '' }));
                 const stream = streamOpenAICompatible(model.provider as any, model.id, [...standardHistory, { role: 'user', content: msg }], systemPrompt, activeTools, signal);
                 let fullText = "";
                 for await (const chunk of stream) {
                     if (signal?.aborted) break;
-                    if (chunk.text) { fullText += chunk.text; yield { text: chunk.text }; }
-                    if (chunk.functionCall) yield { functionCall: chunk.functionCall };
+                    if (chunk.text) { 
+                        fullText += chunk.text; 
+                        yield { text: chunk.text }; 
+                        hasYielded = true;
+                    }
+                    if (chunk.functionCall) {
+                        yield { functionCall: chunk.functionCall };
+                        hasYielded = true;
+                    }
                 }
-                this.updateHistory(msg, fullText);
-                return;
+                if (hasYielded) {
+                    this.updateHistory(msg, fullText);
+                    return; // Success, exit loop
+                }
             }
         } catch (err: any) {
             GLOBAL_VAULT.reportFailure(model.provider as Provider, key, err);
             if (i < plan.length - 1) yield { metadata: { systemStatus: `Rerouting to ${plan[i+1]}...`, isRerouting: true } };
-            else yield { text: "Connection anomaly. Please retry." };
+            // Don't yield error text yet, try next model
+        }
+    }
+
+    // FALLBACK IF ALL FAILED
+    if (!hasYielded) {
+        if (attempts === 0) {
+             yield { text: `\n\n> ⚠️ **SYSTEM HALT: NO API KEYS DETECTED**\n\nSistem tidak menemukan kunci API yang valid di \`.env\`. Harap konfirmasi konfigurasi server atau tambahkan kunci API.` };
+        } else {
+             yield { text: `\n\n> ⚠️ **CONNECTION FAILURE**\n\nSemua provider AI (${attempts}) gagal merespons. Periksa koneksi internet atau kuota API Anda.` };
         }
     }
   }

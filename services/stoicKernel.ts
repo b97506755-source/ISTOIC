@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { HANISAH_BRAIN } from "./melsaBrain";
 import { streamOpenAICompatible } from "./providerEngine";
@@ -35,6 +36,9 @@ class StoicLogicKernel {
 
     const plan = [...new Set([effectiveId, MODEL_IDS.GEMINI_FLASH, MODEL_IDS.LLAMA_70B])];
 
+    let attempts = 0;
+    let hasYielded = false;
+
     for (let i = 0; i < plan.length; i++) {
         if (signal?.aborted) break;
         const currentId = plan[i];
@@ -42,6 +46,8 @@ class StoicLogicKernel {
         const key = GLOBAL_VAULT.getKey(model.provider as Provider);
 
         if (!key) continue;
+
+        attempts++;
 
         try {
           if (model.provider === 'GEMINI') {
@@ -51,24 +57,44 @@ class StoicLogicKernel {
             let fullText = "";
             for await (const chunk of stream) {
               if (signal?.aborted) break;
-              if (chunk.text) { fullText += chunk.text; yield { text: chunk.text }; }
+              if (chunk.text) { 
+                  fullText += chunk.text; 
+                  yield { text: chunk.text }; 
+                  hasYielded = true;
+              }
             }
-            this.updateHistory(msg, fullText);
-            return;
+            if (hasYielded) {
+                this.updateHistory(msg, fullText);
+                return;
+            }
           } else {
             const stream = streamOpenAICompatible(model.provider as any, model.id, [{ role: 'user', content: msg }], systemPrompt, [], signal);
             let fullText = "";
             for await (const chunk of stream) {
                 if (signal?.aborted) break;
-                if (chunk.text) { fullText += chunk.text; yield { text: chunk.text }; }
+                if (chunk.text) { 
+                    fullText += chunk.text; 
+                    yield { text: chunk.text }; 
+                    hasYielded = true;
+                }
             }
-            this.updateHistory(msg, fullText);
-            return;
+            if (hasYielded) {
+                this.updateHistory(msg, fullText);
+                return;
+            }
           }
         } catch (err: any) {
             GLOBAL_VAULT.reportFailure(model.provider as Provider, key, err);
             if (i < plan.length - 1) yield { metadata: { systemStatus: "Logic path obstructed. Rerouting...", isRerouting: true } };
-            else yield { text: "System integrity compromised. Please retry." };
+        }
+    }
+
+    // FALLBACK
+    if (!hasYielded) {
+         if (attempts === 0) {
+             yield { text: `> **LOGIC CORE OFFLINE**: No cryptographic keys detected in vault (.env).` };
+        } else {
+             yield { text: `> **SYSTEM MALFUNCTION**: Critical failure in reasoning engine. All nodes unresponsive.` };
         }
     }
   }

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 // Konfigurasi Edge Runtime (Wajib untuk Vercel agar streaming cepat & murah)
@@ -121,10 +122,9 @@ async function streamGemini(prompt: string, modelId: string, apiKey: string | un
         async start(controller) {
         const encoder = new TextEncoder();
         try {
-            // FIXED: Using result.stream iterator
-            for await (const chunk of result.stream) {
-                // FIXED: chunk.text() is a function call in the new SDK
-                const text = chunk.text();
+            for await (const chunk of result) {
+                // FIXED: Access text as a property, not a method
+                const text = chunk.text;
                 if (text) controller.enqueue(encoder.encode(text));
             }
             controller.close();
