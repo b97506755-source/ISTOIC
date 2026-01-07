@@ -6,40 +6,62 @@ import { debugService } from '../services/debugService';
 export const useGlobalPeer = (identity: IStokUserIdentity | null) => {
     const peerRef = useRef<any>(null);
     const [incomingConnection, setIncomingConnection] = useState<any>(null);
-    const [status, setStatus] = useState<'INIT' | 'CONNECTING' | 'READY' | 'DISCONNECTED' | 'ERROR'>('INIT');
+    const [status, setStatus] = useState<'INIT' | 'CONNECTING' | 'READY' | 'DISCONNECTED' | 'ERROR' | 'RATE_LIMITED'>('INIT');
     const [peerId, setPeerId] = useState<string | null>(null);
-    const [isPeerReady, setIsPeerReady] = useState(false); // Legacy boolean for backward compat if needed
+    const [isPeerReady, setIsPeerReady] = useState(false);
     
-    // Timers
+    // Retry Logic State
+    const retryCount = useRef(0);
     const healthCheckInterval = useRef<any>(null);
     const retryTimeout = useRef<any>(null);
 
     // CLEANUP FUNCTION
     const destroyPeer = () => {
         if (peerRef.current) {
+            // Remove listeners to prevent zombie callbacks
+            peerRef.current.removeAllListeners();
             peerRef.current.destroy();
             peerRef.current = null;
         }
-        setStatus('DISCONNECTED');
         setIsPeerReady(false);
         setPeerId(null);
         if (healthCheckInterval.current) clearInterval(healthCheckInterval.current);
         if (retryTimeout.current) clearTimeout(retryTimeout.current);
     };
 
+    const scheduleReconnect = useCallback((isError: boolean = false) => {
+        // Stop any pending retries
+        if (retryTimeout.current) clearTimeout(retryTimeout.current);
+
+        // Exponential Backoff: 2s, 4s, 8s, 16s... max 30s
+        const baseDelay = 2000;
+        let delay = Math.min(baseDelay * Math.pow(2, retryCount.current), 30000);
+        
+        // If we hit Rate Limit error, force a longer cooldown immediately
+        if (status === 'RATE_LIMITED') delay = 20000; 
+
+        console.log(`[HYDRA] Scheduling recovery in ${delay}ms (Attempt ${retryCount.current + 1})...`);
+        
+        retryTimeout.current = setTimeout(() => {
+            retryCount.current++;
+            initGlobalPeer();
+        }, delay);
+    }, [status]); // Depend on status to catch RATE_LIMITED updates
+
     const initGlobalPeer = useCallback(async () => {
         if (!identity || !identity.istokId) return;
 
-        // Avoid re-init if already healthy
-        if (peerRef.current && !peerRef.current.destroyed && !peerRef.current.disconnected) {
-            return;
-        }
-        
-        // Prevent double init overlap
+        // Prevent double init if currently connecting
         if (status === 'CONNECTING') return;
 
+        // Clean up previous instance hard before new one
+        if (peerRef.current) {
+            if (!peerRef.current.destroyed) peerRef.current.destroy();
+            peerRef.current = null;
+        }
+
         setStatus('CONNECTING');
-        console.log('[HYDRA] INITIALIZING ENGINE...');
+        console.log(`[HYDRA] INITIALIZING ENGINE (Attempt ${retryCount.current})...`);
 
         try {
             const { Peer } = await import('peerjs');
@@ -47,7 +69,6 @@ export const useGlobalPeer = (identity: IStokUserIdentity | null) => {
             let iceServers = [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
             ];
 
             const meteredKey = process.env.VITE_METERED_API_KEY;
@@ -66,7 +87,6 @@ export const useGlobalPeer = (identity: IStokUserIdentity | null) => {
                 }
             }
 
-            // Create Peer
             const peer = new Peer(identity.istokId, {
                 debug: 0,
                 config: { 
@@ -74,7 +94,7 @@ export const useGlobalPeer = (identity: IStokUserIdentity | null) => {
                     iceTransportPolicy: 'all',
                     iceCandidatePoolSize: 10
                 },
-                pingInterval: 5000, 
+                pingInterval: 10000, // Slower ping to save resources
             } as any);
 
             // --- EVENTS ---
@@ -84,12 +104,12 @@ export const useGlobalPeer = (identity: IStokUserIdentity | null) => {
                 setStatus('READY');
                 setIsPeerReady(true);
                 setPeerId(id);
+                retryCount.current = 0; // Reset backoff on success
             });
 
             peer.on('connection', (conn) => {
-                debugService.log('INFO', 'GLOBAL', 'INCOMING', `Signal detected from ${conn.peer}`);
+                debugService.log('INFO', 'GLOBAL', 'INCOMING', `Signal from ${conn.peer}`);
                 
-                // Immediate State Update (Optimistic)
                 setIncomingConnection({ 
                     conn, 
                     firstData: null, 
@@ -111,38 +131,44 @@ export const useGlobalPeer = (identity: IStokUserIdentity | null) => {
             });
 
             peer.on('disconnected', () => {
-                console.warn('[HYDRA] SIGNAL LOST. ATTEMPTING RECONNECT...');
+                console.warn('[HYDRA] SIGNAL LOST (Disconnected).');
                 setStatus('DISCONNECTED');
                 setIsPeerReady(false);
-                // Attempt soft reconnect
+                // Soft reconnect attempt
                 peer.reconnect();
             });
 
             peer.on('close', () => {
-                console.error('[HYDRA] PEER DESTROYED.');
+                console.error('[HYDRA] PEER DESTROYED (Close).');
                 setStatus('DISCONNECTED');
                 setIsPeerReady(false);
                 setPeerId(null);
                 
-                // Aggressive Re-Init
-                if (retryTimeout.current) clearTimeout(retryTimeout.current);
-                retryTimeout.current = setTimeout(() => {
-                    console.log("[HYDRA] AUTO-REBOOTING...");
-                    initGlobalPeer();
-                }, 1500);
+                // Trigger full re-init via backoff
+                scheduleReconnect();
             });
 
             peer.on('error', (err) => {
-                console.error("[HYDRA] ERROR:", err);
-                // Common error: ID taken (tab duplication). We can't fix that automatically easily without changing ID.
-                // But for network errors, we retry.
-                if (err.type === 'peer-unavailable' || err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
-                    if (retryTimeout.current) clearTimeout(retryTimeout.current);
-                    retryTimeout.current = setTimeout(() => {
-                        if (!peerRef.current || peerRef.current.destroyed) initGlobalPeer();
-                        else peerRef.current.reconnect();
-                    }, 3000);
+                console.error("[HYDRA] ERROR:", err.type, err.message);
+                
+                // CRITICAL: Handle "Insufficient resources" / Rate Limiting
+                if (err.message && (err.message.includes('Insufficient resources') || err.message.includes('Rate limit'))) {
+                    setStatus('RATE_LIMITED');
+                    // Force a very long wait
+                    retryCount.current = 5; // Jump to high backoff tier
+                } else {
+                    setStatus('ERROR');
                 }
+
+                // If fatal ID error, don't retry immediately
+                if (err.type === 'unavailable-id') {
+                    console.error("[HYDRA] ID TAKEN. Closing.");
+                    // Maybe user has another tab open?
+                    return; 
+                }
+
+                // Retry for network/server errors
+                scheduleReconnect(true);
             });
 
             peerRef.current = peer;
@@ -150,70 +176,69 @@ export const useGlobalPeer = (identity: IStokUserIdentity | null) => {
         } catch (e) {
             console.error("[HYDRA] FATAL INIT FAIL", e);
             setStatus('ERROR');
-            setTimeout(initGlobalPeer, 5000); 
+            scheduleReconnect(true);
         }
-    }, [identity, status]);
+    }, [identity, scheduleReconnect]); // Added scheduleReconnect to deps
 
     // Initial Setup
     useEffect(() => {
         if (identity?.istokId) {
+            retryCount.current = 0;
             initGlobalPeer();
         }
         return () => destroyPeer();
     }, [identity, initGlobalPeer]);
 
-    // Watchdog / Health Check
+    // Watchdog
     useEffect(() => {
         healthCheckInterval.current = setInterval(() => {
             if (!peerRef.current) return;
             
             if (peerRef.current.disconnected && !peerRef.current.destroyed) {
-                console.log("[HYDRA] WATCHDOG: Reconnecting disconnected peer...");
+                console.log("[HYDRA] WATCHDOG: Reconnecting...");
                 peerRef.current.reconnect();
             }
-            
-            if (peerRef.current.destroyed) {
-                console.log("[HYDRA] WATCHDOG: Peer destroyed. Rebooting...");
-                initGlobalPeer();
-            }
-        }, 5000); // Check every 5s
+        }, 10000); // Relaxed check to 10s
 
         return () => clearInterval(healthCheckInterval.current);
-    }, [initGlobalPeer]);
+    }, []);
 
-    // Network Recovery (Aggressive)
+    // Network Recovery
     useEffect(() => {
         const handleOnline = () => {
-            console.log("[HYDRA] NETWORK RESTORED. FORCING REBOOT...");
-            // Force destroy and recreate to ensure clean socket state
+            console.log("[HYDRA] NETWORK RESTORED. RESETTING BACKOFF...");
+            retryCount.current = 0;
             if (peerRef.current) peerRef.current.destroy();
             initGlobalPeer();
         };
 
-        window.addEventListener('online', handleOnline);
-        // Also listen for visibility change to reconnect when tab becomes active
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && (peerRef.current?.disconnected || peerRef.current?.destroyed)) {
-                console.log("[HYDRA] TAB ACTIVE. CHECKING CONNECTION...");
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible' && (!peerRef.current || peerRef.current.disconnected)) {
+                console.log("[HYDRA] TAB AWAKE. CHECKING SIGNAL...");
                 if (peerRef.current?.disconnected) peerRef.current.reconnect();
                 else initGlobalPeer();
             }
-        });
+        };
+
+        window.addEventListener('online', handleOnline);
+        document.addEventListener('visibilitychange', handleVisibility);
 
         return () => {
             window.removeEventListener('online', handleOnline);
+            document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, [initGlobalPeer]);
 
     return {
         peer: peerRef.current,
-        isPeerReady: status === 'READY', // Normalized boolean for UI
-        status, // Detailed status
+        isPeerReady: status === 'READY',
+        status, 
         peerId, 
         incomingConnection,
         clearIncoming: () => setIncomingConnection(null),
         forceReconnect: () => {
              console.log("[HYDRA] MANUAL RECONNECT TRIGGERED");
+             retryCount.current = 0; // Reset backoff on manual trigger
              if (peerRef.current) peerRef.current.destroy();
              initGlobalPeer();
         }

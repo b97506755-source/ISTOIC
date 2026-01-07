@@ -9,7 +9,7 @@ import {
     Radio, Server, X, PhoneCall, 
     Lock, ShieldCheck, ArrowRight, Loader2,
     User, Sparkles, Languages, BrainCircuit,
-    Power, Activity, ScanLine, QrCode, Users, Signal, RefreshCw, AlertTriangle
+    Power, Activity, ScanLine, QrCode, Users, Signal, RefreshCw, AlertTriangle, CloudOff
 } from 'lucide-react';
 
 // --- HOOKS & SERVICES ---
@@ -24,6 +24,7 @@ import { compressImage } from './components/gambar';
 import { IstokIdentityService, IStokUserIdentity } from './services/istokIdentity';
 import { IStokInput } from './components/IStokInput'; 
 import { OMNI_KERNEL } from '../../services/omniRace'; 
+import { useGlobalPeer } from '../../hooks/useGlobalPeer'; // Re-import logic
 
 // --- HYDRA CONSTANTS ---
 const CHUNK_SIZE = 1024 * 64; // 64KB
@@ -140,6 +141,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         // --- GLOBAL PEER SYNC ---
         // Monitor global peer status constantly
         const checkPeerStatus = () => {
+            // Check if peer exists and not destroyed/disconnected
             if (globalPeer && !globalPeer.destroyed && !globalPeer.disconnected) {
                 setIsPeerAlive(true);
             } else {
@@ -171,13 +173,16 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
 
     // AUTO RECONNECT LOGIC FOR CHAT SESSION
     useEffect(() => {
+        // Only attempt reconnect if:
+        // 1. Chat UI is active (isConnected)
+        // 2. Chat Data Connection is dead (!isDataConnectionAlive)
+        // 3. Global Peer Signal is healthy (isPeerAlive) -> CRITICAL to prevent spamming when internet is down
         if (isConnected && !isDataConnectionAlive && isPeerAlive && targetPeerId) {
             console.log("Attempting to restore chat connection...");
-            // Only attempt if we have a target and peer is back online
             if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = setTimeout(() => {
                 connectToPeer(targetPeerId, accessPin, true); // True = Reconnect Mode (Silent)
-            }, 2000);
+            }, 3000); // 3s delay
         }
     }, [isConnected, isDataConnectionAlive, isPeerAlive, targetPeerId]);
 
@@ -249,8 +254,9 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
 
     // --- CONNECTION LOGIC ---
     const connectToPeer = (id: string, pin: string, isReconnect: boolean = false) => {
-        if(!globalPeer || !identity) {
-            if(!isReconnect) alert("Sistem Hydra belum siap. Tunggu sebentar...");
+        // Prevent connect spam if global peer is dead
+        if(!globalPeer || !isPeerAlive || !identity) {
+            if(!isReconnect) alert("Sistem Hydra sedang offline. Cek koneksi internet.");
             return;
         }
         
@@ -305,11 +311,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     };
 
     const handleForceReconnect = () => {
-        if (globalPeer && globalPeer.disconnected) {
-            globalPeer.reconnect();
-        } else if (!globalPeer) {
-            window.location.reload();
-        }
+        window.location.reload(); // Simplest way to fully reset Peer state from scratch
     };
 
     // ... (Smart Compose & Translation Logic - same as before) ...
@@ -531,7 +533,10 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                      {/* Radar / Status Footer */}
                      <div className="flex items-center justify-between px-2 opacity-50">
                          <div className="flex items-center gap-4 text-[9px] font-mono">
-                             <span className="flex items-center gap-1"><Signal size={10}/> P2P: {isPeerAlive ? 'ACTIVE' : 'INIT'}</span>
+                             <span className="flex items-center gap-1">
+                                <Signal size={10} className={isPeerAlive ? 'text-emerald-500' : 'text-red-500'} /> 
+                                P2P: {isPeerAlive ? 'ACTIVE' : 'COOLDOWN'}
+                             </span>
                              <span className="flex items-center gap-1"><Server size={10}/> TURN: {process.env.VITE_METERED_API_KEY ? 'TITANIUM' : 'STANDARD'}</span>
                          </div>
                          <div className="text-[9px] font-black uppercase tracking-[0.2em]">V25.0_SECURE</div>
@@ -623,7 +628,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                                     <span>AES-256</span>
                                 </>
                             ) : (
-                                <span className="text-red-400 flex items-center gap-1"><AlertTriangle size={10}/> SIGNAL LOST. RECONNECTING...</span>
+                                <span className="text-red-400 flex items-center gap-1"><CloudOff size={10}/> UPLINK LOST</span>
                             )}
                         </div>
                     </div>
