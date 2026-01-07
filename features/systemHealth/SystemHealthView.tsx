@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
     Activity, Terminal, ShieldCheck, Trash2, Network, Server, Database,
@@ -259,7 +260,7 @@ export const SystemHealthView: React.FC = () => {
                         <div className="flex items-center gap-3">
                             <div className={`w-2 h-2 rounded-full shadow-[0_0_10px_currentColor] ${features.AUTO_DIAGNOSTICS ? 'bg-[var(--accent-color)] animate-pulse' : 'bg-red-500'}`}></div>
                             <span className="tech-mono text-[9px] font-black uppercase tracking-[0.4em] text-neutral-500">
-                                SYSTEM_INTEGRITY_MODULE_v25.0 {features.AUTO_DIAGNOSTICS ? '' : '[OFFLINE]'}
+                                SYSTEM_INTEGRITY_MODULE_v101.0 {features.AUTO_DIAGNOSTICS ? '' : '[OFFLINE]'}
                             </span>
                         </div>
                         <h2 className="text-[12vw] md:text-[5rem] xl:text-[7rem] heading-heavy text-black dark:text-white leading-[0.85] tracking-tighter uppercase break-words">
@@ -422,7 +423,7 @@ export const SystemHealthView: React.FC = () => {
                                 </div>
                             ))}
                             {isStreamFrozen && (
-                                <div className="sticky bottom-0 left-0 right-0 p-2 text-center bg-amber-900/20 border-t border-amber-500/30 text-amber-500 text-[9px] font-black uppercase tracking-widest backdrop-blur-md">
+                                <div className="sticky bottom-0 left-0 right-0 p-2 text-center bg-amber-900/40 text-amber-500 text-[9px] font-black uppercase tracking-widest backdrop-blur-md">
                                     /// STREAM PAUSED - BUFFERING BACKGROUND LOGS ///
                                 </div>
                             )}
@@ -444,7 +445,7 @@ export const SystemHealthView: React.FC = () => {
                     <IntegrityMatrix />
                 )}
 
-                {/* --- MEMORY TAB --- */}
+                {/* --- MEMORY TAB (LOCAL STORAGE) --- */}
                 {activeTab === 'MEMORY' && (
                     <div className="flex-1 bg-white dark:bg-[#0a0a0b] rounded-[32px] border border-black/5 dark:border-white/5 flex overflow-hidden shadow-lg animate-slide-up">
                         <div className="w-1/3 border-r border-black/5 dark:border-white/5 overflow-y-auto custom-scroll p-2 bg-zinc-50 dark:bg-black/20">
@@ -481,6 +482,23 @@ export const SystemHealthView: React.FC = () => {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* CLI FOOTER */}
+            <div className="p-3 bg-[#0a0a0b] border-t border-white/10 shrink-0 relative z-20">
+                <form onSubmit={handleCLI} className="relative flex items-center group">
+                    <span className="absolute left-3 text-[var(--accent-color)] font-black text-xs animate-pulse">{'>'}</span>
+                    <input 
+                        type="text" 
+                        value={cliInput}
+                        onChange={(e) => setCliInput(e.target.value)}
+                        placeholder="ENTER_COMMAND..."
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-8 pr-12 text-[11px] text-white focus:outline-none focus:border-[var(--accent-color)]/50 focus:bg-white/10 transition-all font-mono placeholder:text-neutral-700"
+                    />
+                    <button type="submit" disabled={!cliInput} className="absolute right-2 p-1.5 bg-white/10 rounded-lg text-neutral-400 hover:text-white hover:bg-[var(--accent-color)]/20 transition-all disabled:opacity-0">
+                        <ArrowRight size={14} />
+                    </button>
+                </form>
             </div>
         </div>
     );

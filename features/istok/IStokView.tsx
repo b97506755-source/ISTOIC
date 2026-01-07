@@ -582,7 +582,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                              </span>
                              <span className="flex items-center gap-1"><Server size={10}/> TURN: {process.env.VITE_METERED_API_KEY ? 'TITANIUM' : 'STANDARD'}</span>
                          </div>
-                         <div className="text-[9px] font-black uppercase tracking-[0.2em]">V25.0_SECURE</div>
+                         <div className="text-[9px] font-black uppercase tracking-[0.2em]">V101.0_SECURE</div>
                      </div>
                  </div>
 

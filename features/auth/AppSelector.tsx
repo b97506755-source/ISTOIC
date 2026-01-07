@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Radio, Cpu, Shield, Zap } from 'lucide-react';
 
@@ -70,7 +71,7 @@ export const AppSelector: React.FC<AppSelectorProps> = ({ onSelect }) => {
             
             <div className="absolute bottom-8 text-center">
                 <p className="text-[9px] text-neutral-600 font-mono uppercase tracking-[0.3em]">
-                    SECURE_BOOT_LOADER // v25.0
+                    SECURE_BOOT_LOADER // v101.0
                 </p>
             </div>
         </div>

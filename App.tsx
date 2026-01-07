@@ -74,7 +74,7 @@ const AppContent: React.FC<AppContentProps> = ({
     globalPeer, incomingRequest, onAcceptRequest, onDeclineRequest
 }) => {
   const [activeFeature, setActiveFeature] = useState<FeatureID>('dashboard');
-  const [isTutorialComplete, setIsTutorialComplete] = useLocalStorage<boolean>('app_tutorial_complete', false);
+  const [isTutorialComplete, setIsTutorialComplete] = useLocalStorage<boolean>('app_tutorial_complete_v101', false);
   
   // REACTIVE SETTINGS
   const [theme] = useLocalStorage<string>('app_theme', 'cyan');
@@ -279,7 +279,12 @@ const AppContent: React.FC<AppContentProps> = ({
 
       <DebugConsole isOpen={isDebugOpen} onClose={() => setIsDebugOpen(false)} />
 
-      {!isTutorialComplete && <TutorialOverlay onComplete={() => setIsTutorialComplete(true)} />}
+      {!isTutorialComplete && (
+          <TutorialOverlay 
+            onComplete={() => setIsTutorialComplete(true)} 
+            onNavigate={setActiveFeature} 
+          />
+      )}
 
       <style>{`
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }

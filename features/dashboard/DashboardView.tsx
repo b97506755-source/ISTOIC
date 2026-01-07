@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { type Note } from '../../types';
@@ -193,7 +194,7 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes }) => {
                     <div className="space-y-6 md:space-y-8 flex-1 w-full">
                         <div className="flex items-center gap-4">
                             <div className="px-4 py-2 rounded-xl bg-skin-card border border-skin-border backdrop-blur-md tech-mono text-[9px] font-black uppercase text-accent tracking-[0.3em] shadow-[0_0_20px_rgba(var(--accent-rgb),0.2)] flex items-center gap-2">
-                                <Fingerprint size={12} /> PERSONAL_OS_v25
+                                <Fingerprint size={12} /> PERSONAL_OS_v101.0
                             </div>
                             <div className="h-[1px] w-12 bg-gradient-to-r from-accent/50 to-transparent"></div>
                             <button 

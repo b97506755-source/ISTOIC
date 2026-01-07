@@ -1,5 +1,4 @@
 
-// ... (imports remain same)
 import React, { useState, useEffect, memo } from 'react';
 import { type FeatureID, FEATURES } from '../constants';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -139,6 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
           <div className={`px-6 mb-10 transition-all duration-500 flex flex-col relative z-10 ${isExpanded ? 'items-start' : 'items-center'}`}>
               <div className="flex items-center justify-between w-full">
                   <button 
+                    id="nav-logo"
                     onClick={handleNavLogo}
                     aria-label="Go to Dashboard"
                     className="relative group outline-none"
@@ -172,9 +172,9 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
               {/* Text Label */}
               <div className={`mt-5 overflow-hidden whitespace-nowrap transition-all duration-500 flex flex-col ${isExpanded ? 'opacity-100 max-h-[100px] translate-x-0' : 'opacity-0 max-h-0 -translate-x-4 pointer-events-none'}`}>
                   <h1 className="text-lg font-black tracking-tighter text-skin-text leading-none uppercase flex items-center gap-1">
-                    ISTOIC <span className="text-accent">ASSISTANT</span> <span className="px-1.5 py-0.5 rounded bg-accent/10 text-[8px] text-accent tracking-widest border border-accent/20">V15.0</span>
+                    ISTOIC <span className="text-accent">ASSISTANT</span> <span className="px-1.5 py-0.5 rounded bg-accent/10 text-[8px] text-accent tracking-widest border border-accent/20">V101.0</span>
                   </h1>
-                  <p className="text-[9px] font-medium text-skin-muted mt-1 pl-0.5">Personal AI OS</p>
+                  <p className="text-[9px] font-medium text-skin-muted mt-1 pl-0.5">PLATINUM OS</p>
               </div>
 
               {!isExpanded && (
@@ -207,6 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
               return (
                 <button
                   key={feature.id}
+                  id={`nav-${feature.id}`}
                   onClick={handleClick}
                   aria-label={label}
                   disabled={isDisabled}
@@ -248,6 +249,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
             {/* SECURE CALL BUTTON */}
             {onOpenTeleponan && (
                 <button
+                  id="nav-teleponan"
                   onClick={onOpenTeleponan}
                   className={`
                     relative flex items-center rounded-[16px] transition-all duration-300 group overflow-hidden border border-green-500/10 bg-green-500/5 hover:bg-green-500/10 hover:border-green-500/30 mt-2
@@ -271,6 +273,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
           <div className="mt-auto px-4 flex flex-col gap-4 relative z-10">
              {/* System Status */}
              <button 
+                id="nav-system"
                 onClick={handleNavSystem}
                 className={`
                     rounded-[20px] border transition-all w-full text-left group relative overflow-hidden
@@ -302,6 +305,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
              <div className={`h-[1px] bg-gradient-to-r from-transparent via-skin-border to-transparent mx-4 transition-all ${isExpanded ? 'opacity-100' : 'opacity-0'}`} />
 
              <button 
+                id="nav-settings"
                 onClick={handleNavSettings}
                 className={`
                   flex items-center rounded-[16px] transition-all duration-300 group

@@ -335,7 +335,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                                     ISTOIC <span className="text-emerald-500">TITANIUM</span>
                                 </h1>
                                 <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-[0.3em]">
-                                    SECURE COGNITIVE OS
+                                    SECURE COGNITIVE OS v101.0
                                 </p>
                             </div>
 

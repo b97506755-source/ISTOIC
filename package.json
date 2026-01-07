@@ -2,7 +2,7 @@
 {
   "name": "personaflow-ai",
   "private": true,
-  "version": "13.6.0",
+  "version": "101.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
