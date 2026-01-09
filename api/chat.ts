@@ -37,7 +37,6 @@ export async function POST(request: Request) {
     let activeModel = modelId;
 
     // Gabungkan Context (System Prompt) agar AI ingat instruksi
-    // Note: Beberapa provider support 'system' role di messages, tapi penggabungan manual lebih aman untuk konsistensi context.
     const systemInstruction = context || "You are a helpful assistant.";
     
     // --- INTELLIGENT ROUTING ---
@@ -149,7 +148,7 @@ async function streamGemini(userMsg: string, systemMsg: string, modelId: string,
   }
 }
 
-// --- HELPER 2: OPENAI-COMPATIBLE STREAMING (Unified for Groq, DeepSeek, OpenAI) ---
+// --- HELPER 2: OPENAI-COMPATIBLE STREAMING (Unified & Buffered) ---
 async function streamOpenAICompatible(
   endpoint: string, 
   apiKey: string | undefined, 
@@ -189,6 +188,7 @@ async function streamOpenAICompatible(
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       const encoder = new TextEncoder();
+      let buffer = ''; // Buffer for split chunks
 
       if (!reader) { controller.close(); return; }
 
@@ -197,8 +197,14 @@ async function streamOpenAICompatible(
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            // Decode and append to buffer
+            buffer += decoder.decode(value, { stream: true });
+            
+            // Split buffer by newlines
+            const lines = buffer.split('\n');
+            
+            // Keep the last incomplete line in the buffer
+            buffer = lines.pop() || '';
 
             for (const line of lines) {
               const trimmed = line.trim();
@@ -206,7 +212,9 @@ async function streamOpenAICompatible(
               
               if (trimmed.startsWith('data: ')) {
                 try {
-                  const json = JSON.parse(trimmed.replace('data: ', ''));
+                  const jsonStr = trimmed.replace('data: ', '');
+                  const json = JSON.parse(jsonStr);
+                  
                   // Standard OpenAI Content
                   const content = json.choices?.[0]?.delta?.content || "";
                   
@@ -220,7 +228,9 @@ async function streamOpenAICompatible(
                   if (content) {
                       controller.enqueue(encoder.encode(content));
                   }
-                } catch (e) { }
+                } catch (e) { 
+                    // Should rarely happen now with buffering
+                }
               }
             }
           }

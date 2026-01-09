@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState, memo, useCallback } from 'react';
+import React, { useRef, useEffect, useState, memo, useCallback, useMemo } from 'react';
 import { Send, Plus, Loader2, Mic, MicOff, Database, DatabaseZap, Paperclip, X, Image as ImageIcon, Flame, Brain, CornerDownLeft, Clipboard, ShieldCheck, FileText, Square, Globe, Palette } from 'lucide-react';
 import { TRANSLATIONS, getLang } from '../../../services/i18n';
 import { debugService } from '../../../services/debugService';
@@ -55,6 +55,23 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
   const recognitionRef = useRef<any>(null);
   const currentLang = getLang();
   const t = TRANSLATIONS[currentLang].chat;
+
+  const suggestionChips = useMemo(() => {
+    if (personaMode === 'hanisah') {
+        return [
+            { label: '🎨 Buat Gambar', text: 'Buatkan gambar ' },
+            { label: '📝 Ringkas', text: 'Tolong ringkas ini: ' },
+            { label: '💡 Ide Konten', text: 'Ide konten tentang ' },
+            { label: '🧐 Analisa', text: 'Analisa data ini: ' }
+        ];
+    }
+    return [
+        { label: '🧠 Analyze', text: 'Analyze this logically: ' },
+        { label: '🐞 Debug', text: 'Debug this code: ' },
+        { label: '📝 Summarize', text: 'Summarize key points: ' },
+        { label: '⚖️ Evaluate', text: 'Pros & cons of: ' }
+    ];
+  }, [personaMode]);
 
   // Optimized: Resize using requestAnimationFrame to avoid layout thrashing during typing
   useEffect(() => {
@@ -252,6 +269,22 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
           </div>
       )}
 
+      {/* SUGGESTION CHIPS (Standard Mode - Top) */}
+      {!input && !attachment && !isDictating && variant === 'standard' && (
+        <div className="absolute -top-14 left-0 right-0 flex gap-2 overflow-x-auto no-scrollbar px-1 py-2 z-0 pointer-events-auto">
+            {suggestionChips.map((chip, i) => (
+                <button
+                    key={i}
+                    onClick={() => { setInput(chip.text); inputRef.current?.focus(); }}
+                    className="shrink-0 px-3 py-1.5 rounded-xl bg-[#09090b]/80 backdrop-blur-md border border-white/10 text-[10px] font-medium text-neutral-400 hover:text-white hover:border-accent/50 hover:bg-white/5 transition-all shadow-sm active:scale-95 animate-slide-up"
+                    style={{ animationDelay: `${i * 50}ms` }}
+                >
+                    {chip.label}
+                </button>
+            ))}
+        </div>
+      )}
+
       {/* MAIN CAPSULE - GLASS HUD STYLE */}
       <div 
         className={`
@@ -290,8 +323,8 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
             </div>
         )}
 
-        {/* INPUT AREA */}
-        <div className="relative px-4 pt-3 pb-2 flex items-center">
+        {/* INPUT AREA & HERO SUGGESTIONS */}
+        <div className="relative px-4 pt-3 pb-2 flex flex-col">
             <textarea
                 ref={inputRef}
                 value={input}
@@ -306,6 +339,21 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
                 aria-label="Chat Input"
                 disabled={isLoading && !onStop} 
             />
+
+            {/* SUGGESTION CHIPS (Hero Mode - Inside) */}
+            {!input && !attachment && !isDictating && variant === 'hero' && (
+                <div className="flex flex-wrap gap-2 mt-3 opacity-0 animate-fade-in" style={{ animationDelay: '200ms', opacity: 1 }}>
+                    {suggestionChips.map((chip, i) => (
+                        <button
+                            key={i}
+                            onClick={() => { setInput(chip.text); inputRef.current?.focus(); }}
+                            className="px-3 py-1 rounded-lg bg-black/5 dark:bg-white/5 border border-transparent hover:border-accent/30 hover:bg-accent/5 text-[9px] font-bold text-neutral-500 hover:text-accent transition-all"
+                        >
+                            {chip.label}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
 
         {/* TOOLBAR & ACTIONS */}
@@ -411,6 +459,10 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
       </div>
       
       <style>{`
+        .mask-fade-sides {
+            mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        }
         @keyframes music-bar {
             0%, 100% { height: 4px; }
             50% { height: 12px; }
