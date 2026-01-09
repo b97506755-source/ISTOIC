@@ -3,33 +3,25 @@ import React, { memo, useState, useMemo, useEffect, useRef } from 'react';
 import Markdown from 'react-markdown';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { 
-    Flame, Brain, ExternalLink, Sparkles, Cpu, Zap, Box, Globe, 
-    Copy, Check, ChevronDown, Wind, ArrowRight,
-    Terminal, Clock, Image as ImageIcon, RefreshCw, Search,
-    Download, Maximize2, Network, Code as CodeIcon, Play,
-    BrainCircuit, Infinity
+    Flame, Brain, ExternalLink, Sparkles, 
+    Box, ArrowRight, Copy, Check, ChevronDown,
+    Image as ImageIcon, RefreshCw, Search,
+    Network, BrainCircuit, Infinity, AlertTriangle
 } from 'lucide-react';
 import type { ChatMessage } from '../../../types';
 import { generateImage } from '../../../services/geminiService';
+import { AIProviderInfo } from './AIProviderInfo';
 
+// --- TYPES ---
 interface ChatWindowProps {
   messages: ChatMessage[];
   personaMode: 'hanisah' | 'stoic';
   isLoading: boolean;
-  messagesEndRef: React.RefObject<HTMLDivElement>; // Kept for API compatibility
+  messagesEndRef?: React.RefObject<HTMLDivElement>;
   onUpdateMessage?: (messageId: string, newText: string) => void;
 }
 
-const ProviderIcon = ({ provider }: { provider?: string }) => {
-    const p = provider?.toUpperCase() || 'UNKNOWN';
-    if (p.includes('GEMINI')) return <Sparkles size={10} className="text-blue-400" />;
-    if (p.includes('GROQ')) return <Zap size={10} className="text-orange-400" />;
-    if (p.includes('OPENAI')) return <Cpu size={10} className="text-green-400" />;
-    if (p.includes('DEEPSEEK')) return <Brain size={10} className="text-indigo-400" />;
-    if (p.includes('OPENROUTER')) return <Globe size={10} className="text-purple-400" />;
-    if (p.includes('MISTRAL')) return <Wind size={10} className="text-yellow-400" />;
-    return <Box size={10} className="text-neutral-400" />;
-};
+// --- SUB-COMPONENTS ---
 
 const SystemStatusBubble = ({ status }: { status: string }) => (
     <div className="flex items-center gap-2.5 my-2 px-4 py-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20 text-amber-500 w-fit animate-slide-up">
@@ -160,18 +152,27 @@ const CodeBlock = ({ language, children }: { language: string, children: React.R
     );
 };
 
+// --- MESSAGE BUBBLE ---
+
 const MessageBubble = memo(({ msg, personaMode, isLoading, onUpdateMessage }: { msg: ChatMessage, personaMode: 'hanisah' | 'stoic', isLoading: boolean, onUpdateMessage?: (id: string, text: string) => void }) => {
-    const [copied, setCopied] = useState(false);
-    const isModel = msg.role === 'model';
+    
+    const isModel = msg.role === 'model' || (msg.role as string) === 'assistant'; 
     const isError = msg.metadata?.status === 'error';
     const isRerouting = msg.metadata?.isRerouting;
     
-    const textContent: string = typeof msg.text === 'string' ? msg.text : '';
+    const textContent: string = useMemo(() => {
+        if (typeof msg.text === 'string' && msg.text) return msg.text as string;
+        const anyMsg = msg as any;
+        if (typeof anyMsg.content === 'string') return anyMsg.content;
+        if (anyMsg.parts && anyMsg.parts[0]?.text) return anyMsg.parts[0].text; 
+        return '';
+    }, [msg]);
 
     const { thought, content, imgPrompt } = useMemo(() => {
         let text = textContent;
         let thoughtContent = null;
         let imagePrompt = null;
+
         if (text.includes('<think>')) {
             const hasClosing = text.includes('</think>');
             if (hasClosing) {
@@ -183,112 +184,152 @@ const MessageBubble = memo(({ msg, personaMode, isLoading, onUpdateMessage }: { 
                 text = ''; 
             }
         }
+
         const imgMatch = text.match(/!!IMG:(.*?)!!/);
-        if (imgMatch) { imagePrompt = imgMatch[1]; text = text.replace(imgMatch[0], ''); }
+        if (imgMatch) { 
+            imagePrompt = imgMatch[1]; 
+            text = text.replace(imgMatch[0], ''); 
+        }
+
         return { thought: thoughtContent, content: text, imgPrompt: imagePrompt };
     }, [textContent]);
 
-    if (isModel && !content && !isLoading && !thought && !isError && !isRerouting) return null;
+    if (isModel && !content && !isLoading && !thought && !isError && !isRerouting && !imgPrompt) {
+        return null;
+    }
 
     const accentColor = personaMode === 'hanisah' ? 'text-orange-500' : 'text-cyan-500';
-    const modelLabel = msg.metadata?.model || (personaMode === 'hanisah' ? 'HANISAH' : 'STOIC');
 
     return (
         <div className={`flex w-full mb-6 md:mb-8 ${isModel ? 'justify-start' : 'justify-end'} px-1 group/msg`}>
             {isModel && (
                 <div className="flex flex-col gap-2 mr-3 shrink-0 mt-1">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-lg border border-white/10 bg-white dark:bg-[#121214] ${accentColor}`}>
-                        {isError ? <Terminal size={16} /> : (personaMode === 'hanisah' ? <Flame size={16} fill="currentColor"/> : <Brain size={16} fill="currentColor"/>)}
+                        {isError ? <AlertTriangle size={16} /> : (personaMode === 'hanisah' ? <Flame size={16} fill="currentColor"/> : <Brain size={16} fill="currentColor"/>)}
                     </div>
                 </div>
             )}
 
             <div className={`relative max-w-[88%] sm:max-w-[80%] lg:max-w-[75%] flex flex-col ${isModel ? 'items-start' : 'items-end'}`}>
-                {isModel && (
-                    <div className="flex items-center gap-3 mb-1.5 px-2 select-none opacity-80">
-                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${isError ? 'text-red-500' : accentColor}`}>{modelLabel.toUpperCase()}</span>
-                        {!isError && msg.metadata?.provider && (
-                            <div className="flex items-center gap-1.5 border-l border-white/10 pl-3">
-                                <ProviderIcon provider={msg.metadata?.provider} />
-                                <span className="text-[7px] font-bold text-neutral-500 uppercase tracking-wider">{msg.metadata.provider}</span>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div className={`relative px-5 py-4 overflow-hidden text-sm md:text-[15px] leading-7 font-sans tracking-wide ${isModel ? 'bg-white dark:bg-[#0a0a0b] text-black dark:text-neutral-200 rounded-[24px] rounded-tl-sm border border-black/5 dark:border-white/10' : 'bg-zinc-100 dark:bg-white/5 text-black dark:text-white rounded-[24px] rounded-tr-sm border border-black/5 dark:border-white/5'}`}>
-                    {(content || isLoading || thought || isRerouting || imgPrompt) && (
-                        <>
-                            {isRerouting && msg.metadata?.systemStatus && !content && <SystemStatusBubble status={msg.metadata.systemStatus} />}
-                            {thought && <ThinkingAccordion content={thought} isActive={isLoading && !content} />}
-                            {content && (
-                                <div className={`prose dark:prose-invert prose-sm max-w-none break-words min-w-0 ${isModel ? 'prose-p:text-neutral-800 dark:prose-p:text-neutral-300' : ''}`}>
-                                    <Markdown urlTransform={(url) => url} components={{
-                                            code({node, inline, className, children, ...props}: any) {
-                                                const match = /language-(\w+)/.exec(className || '');
-                                                return !inline ? <CodeBlock language={match ? match[1] : 'text'} children={children} /> : <code className="text-[12px] font-mono font-bold px-1.5 py-0.5 rounded border bg-black/5 dark:bg-white/10 border-black/5 dark:border-white/10" {...props}>{children}</code>;
-                                            },
-                                            a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-bold inline-flex items-center gap-1 bg-accent/5 px-1.5 rounded transition-colors border border-accent/10">{children} <ArrowRight size={10} className="-rotate-45"/></a>,
-                                            img: ({src, alt}) => <MarkdownImage src={src} alt={alt} />,
-                                        }}>{content}</Markdown>
-                                    {isLoading && isModel && <span className="inline-block w-2 h-4 bg-accent align-middle ml-1 animate-[pulse_0.8s_ease-in-out_infinite]"></span>}
-                                </div>
-                            )}
-                            {imgPrompt && <ImageGenerationCard prompt={imgPrompt} messageId={msg.id} originalText={textContent} onUpdateMessage={onUpdateMessage} />}
-                            {isLoading && !content && !thought && !imgPrompt && !isRerouting && (
-                                <div className="flex items-center gap-2 py-1"><span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 animate-pulse">Computing</span><div className="flex gap-1"><div className="w-1 h-1 bg-accent rounded-full animate-bounce"></div><div className="w-1 h-1 bg-accent rounded-full animate-bounce delay-75"></div><div className="w-1 h-1 bg-accent rounded-full animate-bounce delay-150"></div></div></div>
-                            )}
-                            {isModel && msg.metadata?.groundingChunks && <GroundingSources chunks={msg.metadata.groundingChunks} />}
-                        </>
+                
+                {/* Bubble Container */}
+                <div className={`relative px-5 py-4 overflow-hidden text-sm md:text-[15px] leading-7 font-sans tracking-wide shadow-sm 
+                    ${isModel 
+                        ? 'bg-white dark:bg-[#0a0a0b] text-black dark:text-neutral-200 rounded-[24px] rounded-tl-sm border border-black/5 dark:border-white/10' 
+                        : 'bg-zinc-100 dark:bg-white/5 text-black dark:text-white rounded-[24px] rounded-tr-sm border border-black/5 dark:border-white/5'
+                    }`}>
+                    
+                    {isRerouting && msg.metadata?.systemStatus && !content && <SystemStatusBubble status={msg.metadata.systemStatus} />}
+                    {thought && <ThinkingAccordion content={thought} isActive={isLoading && !content} />}
+                    
+                    {/* Main Content */}
+                    {content && (
+                        <div className={`prose dark:prose-invert prose-sm max-w-none break-words min-w-0 ${isModel ? 'prose-p:text-neutral-800 dark:prose-p:text-neutral-300' : ''}`}>
+                            <Markdown 
+                                urlTransform={(url) => url} 
+                                components={{
+                                    code({node, inline, className, children, ...props}: any) {
+                                        const match = /language-(\w+)/.exec(className || '');
+                                        return !inline 
+                                            ? <CodeBlock language={match ? match[1] : 'text'} children={children} /> 
+                                            : <code className="text-[12px] font-mono font-bold px-1.5 py-0.5 rounded border bg-black/5 dark:bg-white/10 border-black/5 dark:border-white/10" {...props}>{children}</code>;
+                                    },
+                                    a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-bold inline-flex items-center gap-1 bg-accent/5 px-1.5 rounded transition-colors border border-accent/10">{children} <ArrowRight size={10} className="-rotate-45"/></a>,
+                                    img: ({src, alt}) => <MarkdownImage src={src} alt={alt} />,
+                                    table: ({children}) => <div className="overflow-x-auto my-4 border border-white/10 rounded-xl"><table className="min-w-full divide-y divide-white/10 text-[12px]">{children}</table></div>,
+                                    th: ({children}) => <th className="px-4 py-2 bg-white/5 font-black uppercase tracking-wider text-left">{children}</th>,
+                                    td: ({children}) => <td className="px-4 py-2 border-t border-white/5">{children}</td>,
+                                }}
+                            >
+                                {content}
+                            </Markdown>
+                            {isLoading && isModel && <span className="inline-block w-2 h-4 bg-accent align-middle ml-1 animate-[pulse_0.8s_ease-in-out_infinite]"></span>}
+                        </div>
                     )}
+
+                    {imgPrompt && <ImageGenerationCard prompt={imgPrompt} messageId={msg.id} originalText={textContent} onUpdateMessage={onUpdateMessage} />}
+
+                    {isLoading && !content && !thought && !imgPrompt && !isRerouting && (
+                        <div className="flex items-center gap-2 py-1">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 animate-pulse">Computing</span>
+                            <div className="flex gap-1">
+                                <div className="w-1 h-1 bg-accent rounded-full animate-bounce"></div>
+                                <div className="w-1 h-1 bg-accent rounded-full animate-bounce delay-75"></div>
+                                <div className="w-1 h-1 bg-accent rounded-full animate-bounce delay-150"></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Metadata Footer: Provider Info */}
+                    {isModel && (
+                        <AIProviderInfo 
+                            metadata={msg.metadata} 
+                            isHydra={msg.metadata?.model === 'auto-best' || msg.metadata?.model?.includes('HYDRA')} 
+                        />
+                    )}
+
+                    {isModel && msg.metadata?.groundingChunks && <GroundingSources chunks={msg.metadata.groundingChunks} />}
                 </div>
             </div>
         </div>
     );
-}, (prev, next) => prev.msg.text === next.msg.text && prev.isLoading === next.isLoading && prev.msg.metadata?.model === next.msg.metadata?.model);
+}, (prev, next) => {
+    // Memo comparison
+    const prevText = typeof prev.msg.text === 'string' ? prev.msg.text : ((prev.msg as any).content || '');
+    const nextText = typeof next.msg.text === 'string' ? next.msg.text : ((next.msg as any).content || '');
+    
+    return prevText === nextText 
+        && prev.isLoading === next.isLoading 
+        && prev.msg.metadata?.model === next.msg.metadata?.model
+        && prev.msg.metadata?.status === next.msg.metadata?.status;
+});
+
+// --- MAIN WINDOW ---
 
 export const ChatWindow: React.FC<ChatWindowProps> = memo(({ messages, personaMode, isLoading, messagesEndRef, onUpdateMessage }) => {
     const virtuosoRef = useRef<VirtuosoHandle>(null);
 
-    const allItems = isLoading 
-        ? [...messages, { id: 'loading-indicator', role: 'model', text: '', isLoader: true } as any] 
-        : messages;
+    const allItems = useMemo(() => {
+        return isLoading 
+            ? [...messages, { id: 'loading-indicator', role: 'model', text: '', isLoader: true } as any] 
+            : messages;
+    }, [messages, isLoading]);
 
     return (
-        <div className="h-full w-full">
+        <div className="h-full w-full min-h-0 flex-1 flex flex-col relative bg-transparent" style={{ overscrollBehavior: 'contain' }}>
             <Virtuoso
                 ref={virtuosoRef}
                 style={{ height: '100%', width: '100%' }}
                 data={allItems}
-                initialTopMostItemIndex={messages.length - 1}
-                followOutput="auto" // IMPORTANT: Fixes scrolling issues with new content
+                initialTopMostItemIndex={Math.max(0, allItems.length - 1)}
+                followOutput="auto"
+                alignToBottom
+                atBottomThreshold={60}
+                overscan={200}
                 itemContent={(index, msg) => {
                     if ((msg as any).isLoader) {
                          if (messages.length > 0 && messages[messages.length-1].role === 'user') {
                             return (
                                 <div className="flex justify-start mb-10 pl-14 animate-fade-in py-4">
                                     <div className="flex items-center gap-4 px-6 py-4 rounded-2xl border border-dashed border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-sm">
-                                        <div className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-accent shadow-[0_0_15px_var(--accent-glow)]"></span></div>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-500 flex items-center gap-2">{personaMode === 'hanisah' ? 'HANISAH_SYNTHESIZING' : 'QUANTUM_ANALYSIS_ACTIVE'}</span>
+                                        <div className="relative flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-accent shadow-[0_0_15px_var(--accent-glow)]"></span>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-neutral-500 flex items-center gap-2">
+                                            {personaMode === 'hanisah' ? 'HANISAH_SYNTHESIZING' : 'QUANTUM_ANALYSIS_ACTIVE'}
+                                        </span>
                                     </div>
                                 </div>
                             );
                          }
-                         return null;
+                         return <div className="h-4"></div>;
                     }
-
                     const isLast = index === messages.length - 1;
-                    const loadingState = isLoading && isLast && msg.role === 'model';
-                    
+                    const loadingState = isLoading && isLast && (msg.role === 'model' || (msg.role as string) === 'assistant');
                     return (
-                        <div className="py-2">
-                             <MessageBubble 
-                                key={msg.id}
-                                msg={msg} 
-                                personaMode={personaMode} 
-                                isLoading={loadingState} 
-                                onUpdateMessage={onUpdateMessage}
-                            />
+                        <div className="py-2 px-2 md:px-4">
+                             <MessageBubble key={msg.id || index} msg={msg} personaMode={personaMode} isLoading={loadingState} onUpdateMessage={onUpdateMessage}/>
                         </div>
                     );
                 }}

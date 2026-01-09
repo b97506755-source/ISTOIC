@@ -1,0 +1,200 @@
+
+/* 
+  IStoicAI Base Styles v0.30
+  iOS PWA Optimized
+*/
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+  
+  /* --- TOKEN SYSTEM: LIGHT MODE --- */
+  --bg-main: #f2f3f5;       
+  --bg-card: #ffffff;       
+  --bg-surface: #f4f4f5;    
+  --bg-surface-hover: #e4e4e7;
+  
+  --text-main: #09090b;     
+  --text-muted: #71717a;    
+  
+  --border-base: rgba(0, 0, 0, 0.06);
+  --border-highlight: rgba(0, 0, 0, 0.12);
+  
+  --shadow-color: 0 0 0;
+  
+  /* iOS Safe Area Defaults */
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-right);
+}
+
+.dark {
+  /* --- TOKEN SYSTEM: DARK MODE --- */
+  --bg-main: #000000;       
+  --bg-card: #0a0a0b;       
+  --bg-surface: #18181b;    
+  --bg-surface-hover: #27272a;
+  
+  --text-main: #fafafa;     
+  --text-muted: #a1a1aa;    
+  
+  --border-base: rgba(255, 255, 255, 0.08);
+  --border-highlight: rgba(255, 255, 255, 0.15);
+}
+
+html {
+    height: 100%;
+    /* Prevent elastic scrolling on iOS */
+    overflow: hidden; 
+    background-color: var(--bg-main);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  /* Use 100dvh for proper mobile browser height handling (address bar awareness) */
+  height: 100dvh; 
+  width: 100vw;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent pull-to-refresh on mobile PWA */
+  overscroll-behavior-y: none; 
+  touch-action: manipulation;
+  
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- SAFE AREA UTILITIES (iOS XR+) --- */
+/* Top padding for Notch */
+.pt-safe { 
+    padding-top: max(1rem, var(--sat)); 
+}
+/* Bottom padding for Home Indicator */
+.pb-safe { 
+    padding-bottom: max(1rem, var(--sab)); 
+}
+/* Margins */
+.mt-safe { margin-top: max(1rem, var(--sat)); }
+.mb-safe { margin-bottom: max(1rem, var(--sab)); }
+
+/* GLOBAL SELECTION */
+::selection {
+  background-color: rgba(var(--accent-rgb), 0.3);
+  color: inherit;
+}
+
+/* GLOBAL NOISE TEXTURE */
+.bg-noise {
+  position: relative;
+}
+.bg-noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.03; 
+  pointer-events: none;
+  z-index: 50; 
+  mix-blend-mode: overlay;
+}
+
+/* SCROLLBAR REFINEMENT */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 10px;
+}
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* IOS INPUT ZOOM FIX */
+@media screen and (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important; 
+  }
+}
+
+/* ANIMATIONS */
+@keyframes aurora {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-aurora {
+  background-size: 200% 200%;
+  animation: aurora 20s ease infinite;
+}
+
+@keyframes gradient-x {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-text {
+  background-size: 200% 200%;
+  animation: gradient-x 4s ease infinite;
+}
+
+/* GLITCH EFFECT */
+@keyframes glitch-anim-1 {
+  0% { clip: rect(20px, 9999px, 15px, 0); }
+  20% { clip: rect(65px, 9999px, 80px, 0); }
+  40% { clip: rect(10px, 9999px, 35px, 0); }
+  60% { clip: rect(90px, 9999px, 100px, 0); }
+  80% { clip: rect(15px, 9999px, 30px, 0); }
+  100% { clip: rect(50px, 9999px, 60px, 0); }
+}
+.animate-glitch { position: relative; }
+.animate-glitch::before, .animate-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: #020202;
+}
+.animate-glitch::before {
+  left: 2px; text-shadow: -1px 0 red;
+  clip: rect(24px, 550px, 90px, 0);
+  animation: glitch-anim-1 2s infinite linear alternate-reverse;
+}
+.animate-glitch::after {
+  left: -2px; text-shadow: -1px 0 blue;
+  clip: rect(85px, 550px, 140px, 0);
+  animation: glitch-anim-1 2s infinite linear alternate-reverse;
+}
+
+/* UTILITIES */
+.text-glow { text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.6); }
+.border-glass { border: 1px solid var(--border-base); }
+.glass-card-3d {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* TERMINAL STYLES */
+.bg-terminal-void { background-color: #030304; position: relative; }
+.terminal-scanlines::before {
+  content: " "; display: block; position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 10; background-size: 100% 2px, 3px 100%; pointer-events: none; opacity: 0.15;
+}

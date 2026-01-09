@@ -1,52 +1,84 @@
 
-// ... existing types ...
+/**
+ * ISTOIC TITANIUM - CORE TYPE DEFINITIONS
+ * High-precision types for Neural Interface, AI Models, and P2P Sync.
+ */
+
+// --- CORE DATA: NOTES & TASKS ---
 
 export interface Note {
   id: string;
   title: string;
   content: string;
   tags: string[];
-  created: string; 
-  updated: string; 
-  is_pinned?: boolean; 
+  created: string; // ISO Date String
+  updated: string; // ISO Date String
+  is_pinned?: boolean;
   is_archived?: boolean;
   tasks?: TaskItem[];
-  user?: string;
+  user?: string; // Owner ID for multi-user scenarios
 }
 
 export interface TaskItem {
   id: string;
   text: string;
   isCompleted: boolean;
-  dueDate?: string; 
+  dueDate?: string; // ISO Date String
+}
+
+// --- AI CHAT SYSTEM TYPES ---
+
+export type PersonaMode = 'hanisah' | 'stoic';
+
+export type MessageRole = 'user' | 'model' | 'system' | 'assistant';
+
+export type MessageStatus = 'success' | 'error' | 'retrying' | 'loading' | 'streaming';
+
+export interface GroundingChunk {
+    web?: {
+        uri?: string;
+        title?: string;
+    };
+    maps?: {
+        uri?: string;
+        title?: string;
+    };
+    // Fallback for other grounding types
+    [key: string]: any; 
+}
+
+export interface MessageMetadata {
+    model?: string;
+    provider?: string;
+    latency?: number; // In milliseconds
+    status: MessageStatus;
+    errorDetails?: string;
+    groundingChunks?: GroundingChunk[];
+    isRerouting?: boolean;
+    systemStatus?: string; // E.g., "Rerouting to Llama 3..."
+    createdAt?: string; // ISO Date String
+    hasAttachment?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  text: string | Blob; // Supports text or binary data (audio/image input)
+  metadata?: MessageMetadata;
 }
 
 export interface ChatThread {
   id: string;
   title: string;
-  persona: 'hanisah' | 'stoic';
-  model_id: string; 
+  persona: PersonaMode;
+  model_id: string;
   messages: ChatMessage[];
-  updated: string; 
+  updated: string; // ISO Date String
   isPinned?: boolean;
   user?: string;
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model';
-  text: string | Blob;
-  metadata?: {
-    model?: string;
-    provider?: string;
-    latency?: number;
-    status: 'success' | 'error' | 'retrying';
-    errorDetails?: string;
-    groundingChunks?: any[];
-    isRerouting?: boolean;
-    systemStatus?: string;
-  };
-}
+// --- LOGGING & DIAGNOSTICS ---
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'TODO' | 'KERNEL' | 'TRACE';
 
@@ -60,25 +92,51 @@ export interface LogEntry {
   payload?: any;
 }
 
+// --- MODEL REGISTRY TYPES ---
+
+export type AIProvider = 
+    | 'GEMINI' 
+    | 'GROQ' 
+    | 'DEEPSEEK' 
+    | 'OPENAI' 
+    | 'XAI' 
+    | 'MISTRAL' 
+    | 'OPENROUTER';
+
+export type ModelCategory = 
+    | 'GEMINI_3' 
+    | 'GEMINI_2_5' 
+    | 'DEEPSEEK_OFFICIAL' 
+    | 'GROQ_VELOCITY' 
+    | 'OPEN_ROUTER_ELITE' 
+    | 'MISTRAL_NATIVE';
+
+export type ModelSpeed = 'INSTANT' | 'FAST' | 'THINKING' | 'DEEP';
+
+export interface ModelSpecs {
+    context: string;      // E.g., "128k"
+    contextLimit: number; // E.g., 128000
+    speed: ModelSpeed;
+    intelligence: number; // 0-100 Score
+}
+
 export interface ModelMetadata {
   id: string;
   name: string;
-  category: 'GEMINI_3' | 'GEMINI_2_5' | 'DEEPSEEK_OFFICIAL' | 'GROQ_VELOCITY' | 'OPEN_ROUTER_ELITE' | 'MISTRAL_NATIVE';
-  provider: 'GEMINI' | 'GROQ' | 'DEEPSEEK' | 'OPENAI' | 'XAI' | 'MISTRAL' | 'OPENROUTER';
+  category: ModelCategory;
+  provider: AIProvider;
   description: string;
-  specs: { 
-      context: string; 
-      contextLimit: number; 
-      speed: 'INSTANT' | 'FAST' | 'THINKING' | 'DEEP'; 
-      intelligence: number; 
-  }
+  specs: ModelSpecs;
 }
 
-// --- NEW STRICT TYPES FOR P2P ---
+// --- P2P & NETWORKING TYPES (ISTOK) ---
+
+export type ConnectionStatus = 'HANDSHAKING' | 'READY' | 'DISCONNECTED' | 'ERROR';
+
 export interface IncomingConnection {
-  conn: any; // PeerJS DataConnection (kept as any for lazy loading, but typed at boundary)
+  conn: any; // PeerJS DataConnection (typed loosely to avoid hard dependency on PeerJS types here)
   firstData: any; // The handshake payload
-  status: 'HANDSHAKING' | 'READY';
+  status: ConnectionStatus;
 }
 
 export interface GlobalPeerState {
@@ -88,4 +146,22 @@ export interface GlobalPeerState {
   incomingConnection: IncomingConnection | null;
   clearIncoming: () => void;
   forceReconnect: () => void;
+}
+
+// --- AUTH & USER PROFILE ---
+
+export interface UserPreferences {
+    theme: 'dark' | 'light' | 'system';
+    language: 'id' | 'en';
+    reducedMotion: boolean;
+    autoPlayAudio: boolean;
+}
+
+export interface UserProfile {
+    uid: string;
+    displayName: string | null;
+    email: string | null;
+    photoURL: string | null;
+    bio?: string;
+    preferences?: UserPreferences;
 }

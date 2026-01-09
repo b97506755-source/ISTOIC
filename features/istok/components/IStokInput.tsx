@@ -12,6 +12,7 @@ interface IStokInputProps {
     onAiAssist: (text: string, mode: 'REPLY' | 'REFINE') => Promise<string>;
     onAiTranslate: (text: string, targetLang: string) => Promise<string>;
     isAiThinking: boolean;
+    onTyping?: () => void; // New optional prop
 }
 
 export const IStokInput = memo(({ 
@@ -23,7 +24,8 @@ export const IStokInput = memo(({
     onToggleTtl,
     onAiAssist,
     onAiTranslate,
-    isAiThinking
+    isAiThinking,
+    onTyping
 }: IStokInputProps) => {
     const [text, setText] = useState('');
     const [isRecording, setIsRecording] = useState(false);
@@ -47,6 +49,11 @@ export const IStokInput = memo(({
 
         onSend(finalMessage);
         setText('');
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setText(e.target.value);
+        if (onTyping) onTyping();
     };
 
     const handleAiAction = async (action: 'REPLY' | 'REFINE') => {
@@ -148,7 +155,7 @@ export const IStokInput = memo(({
                     <input 
                         ref={inputRef}
                         value={text} 
-                        onChange={e=>setText(e.target.value)} 
+                        onChange={handleChange} 
                         onKeyDown={e=>e.key==='Enter' && handleSend()} 
                         placeholder={isRecording ? "Recording..." : (translateLang ? `Translating to ${translateLang}...` : "Message...")} 
                         className="flex-1 bg-transparent outline-none text-white text-sm placeholder:text-neutral-600 px-2 py-3" 
