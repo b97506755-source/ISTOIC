@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, FunctionDeclaration, Schema } from "@google/genai";
 import { debugService } from './debugService';
 import { GLOBAL_VAULT, Provider } from "./hydraVault";
@@ -280,28 +281,29 @@ export async function decodeAudioData(
   return buffer;
 }
 
-// --- V20 TOOL DEFINITIONS ---
+// --- V25 TOOL DEFINITIONS (UPGRADED) ---
 
 const manageNoteTool: FunctionDeclaration = {
   name: 'manage_note',
-  description: 'Creates, updates, searches, or reads notes in the secure vault. Triggered by words like "Catat", "Simpan", "Save", "Tulis".',
+  description: 'The PRIMARY tool for note management. Creates, updates, appends content, searches, or reads notes in the secure vault.',
   parameters: {
     type: Type.OBJECT,
     properties: {
       action: { 
           type: Type.STRING, 
-          description: 'Action to perform: CREATE, UPDATE, APPEND, DELETE, SEARCH, or READ' 
+          enum: ['CREATE', 'UPDATE', 'APPEND', 'DELETE', 'SEARCH', 'READ'],
+          description: 'The operation to perform.' 
       },
-      id: { type: Type.STRING, description: 'Target Note ID (for UPDATE/DELETE/READ)' },
+      id: { type: Type.STRING, description: 'Target Note ID (Required for UPDATE, APPEND, DELETE, READ)' },
       title: { type: Type.STRING, description: 'Note Title' },
-      content: { type: Type.STRING, description: 'Note Content' },
-      appendContent: { type: Type.STRING, description: 'Text to append to existing note' },
+      content: { type: Type.STRING, description: 'Main content of the note' },
+      appendContent: { type: Type.STRING, description: 'Text to append to the end of an existing note (for APPEND action)' },
       tags: { 
           type: Type.ARRAY, 
           items: { type: Type.STRING }, 
           description: 'Tags for categorization' 
       },
-      query: { type: Type.STRING, description: 'Search query for SEARCH action' }
+      query: { type: Type.STRING, description: 'Search keywords for SEARCH action' }
     },
     required: ['action']
   }
@@ -309,25 +311,13 @@ const manageNoteTool: FunctionDeclaration = {
 
 const searchNotesTool: FunctionDeclaration = {
     name: 'search_notes',
-    description: 'Search for information in the user\'s notes.',
+    description: 'Legacy tool. Prefer manage_note with action=SEARCH.',
     parameters: {
         type: Type.OBJECT,
         properties: {
             query: { type: Type.STRING, description: 'Keywords to search for.' }
         },
         required: ['query']
-    }
-};
-
-const readNoteTool: FunctionDeclaration = {
-    name: 'read_note',
-    description: 'Read the full content of a specific note.',
-    parameters: {
-        type: Type.OBJECT,
-        properties: {
-            id: { type: Type.STRING, description: 'The ID of the note to read.' }
-        },
-        required: ['id']
     }
 };
 
@@ -349,12 +339,11 @@ const generateVisualTool: FunctionDeclaration = {
 
 const googleSearchTool = { googleSearch: {} };
 
-export const noteTools = { functionDeclarations: [manageNoteTool, searchNotesTool, readNoteTool] };
+export const noteTools = { functionDeclarations: [manageNoteTool, searchNotesTool] };
 export const visualTools = { functionDeclarations: [generateVisualTool] }; 
 export const searchTools = [googleSearchTool]; 
 
 // Universal tools for Non-Gemini providers (OpenAI Compatible)
-// Note: Some providers might need different schema, but this structure is generally accepted by Vercel AI SDK
 export const universalTools = {
-    functionDeclarations: [manageNoteTool, searchNotesTool, readNoteTool, generateVisualTool]
+    functionDeclarations: [manageNoteTool, generateVisualTool]
 };

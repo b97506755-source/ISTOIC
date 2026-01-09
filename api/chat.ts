@@ -6,6 +6,42 @@ export const config = {
   runtime: 'edge',
 };
 
+// --- TOOL DEFINITIONS ---
+const TOOLS_DEF = [
+  {
+    functionDeclarations: [
+      {
+        name: "generate_visual",
+        description: "Generate an image based on the prompt. Use this whenever the user asks to generate, draw, create, or show an image.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            prompt: { type: "STRING", description: "The detailed prompt for the image." }
+          },
+          required: ["prompt"]
+        }
+      },
+      {
+        name: "manage_note",
+        description: "Manage user notes (create, update, search, read).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            action: { type: "STRING", enum: ["CREATE", "UPDATE", "SEARCH", "READ", "DELETE", "APPEND"] },
+            id: { type: "STRING" },
+            title: { type: "STRING" },
+            content: { type: "STRING" },
+            appendContent: { type: "STRING" },
+            query: { type: "STRING" },
+            tags: { type: "ARRAY", items: { type: "STRING" } }
+          },
+          required: ["action"]
+        }
+      }
+    ]
+  }
+];
+
 // --- HELPER: ROTASI KEY (LOAD BALANCER) ---
 function getActiveKey(envVar: string | undefined): string | undefined {
   if (!envVar) return undefined;
@@ -119,7 +155,8 @@ async function streamGemini(userMsg: string, systemMsg: string, modelId: string,
         model: modelId,
         contents: [{ role: 'user', parts: [{ text: userMsg }] }],
         config: {
-            systemInstruction: systemMsg
+            systemInstruction: systemMsg,
+            tools: TOOLS_DEF as any // Inject Tools
         }
     });
 
@@ -128,8 +165,19 @@ async function streamGemini(userMsg: string, systemMsg: string, modelId: string,
         const encoder = new TextEncoder();
         try {
             for await (const chunk of result) {
+                // 1. Text Content
                 const text = chunk.text;
                 if (text) controller.enqueue(encoder.encode(text));
+                
+                // 2. Tool Calls (Serialized for Client)
+                const calls = chunk.functionCalls;
+                if (calls) {
+                    for (const call of calls) {
+                        const json = JSON.stringify({ name: call.name, args: call.args });
+                        // Use unique delimiter for client parsing
+                        controller.enqueue(encoder.encode(`::TOOL::${json}::ENDTOOL::`));
+                    }
+                }
             }
             controller.close();
         } catch (e) {

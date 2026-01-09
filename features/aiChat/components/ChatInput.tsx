@@ -61,15 +61,15 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
         return [
             { label: '🎨 Buat Gambar', text: 'Buatkan gambar ' },
             { label: '📝 Ringkas', text: 'Tolong ringkas ini: ' },
-            { label: '💡 Ide Konten', text: 'Ide konten tentang ' },
-            { label: '🧐 Analisa', text: 'Analisa data ini: ' }
+            { label: '✅ Buat Task', text: 'Buat daftar tugas dari: ' },
+            { label: '🧠 Brainstorm', text: 'Bantu ide untuk ' }
         ];
     }
     return [
         { label: '🧠 Analyze', text: 'Analyze this logically: ' },
         { label: '🐞 Debug', text: 'Debug this code: ' },
-        { label: '📝 Summarize', text: 'Summarize key points: ' },
-        { label: '⚖️ Evaluate', text: 'Pros & cons of: ' }
+        { label: '📋 Extract Tasks', text: 'Extract action items: ' },
+        { label: '📝 Summarize', text: 'Summarize key points: ' }
     ];
   }, [personaMode]);
 
@@ -269,22 +269,6 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
           </div>
       )}
 
-      {/* SUGGESTION CHIPS (Standard Mode - Top) */}
-      {!input && !attachment && !isDictating && variant === 'standard' && (
-        <div className="absolute -top-14 left-0 right-0 flex gap-2 overflow-x-auto no-scrollbar px-1 py-2 z-0 pointer-events-auto">
-            {suggestionChips.map((chip, i) => (
-                <button
-                    key={i}
-                    onClick={() => { setInput(chip.text); inputRef.current?.focus(); }}
-                    className="shrink-0 px-3 py-1.5 rounded-xl bg-[#09090b]/80 backdrop-blur-md border border-white/10 text-[10px] font-medium text-neutral-400 hover:text-white hover:border-accent/50 hover:bg-white/5 transition-all shadow-sm active:scale-95 animate-slide-up"
-                    style={{ animationDelay: `${i * 50}ms` }}
-                >
-                    {chip.label}
-                </button>
-            ))}
-        </div>
-      )}
-
       {/* MAIN CAPSULE - GLASS HUD STYLE */}
       <div 
         className={`
@@ -323,7 +307,7 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
             </div>
         )}
 
-        {/* INPUT AREA & HERO SUGGESTIONS */}
+        {/* INPUT AREA & UNIFIED SUGGESTIONS */}
         <div className="relative px-4 pt-3 pb-2 flex flex-col">
             <textarea
                 ref={inputRef}
@@ -340,14 +324,24 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
                 disabled={isLoading && !onStop} 
             />
 
-            {/* SUGGESTION CHIPS (Hero Mode - Inside) */}
-            {!input && !attachment && !isDictating && variant === 'hero' && (
-                <div className="flex flex-wrap gap-2 mt-3 opacity-0 animate-fade-in" style={{ animationDelay: '200ms', opacity: 1 }}>
+            {/* SUGGESTION CHIPS (Below Input, Inside Container) */}
+            {!input && !attachment && !isDictating && (
+                <div className={`
+                    flex gap-2 mt-2 
+                    ${variant === 'hero' ? 'flex-wrap opacity-0 animate-fade-in' : 'overflow-x-auto no-scrollbar mask-fade-sides'}
+                `}
+                style={variant === 'hero' ? { animationDelay: '200ms', opacity: 1 } : {}}
+                >
                     {suggestionChips.map((chip, i) => (
                         <button
                             key={i}
                             onClick={() => { setInput(chip.text); inputRef.current?.focus(); }}
-                            className="px-3 py-1 rounded-lg bg-black/5 dark:bg-white/5 border border-transparent hover:border-accent/30 hover:bg-accent/5 text-[9px] font-bold text-neutral-500 hover:text-accent transition-all"
+                            className={`
+                                shrink-0 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-medium whitespace-nowrap
+                                bg-black/5 dark:bg-white/5 border-transparent 
+                                hover:border-accent/30 hover:bg-accent/5 hover:text-accent
+                                text-neutral-500 dark:text-neutral-400
+                            `}
                         >
                             {chip.label}
                         </button>

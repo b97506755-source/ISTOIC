@@ -27,7 +27,6 @@ class StoicLogicKernel {
         const currentId = plan[i];
         const model = MASTER_MODEL_CATALOG.find(m => m.id === currentId) || MASTER_MODEL_CATALOG[0];
 
-        // We no longer check for local keys here. We assume the server has them.
         debugService.log('INFO', 'STOIC_KERNEL', 'PROXY_REQ', `Routing to /api/chat for ${model.provider} [${model.name}]...`);
 
         try {
@@ -51,20 +50,54 @@ class StoicLogicKernel {
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let fullText = "";
+            let buffer = "";
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
                 
-                const chunkText = decoder.decode(value, { stream: true });
-                fullText += chunkText;
-                yield { text: chunkText };
+                buffer += decoder.decode(value, { stream: true });
+
+                // PARSE TOOLS FROM STREAM PROTOCOL
+                const toolRegex = /::TOOL::(.*)::ENDTOOL::/s;
+                let match;
+                
+                while ((match = toolRegex.exec(buffer)) !== null) {
+                    const [fullMatch, jsonStr] = match;
+                    
+                    const textBefore = buffer.slice(0, match.index);
+                    if (textBefore) {
+                        yield { text: textBefore };
+                        hasYielded = true;
+                    }
+                    
+                    try {
+                        const toolData = JSON.parse(jsonStr);
+                        yield { functionCall: toolData };
+                        hasYielded = true;
+                    } catch (e) {
+                        console.error("Tool Parse Error", e);
+                    }
+                    
+                    buffer = buffer.slice(match.index + fullMatch.length);
+                }
+
+                if (!buffer.includes("::TOOL::")) {
+                    if (buffer) {
+                        yield { text: buffer };
+                        buffer = "";
+                        hasYielded = true;
+                    }
+                }
+            }
+            
+            if (buffer) {
+                yield { text: buffer };
                 hasYielded = true;
             }
 
             if (hasYielded) {
-                this.updateHistory(msg, fullText);
+                this.updateHistory(msg, "[Stream Complete]");
                 return; // Success
             }
 

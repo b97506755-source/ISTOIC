@@ -57,18 +57,6 @@ export class HanisahKernel {
 
         try {
             // --- STRICT SERVER-SIDE ROUTING ---
-            // We no longer check for local keys. We assume the server has them.
-            
-            // Build simple history for context (Client -> Server state transfer)
-            const standardHistory = this.history.map(h => ({ 
-                role: h.role === 'model' ? 'assistant' : 'user', 
-                content: h.parts ? h.parts[0].text : h.content 
-            }));
-            
-            // Note: The /api/chat endpoint currently accepts a simplified payload. 
-            // Ideally, it should accept the full history array. 
-            // For V101 stability, we concatenate relevant context into the system prompt 
-            // or rely on the server to handle the single-turn + prompt injection efficiently.
             
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -77,7 +65,7 @@ export class HanisahKernel {
                     message: msg, 
                     modelId: model.id,
                     provider: model.provider,
-                    context: systemPrompt // Sending Full System Prompt + Context as context
+                    context: systemPrompt 
                 }),
                 signal
             });
@@ -90,19 +78,57 @@ export class HanisahKernel {
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let fullText = "";
+            let buffer = "";
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-                const chunkText = decoder.decode(value, { stream: true });
-                fullText += chunkText;
-                yield { text: chunkText };
+                
+                buffer += decoder.decode(value, { stream: true });
+
+                // PARSE TOOLS FROM STREAM PROTOCOL (::TOOL::...::ENDTOOL::)
+                const toolRegex = /::TOOL::(.*)::ENDTOOL::/s;
+                let match;
+                
+                while ((match = toolRegex.exec(buffer)) !== null) {
+                    const [fullMatch, jsonStr] = match;
+                    
+                    // Output text before tool call
+                    const textBefore = buffer.slice(0, match.index);
+                    if (textBefore) {
+                        yield { text: textBefore };
+                        hasYielded = true;
+                    }
+                    
+                    try {
+                        const toolData = JSON.parse(jsonStr);
+                        yield { functionCall: toolData };
+                        hasYielded = true;
+                    } catch (e) {
+                        console.error("Tool Parse Error", e);
+                    }
+                    
+                    buffer = buffer.slice(match.index + fullMatch.length);
+                }
+
+                // Yield plain text if no partial tool markers remain (simplified)
+                if (!buffer.includes("::TOOL::")) {
+                    if (buffer) {
+                        yield { text: buffer };
+                        buffer = "";
+                        hasYielded = true;
+                    }
+                }
+            }
+
+            // Flush remaining
+            if (buffer) {
+                yield { text: buffer };
                 hasYielded = true;
             }
 
             if (hasYielded) {
-                this.updateHistory(msg, fullText);
+                this.updateHistory(msg, "[Stream Complete]");
                 return; // Success, exit loop
             }
 

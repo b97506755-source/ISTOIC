@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { 
   Bold, Italic, Underline, Maximize2, Minimize2, 
@@ -277,6 +278,29 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     updateStatsAndFormats(); 
   };
 
+  // NEW: FORMAT AS CODE BLOCK (JS SYNTAX WRAPPER)
+  const formatCodeBlock = () => {
+    if (isReadonly || !editorRef.current) return;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    const selectedText = range.toString();
+
+    // If text is selected, wrap it. If not, insert placeholder.
+    const textToWrap = selectedText || " // Your code here ";
+    
+    // Create pre/code structure
+    // Note: To support basic JS highlighting "visuals", we rely on CSS classes. 
+    // Real syntax highlighting requires a tokenizer which is too heavy for contentEditable here.
+    // However, this structure allows downstream markdown parsers to pick it up.
+    const html = `<pre style="background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 8px; font-family: monospace; overflow-x: auto; white-space: pre-wrap;"><code class="language-javascript">${textToWrap}</code></pre><p><br></p>`;
+    
+    document.execCommand('insertHTML', false, html);
+    updateStatsAndFormats();
+  };
+
   const changeFont = (fontValue: string) => {
       if(isReadonly) return;
       setCurrentFont(fontValue);
@@ -295,6 +319,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
             case 'u': e.preventDefault(); executeCommand('underline'); break;
             case 'z': e.preventDefault(); executeCommand('undo'); break;
             case 'y': e.preventDefault(); executeCommand('redo'); break;
+            case 'j': e.preventDefault(); formatCodeBlock(); break; // Ctrl+J for JS Code
             default: break;
         }
     }
@@ -327,7 +352,6 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
       const contextText = selectedText || editorRef.current?.innerText || "";
       const contextLabel = selectedText ? "SELECTED_TEXT" : "FULL_DOCUMENT";
       const prompt = `[ROLE: HANISAH_WRITER_MODULE] TASK: ${finalInstruction} CONTEXT (${contextLabel}): """${contextText}""" OUTPUT_DIRECTIVE: Return ONLY the revised/generated text. LANGUAGE_TARGET: ${TRANSLATIONS[currentLang].meta.label}`;
-      // Fix: contextNotes (3rd arg) must be Note[], not string
       const response = await HANISAH_KERNEL.execute(prompt, 'gemini-3-flash-preview', []);
       setHanisahResult(response.text || "Output generation failed.");
     } catch (error) {
@@ -374,10 +398,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     }
 
     const r = new SpeechRecognition();
-    
-    // Dynamic Language Setting based on i18n
     r.lang = TRANSLATIONS[currentLang].meta.code;
-    
     r.continuous = true; 
     r.interimResults = true; 
 
@@ -391,7 +412,6 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     r.onresult = (e: any) => {
       const result = e.results[e.results.length - 1];
       const text = result[0].transcript;
-      
       if (result.isFinal) {
           if (editorRef.current) {
               editorRef.current.focus();
@@ -436,7 +456,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
 
              <button 
                 onClick={() => setIsTaskPanelOpen(!isTaskPanelOpen)}
-                className={`relative px-4 py-2 rounded-full flex items-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest border active:scale-95 ${isTaskPanelOpen ? 'bg-blue-500 text-white border-blue-600' : 'bg-transparent border-skin-border text-skin-muted hover:text-skin-text'}`}
+                className={`relative px-4 py-2 rounded-full flex items-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest border ${isTaskPanelOpen ? 'bg-blue-500 text-white border-blue-600' : 'bg-transparent border-skin-border text-skin-muted hover:text-skin-text'}`}
                 title="Tasks"
              >
                  <CheckSquare size={14} />
@@ -491,6 +511,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
                             <ToolbarButton onClick={() => executeCommand('bold')} icon={<Bold size={16} />} isActive={formats.bold} ariaLabel="Bold" className="w-9 h-9 rounded-xl" />
                             <ToolbarButton onClick={() => executeCommand('italic')} icon={<Italic size={16} />} isActive={formats.italic} ariaLabel="Italic" className="w-9 h-9 rounded-xl" />
                             <ToolbarButton onClick={() => executeCommand('underline')} icon={<Underline size={16} />} isActive={formats.underline} ariaLabel="Underline" className="w-9 h-9 rounded-xl" />
+                            <ToolbarButton onClick={formatCodeBlock} icon={<Code size={16} />} isActive={formats.code} ariaLabel="Code Block" className="w-9 h-9 rounded-xl" />
                         </div>
 
                         <div className="flex items-center gap-2 pl-1 ml-auto shrink-0">
@@ -534,6 +555,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
                     prose-pre:bg-skin-surface prose-pre:text-sm prose-pre:p-6 prose-pre:rounded-2xl prose-pre:font-mono prose-pre:border prose-pre:border-skin-border
                     prose-blockquote:border-l-4 prose-blockquote:border-accent prose-blockquote:pl-4 prose-blockquote:italic
                     ${isReadonly ? 'cursor-default' : 'cursor-text'}
+                    break-words overflow-x-hidden
                 `}
                 style={{ fontSize: `${fontSize}px`, fontFamily: currentFont }}
                 data-placeholder={t.placeholder}
@@ -616,7 +638,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
           )}
       </div>
 
-      {/* Hanisah Writer Overlay - UI remains consistent with editor */}
+      {/* Hanisah Writer Overlay */}
       {showHanisahOverlay && (
         <div className="fixed inset-0 z-[2500] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in">
             <div className="w-full max-w-4xl bg-skin-card rounded-[32px] border border-skin-border overflow-hidden shadow-2xl flex flex-col md:flex-row h-[85vh] md:h-[600px] ring-1 ring-skin-border">

@@ -14,7 +14,7 @@ export const executeNeuralTool = async (
 ): Promise<string> => {
     const { name, args } = fc;
     
-    // --- 1. NOTE MANAGEMENT (GENIUS LOGIC V2) ---
+    // --- 1. NOTE MANAGEMENT (GENIUS LOGIC V2.5) ---
     if (name === 'manage_note') {
         const { action, id, title, content, appendContent, tags, taskContent, taskAction, taskDueDate, query } = args;
         let updatedNotes = [...notes];
@@ -74,9 +74,9 @@ export const executeNeuralTool = async (
             // 2. Keyword Fallback
             if (matches.length === 0) {
                 matches = notes.filter(n => 
-                    n.title.toLowerCase().includes(q) || 
-                    n.content.toLowerCase().includes(q) ||
-                    n.tags?.some(t => t.toLowerCase().includes(q))
+                    (n.title && n.title.toLowerCase().includes(q)) || 
+                    (n.content && n.content.toLowerCase().includes(q)) ||
+                    (n.tags && n.tags.some(t => t.toLowerCase().includes(q)))
                 ).slice(0, 5);
                 method = "EXACT";
             }
@@ -84,23 +84,55 @@ export const executeNeuralTool = async (
             if (matches.length === 0) return `> 🔍 **NO TRACE FOUND**\n> Tidak ada catatan yang cocok dengan "${query}".`;
 
             const list = matches.map(n => 
-                `- **${n.title}** (ID: \`${n.id}\`)\n  _${n.content.slice(0, 60).replace(/\n/g, ' ')}..._`
+                `- **${n.title}** (ID: \`${n.id}\`)\n  _${n.content.substring(0, 60).replace(/\n/g, ' ')}..._`
             ).join('\n');
 
-            return `> 🔍 **VAULT RESULTS** (${method})\n\n${list}\n\n_Gunakan ID untuk edit/baca lengkap._`;
+            return `> 🔍 **VAULT RESULTS** (${method})\n\n${list}\n\n_Katakan "Lihat catatan ID..." untuk membaca isinya._`;
         }
 
-        // C. UPDATE / APPEND (Precise)
-        if ((action === 'UPDATE' || action === 'APPEND') && id) {
-            const noteIndex = updatedNotes.findIndex(n => n.id === id);
+        // C. READ (Fetch & Display)
+        if (action === 'READ') {
+            // Coba cari ID, jika gagal cari berdasarkan judul yang mirip
+            let target = notes.find(n => n.id === id);
             
-            // Jika ID salah, coba cari by title (Smart Fallback)
+            if (!target && title) {
+                target = notes.find(n => n.title.toLowerCase().includes(title.toLowerCase()));
+            }
+
+            if (!target && query) {
+                 target = notes.find(n => n.title.toLowerCase().includes(query.toLowerCase()));
+            }
+
+            if (!target) return "> ❌ **READ ERROR**: Catatan tidak ditemukan. Coba cari dulu.";
+
+            const tasksStr = target.tasks?.map(t => `[${t.isCompleted ? 'x' : ' '}] ${t.text}`).join('\n') || "";
+
+            return `
+**📂 FILE: ${target.title}**
+\`ID: ${target.id}\` | \`Updated: ${new Date(target.updated).toLocaleString()}\`
+***
+${target.content}
+***
+${tasksStr ? `**TASKS:**\n${tasksStr}\n` : ''}
+**TAGS:** \`[${target.tags?.join('] [') || 'NONE'}]\`
+`;
+        }
+
+        // D. UPDATE / APPEND (Precise)
+        if ((action === 'UPDATE' || action === 'APPEND') && (id || title)) {
+            let noteIndex = -1;
+            
+            if (id) {
+                noteIndex = updatedNotes.findIndex(n => n.id === id);
+            }
+            
+            // Jika ID salah/kosong, coba cari by title (Smart Fallback)
+            if (noteIndex === -1 && title) {
+                noteIndex = updatedNotes.findIndex(n => n.title.toLowerCase().includes(title.toLowerCase()));
+            }
+
             if (noteIndex === -1) {
-                // Logic tambahan: Auto-search jika ID tidak valid tapi user memberikan judul
-                const fallbackNote = title ? updatedNotes.find(n => n.title.toLowerCase().includes(title.toLowerCase())) : null;
-                if (!fallbackNote) return `> ❌ **TARGET MISSING**: Note ID \`${id}\` tidak ditemukan.`;
-                // Jika ketemu via judul, update recursive dengan ID yang benar
-                return executeNeuralTool({ ...fc, args: { ...args, id: fallbackNote.id } }, notes, setNotes, imageModelPreference);
+                return `> ❌ **TARGET MISSING**: Note tidak ditemukan. Mohon spesifik.`;
             }
 
             const note = updatedNotes[noteIndex];
@@ -138,7 +170,7 @@ export const executeNeuralTool = async (
             return `> 🔄 **UPDATE SUCCESS**\n> **Target:** ${note.title}\n> **Ops:** ${changesLog.join(', ')}`;
         }
 
-        // D. DELETE
+        // E. DELETE
         if (action === 'DELETE' && id) {
             const target = updatedNotes.find(n => n.id === id);
             if (!target) return `> ❌ **ERROR**: ID Salah.`;
@@ -148,27 +180,20 @@ export const executeNeuralTool = async (
         }
     }
 
-    // --- 2. READ SPECIFIC NOTE (Formatted) ---
+    // --- 2. LEGACY READ SPECIFIC NOTE HANDLER (Fallback) ---
     if (name === 'read_note') {
         const note = notes.find(n => n.id === args.id);
         if (!note) return "> ❌ **READ ERROR**: Akses ditolak atau ID salah.";
-        
-        const tasksStr = note.tasks?.map(t => `[${t.isCompleted ? 'x' : ' '}] ${t.text}`).join('\n') || "No active tasks.";
-
-        return `
-**📂 FILE: ${note.title}**
-\`ID: ${note.id}\` | \`Updated: ${new Date(note.updated).toLocaleString()}\`
-***
-${note.content}
-***
-**TASKS:**
-${tasksStr}
-
-**TAGS:** \`[${note.tags?.join('] [') || 'NONE'}]\`
-`;
+        return `**📂 FILE: ${note.title}**\n\n${note.content}`;
     }
 
-    // --- 3. VISUAL GENERATION (Robust) ---
+    // --- 3. SEARCH NOTES HANDLER (Fallback) ---
+    if (name === 'search_notes') {
+        // Redirect to manage_note logic logic internally or just exec simple search
+        return executeNeuralTool({ name: 'manage_note', args: { action: 'SEARCH', query: args.query } }, notes, setNotes, imageModelPreference);
+    }
+
+    // --- 4. VISUAL GENERATION (Robust) ---
     if (name === 'generate_visual') {
         try {
             const prompt = args.prompt;
@@ -204,7 +229,7 @@ ${tasksStr}
         }
     }
 
-    // --- 4. MECHANIC ---
+    // --- 5. MECHANIC ---
     if (name === 'system_mechanic_tool') {
         const res = await executeMechanicTool(fc);
         if (res.startsWith('{')) return res; 

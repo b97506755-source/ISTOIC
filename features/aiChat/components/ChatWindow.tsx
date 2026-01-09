@@ -5,15 +5,13 @@ import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { 
     Flame, Brain, ExternalLink, ArrowRight, Copy, Check, ChevronDown,
     Image as ImageIcon, RefreshCw, Search,
-    Network, BrainCircuit, Infinity, AlertTriangle, CheckCheck, Clock,
-    ClipboardCopy
+    Network, BrainCircuit, Infinity, AlertTriangle, CheckCheck, Clock
 } from 'lucide-react';
 import type { ChatMessage } from '../../../types';
 import { generateImage } from '../../../services/geminiService';
 import { AIProviderInfo } from './AIProviderInfo';
 
-// --- TYPES & SUB-COMPONENTS (Keep existing helpers like ThinkingAccordion, etc.) ---
-// ... (imports are same as existing, just ensuring ChatWindow has the Copy logic)
+// --- TYPES & SUB-COMPONENTS ---
 
 const SystemStatusBubble = ({ status }: { status: string }) => (
     <div className="flex items-center gap-2.5 my-2 px-4 py-2.5 rounded-xl bg-amber-500/5 border border-amber-500/20 text-amber-500 w-fit animate-slide-up">
@@ -161,7 +159,7 @@ const TypingIndicator = ({ personaMode }: { personaMode: 'hanisah' | 'stoic' }) 
     );
 };
 
-// --- MESSAGE BUBBLE WITH COPY & ACTION CARDS ---
+// --- MESSAGE BUBBLE ---
 const MessageBubble = memo(({ msg, personaMode, isLoading, onUpdateMessage }: { msg: ChatMessage, personaMode: 'hanisah' | 'stoic', isLoading: boolean, onUpdateMessage?: (id: string, text: string) => void }) => {
     const [copied, setCopied] = useState(false);
     
@@ -172,7 +170,7 @@ const MessageBubble = memo(({ msg, personaMode, isLoading, onUpdateMessage }: { 
     
     const textContent: string = useMemo(() => {
         const rawText = msg.text;
-        if (typeof rawText === 'string' && rawText) return rawText;
+        if (typeof rawText === 'string') return rawText;
         if (rawText instanceof Blob) return ''; 
         const anyMsg = msg as any;
         if (typeof anyMsg.content === 'string') return anyMsg.content;
@@ -210,13 +208,11 @@ const MessageBubble = memo(({ msg, personaMode, isLoading, onUpdateMessage }: { 
         if (msg.metadata?.createdAt) {
             return new Date(msg.metadata.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-        return '';
+        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }, [msg.metadata?.createdAt]);
 
-    // SMART COPY FUNCTION
     const handleCopyMessage = () => {
         if (content) {
-            // Clean Markdown markers if needed, or copy raw
             navigator.clipboard.writeText(content);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
@@ -231,6 +227,7 @@ const MessageBubble = memo(({ msg, personaMode, isLoading, onUpdateMessage }: { 
 
     return (
         <div className={`flex w-full mb-6 md:mb-8 ${isModel ? 'justify-start' : 'justify-end'} px-1 group/msg`}>
+            {/* Avatar for Model */}
             {isModel && (
                 <div className="flex flex-col gap-2 mr-3 shrink-0 mt-1">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-lg border border-white/10 bg-white dark:bg-[#121214] ${accentColor}`}>
@@ -239,101 +236,110 @@ const MessageBubble = memo(({ msg, personaMode, isLoading, onUpdateMessage }: { 
                 </div>
             )}
 
-            <div className={`relative max-w-[88%] sm:max-w-[80%] lg:max-w-[75%] flex flex-col ${isModel ? 'items-start' : 'items-end'} min-w-0`}>
+            {/* Bubble & Metadata Container */}
+            <div className={`flex flex-col max-w-[88%] sm:max-w-[80%] lg:max-w-[75%] min-w-0 ${isModel ? 'items-start' : 'items-end'}`}>
                 
-                <div className={`relative px-5 py-4 overflow-hidden text-sm md:text-[15px] leading-7 font-sans tracking-wide shadow-sm break-words
-                    ${isModel 
-                        ? 'bg-white dark:bg-[#0a0a0b] text-black dark:text-neutral-200 rounded-[24px] rounded-tl-sm border border-black/5 dark:border-white/10' 
-                        : 'bg-zinc-100 dark:bg-white/5 text-black dark:text-white rounded-[24px] rounded-tr-sm border border-black/5 dark:border-white/5'
-                    }`}>
+                {/* Bubble Row with Copy Button outside */}
+                <div className={`flex items-end gap-2 ${isModel ? 'flex-row' : 'flex-row-reverse'}`}>
                     
-                    {isRerouting && msg.metadata?.systemStatus && !content && <SystemStatusBubble status={msg.metadata.systemStatus} />}
-                    {thought && <ThinkingAccordion content={thought} isActive={isLoading && !content} />}
-                    
-                    {content && (
-                        <div className={`prose dark:prose-invert prose-sm max-w-none break-words min-w-0 ${isModel ? 'prose-p:text-neutral-800 dark:prose-p:text-neutral-300' : ''} 
-                            /* Custom Blockquote Styling for "Action Cards" */
-                            prose-blockquote:border-l-4 prose-blockquote:border-accent prose-blockquote:bg-accent/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:my-2
-                        `}>
-                            <Markdown 
-                                urlTransform={(url) => url} 
-                                components={{
-                                    code({node, inline, className, children, ...props}: any) {
-                                        const match = /language-(\w+)/.exec(className || '');
-                                        return !inline 
-                                            ? <CodeBlock language={match ? match[1] : 'text'} children={children} /> 
-                                            : <code className="text-[12px] font-mono font-bold px-1.5 py-0.5 rounded border bg-black/5 dark:bg-white/10 border-black/5 dark:border-white/10" {...props}>{children}</code>;
-                                    },
-                                    a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-bold inline-flex items-center gap-1 bg-accent/5 px-1.5 rounded transition-colors border border-accent/10">{children} <ArrowRight size={10} className="-rotate-45"/></a>,
-                                    img: ({src, alt}) => <MarkdownImage src={src} alt={alt} />,
-                                    table: ({children}) => <div className="overflow-x-auto my-4 border border-white/10 rounded-xl"><table className="min-w-full divide-y divide-white/10 text-[12px]">{children}</table></div>,
-                                    th: ({children}) => <th className="px-4 py-2 bg-white/5 font-black uppercase tracking-wider text-left">{children}</th>,
-                                    td: ({children}) => <td className="px-4 py-2 border-t border-white/5">{children}</td>,
-                                    blockquote: ({children}) => <blockquote className="border-l-4 border-l-[var(--accent-color)] bg-[var(--accent-color)]/5 pl-4 py-3 my-2 rounded-r-xl border border-transparent border-l-4 shadow-sm">{children}</blockquote>
-                                }}
-                            >
-                                {content}
-                            </Markdown>
-                            {isLoading && isModel && <span className="inline-block w-2 h-4 bg-accent align-middle ml-1 animate-[pulse_0.8s_ease-in-out_infinite]"></span>}
-                        </div>
-                    )}
-
-                    {imgPrompt && <ImageGenerationCard prompt={imgPrompt} messageId={msg.id} originalText={textContent} onUpdateMessage={onUpdateMessage} />}
-
-                    {isLoading && !content && !thought && !imgPrompt && !isRerouting && (
-                        <div className="flex items-center gap-2 py-1">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 animate-pulse">Computing</span>
-                            <div className="flex gap-1">
-                                <div className="w-1 h-1 bg-accent rounded-full animate-bounce"></div>
-                                <div className="w-1 h-1 bg-accent rounded-full animate-bounce delay-75"></div>
-                                <div className="w-1 h-1 bg-accent rounded-full animate-bounce delay-150"></div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="flex items-center justify-between mt-2 pt-1 gap-4">
-                        <div className="flex-1">
-                             {isModel && (
-                                <AIProviderInfo 
-                                    metadata={msg.metadata} 
-                                    isHydra={msg.metadata?.model === 'auto-best' || msg.metadata?.model?.includes('HYDRA')} 
-                                    className="mt-0"
-                                />
-                            )}
-                        </div>
+                    {/* The Message Bubble */}
+                    <div className={`relative px-5 py-4 overflow-hidden text-sm md:text-[15px] leading-7 font-sans tracking-wide shadow-sm break-words
+                        ${isModel 
+                            ? 'bg-white dark:bg-[#0a0a0b] text-black dark:text-neutral-200 rounded-[24px] rounded-tl-sm border border-black/5 dark:border-white/10' 
+                            : 'bg-zinc-100 dark:bg-white/5 text-black dark:text-white rounded-[24px] rounded-tr-sm border border-black/5 dark:border-white/5'
+                        }
+                    `}>
+                        {isRerouting && msg.metadata?.systemStatus && !content && <SystemStatusBubble status={msg.metadata.systemStatus} />}
+                        {thought && <ThinkingAccordion content={thought} isActive={isLoading && !content} />}
                         
-                        <div className="flex items-center gap-2 shrink-0 opacity-100 select-none">
-                             {/* COPY BUTTON: Shows on hover or always on mobile */}
-                             {isModel && (
-                                 <button 
-                                     onClick={handleCopyMessage}
-                                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-neutral-400 hover:text-accent transition-all md:opacity-0 md:group-hover/msg:opacity-100 focus:opacity-100 opacity-100"
-                                     title="Copy Text"
-                                 >
-                                     {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                                 </button>
-                             )}
+                        {content && (
+                            <div className={`prose dark:prose-invert prose-sm max-w-none break-words min-w-0 ${isModel ? 'prose-p:text-neutral-800 dark:prose-p:text-neutral-300' : ''} 
+                                prose-blockquote:border-l-4 prose-blockquote:border-accent prose-blockquote:bg-accent/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:my-2
+                            `}>
+                                <Markdown 
+                                    urlTransform={(url) => url} 
+                                    components={{
+                                        code({node, inline, className, children, ...props}: any) {
+                                            const match = /language-(\w+)/.exec(className || '');
+                                            return !inline 
+                                                ? <CodeBlock language={match ? match[1] : 'text'} children={children} /> 
+                                                : <code className="text-[12px] font-mono font-bold px-1.5 py-0.5 rounded border bg-black/5 dark:bg-white/10 border-black/5 dark:border-white/10" {...props}>{children}</code>;
+                                        },
+                                        a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-bold inline-flex items-center gap-1 bg-accent/5 px-1.5 rounded transition-colors border border-accent/10">{children} <ArrowRight size={10} className="-rotate-45"/></a>,
+                                        img: ({src, alt}) => <MarkdownImage src={src} alt={alt} />,
+                                        table: ({children}) => <div className="overflow-x-auto my-4 border border-white/10 rounded-xl"><table className="min-w-full divide-y divide-white/10 text-[12px]">{children}</table></div>,
+                                        th: ({children}) => <th className="px-4 py-2 bg-white/5 font-black uppercase tracking-wider text-left">{children}</th>,
+                                        td: ({children}) => <td className="px-4 py-2 border-t border-white/5">{children}</td>,
+                                        blockquote: ({children}) => <blockquote className="border-l-4 border-l-[var(--accent-color)] bg-[var(--accent-color)]/5 pl-4 py-3 my-2 rounded-r-xl border border-transparent border-l-4 shadow-sm">{children}</blockquote>
+                                    }}
+                                >
+                                    {content}
+                                </Markdown>
+                                {isLoading && isModel && <span className="inline-block w-2 h-4 bg-accent align-middle ml-1 animate-[pulse_0.8s_ease-in-out_infinite]"></span>}
+                            </div>
+                        )}
 
-                            <span className="text-[9px] font-mono text-neutral-400">{timestamp}</span>
-                            {isUser && (
-                                <>
-                                    {(msg.metadata?.status === 'success' || !msg.metadata?.status) && <CheckCheck size={12} className="text-neutral-400" />}
-                                    {msg.metadata?.status === 'loading' && <Clock size={12} className="animate-pulse text-neutral-400" />}
-                                    {msg.metadata?.status === 'error' && <AlertTriangle size={12} className="text-red-500" />}
-                                </>
-                            )}
-                        </div>
+                        {imgPrompt && <ImageGenerationCard prompt={imgPrompt} messageId={msg.id} originalText={textContent} onUpdateMessage={onUpdateMessage} />}
+
+                        {isLoading && !content && !thought && !imgPrompt && !isRerouting && (
+                            <div className="flex items-center gap-2 py-1">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 animate-pulse">Computing</span>
+                                <div className="flex gap-1">
+                                    <div className="w-1 h-1 bg-accent rounded-full animate-bounce"></div>
+                                    <div className="w-1 h-1 bg-accent rounded-full animate-bounce delay-75"></div>
+                                    <div className="w-1 h-1 bg-accent rounded-full animate-bounce delay-150"></div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {isModel && msg.metadata?.groundingChunks && <GroundingSources chunks={msg.metadata.groundingChunks} />}
                     </div>
 
-                    {isModel && msg.metadata?.groundingChunks && <GroundingSources chunks={msg.metadata.groundingChunks} />}
+                    {/* Copy Button (Outside) */}
+                    {isModel && content && (
+                        <button 
+                            onClick={handleCopyMessage}
+                            className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-neutral-400 hover:text-accent transition-all shrink-0 self-center"
+                            title="Copy Text"
+                        >
+                            {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                        </button>
+                    )}
                 </div>
+
+                {/* Metadata Footer (Outside) */}
+                <div className={`flex items-center gap-3 mt-1.5 px-2 select-none ${isModel ? 'justify-start' : 'justify-end'}`}>
+                    {isModel && (
+                        <AIProviderInfo 
+                            metadata={msg.metadata} 
+                            isHydra={msg.metadata?.model === 'auto-best' || msg.metadata?.model?.includes('HYDRA')} 
+                            className="mt-0"
+                        />
+                    )}
+                    
+                    <div className="flex items-center gap-1.5 opacity-70">
+                         <span className="text-[9px] font-mono text-neutral-400">{timestamp}</span>
+                         {isUser && (
+                             <>
+                                 {(msg.metadata?.status === 'success' || !msg.metadata?.status) && <CheckCheck size={12} className="text-neutral-400" />}
+                                 {msg.metadata?.status === 'loading' && <Clock size={12} className="animate-pulse text-neutral-400" />}
+                                 {msg.metadata?.status === 'error' && <AlertTriangle size={12} className="text-red-500" />}
+                             </>
+                         )}
+                    </div>
+                </div>
+
             </div>
         </div>
     );
 }, (prev, next) => {
-    // Memo comparison
-    const prevText = typeof prev.msg.text === 'string' ? prev.msg.text : ((prev.msg as any).content || '');
-    const nextText = typeof next.msg.text === 'string' ? next.msg.text : ((next.msg as any).content || '');
+    // Robust equality check for memo
+    const getVal = (m: any) => {
+        if (typeof m.text === 'string') return m.text;
+        return (m.content || '');
+    };
+    const prevText = getVal(prev.msg);
+    const nextText = getVal(next.msg);
     
     const prevMeta = JSON.stringify(prev.msg.metadata);
     const nextMeta = JSON.stringify(next.msg.metadata);
