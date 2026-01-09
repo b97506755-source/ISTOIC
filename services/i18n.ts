@@ -34,7 +34,7 @@ export const TRANSLATIONS = {
             history: "RIWAYAT",
             empty: "BELUM ADA PESAN",
             welcome_hanisah: "⚡ **HANISAH SIAP.**\n\n*Halo! Ada yang bisa saya bantu selesaikan hari ini?*",
-            welcome_stoic: "🧠 **LOGIC CORE AKTIF.**\n\n*Mode Analisis Rasional.*\nSampaikan masalah Anda secara objektif."
+            welcome_stoic: "🏛️ **AURELIUS AI ONLINE.**\n\n*Salve. Mari kita hadapi ini dengan clarity dan wisdom.*"
         },
         editor: {
             placeholder: "Mulai menulis ide...",
@@ -61,20 +61,8 @@ export const TRANSLATIONS = {
             saved: "BERHASIL"
         },
         prompts: {
-            hanisah: `Kamu adalah HANISAH (Asisten Virtual Cerdas).
-[GAYA KOMUNIKASI]
-- Gunakan Bahasa Indonesia yang natural, sopan, dan jelas.
-- Bersikap solutif, langsung pada poin, namun tetap ramah.
-- Gunakan "Saya" dan "Anda" atau "Aku" dan "Kamu" sesuai konteks pengguna.
-
-[FUNGSI]
-- Membantu produktivitas, mencatat, dan riset.
-- Gunakan tool 'manage_note' untuk menyimpan informasi penting.
-- Gunakan 'generate_visual' jika diminta membuat gambar.`,
-            stoic: `Anda adalah LOGIC CORE (Mesin Analisis Stoik).
-Bahasa: INDONESIA (Formal, Padat, Logis).
-Fokus: Objektivitas, Dikotomi Kendali, dan Solusi Rasional.
-Hindari respon emosional. Fokus pada fakta dan tindakan yang bisa diambil.`
+            hanisah: `Kamu adalah HANISAH (Asisten Virtual Cerdas).`,
+            stoic: `Anda adalah AURELIUS (Penasihat Stoic & Strategis).`
         }
     },
     en: {
@@ -108,7 +96,7 @@ Hindari respon emosional. Fokus pada fakta dan tindakan yang bisa diambil.`
             history: "HISTORY",
             empty: "NO DATA",
             welcome_hanisah: "⚡ **HANISAH ONLINE.**\n\n*Hello! How can I assist your productivity today?*",
-            welcome_stoic: "🧠 **LOGIC CORE ONLINE.**\n\n*Analysis Mode Active.*\nState your query objectively."
+            welcome_stoic: "🏛️ **AURELIUS AI ONLINE.**\n\n*Salve. Let us approach this with clarity and wisdom.*"
         },
         editor: {
             placeholder: "Start typing...",
@@ -135,12 +123,8 @@ Hindari respon emosional. Fokus pada fakta dan tindakan yang bisa diambil.`
             saved: "SAVED"
         },
         prompts: {
-            hanisah: `You are HANISAH (Smart Virtual Assistant).
-Style: Casual, polite, helpful English.
-Focus: Productivity, clarity, and assistance.`,
-            stoic: `You are LOGIC CORE.
-Style: Formal, Objective, Stoic.
-Focus: Logic and Rationality.`
+            hanisah: `You are HANISAH (Smart Virtual Assistant).`,
+            stoic: `You are AURELIUS (Stoic & Strategic Advisor).`
         }
     },
     bn: {
@@ -174,7 +158,7 @@ Focus: Logic and Rationality.`
             history: "SEJARAH",
             empty: "TIADA DATA",
             welcome_hanisah: "⚡ **HANISAH ONLINE.**\n\n*Hai, apa bulih saya bantu?*",
-            welcome_stoic: "🧠 **LOGIC CORE ONLINE.**\n\n*Mod Analisis Aktif.*\nSila nyatakan masalah awda."
+            welcome_stoic: "🏛️ **AURELIUS AI ONLINE.**\n\n*Salve. Mari kita hadapi ini dengan bijaksana.*"
         },
         editor: {
             placeholder: "Mula menaip...",
@@ -201,12 +185,8 @@ Focus: Logic and Rationality.`
             saved: "DISIMPAN"
         },
         prompts: {
-            hanisah: `Awda adalah HANISAH.
-Bahasa: Melayu Brunei/Standard.
-Gaya: Sopan dan membantu.`,
-            stoic: `Anda adalah LOGIC CORE.
-Bahasa: Formal.
-Fokus: Logik.`
+            hanisah: `Awda adalah HANISAH.`,
+            stoic: `Awda adalah AURELIUS.`
         }
     }
 };

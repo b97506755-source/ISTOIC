@@ -28,7 +28,7 @@ const PersonaToggle: React.FC<{ mode: 'hanisah' | 'stoic'; onToggle: () => void;
             className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 ${mode === 'hanisah' ? 'bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-500' : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-500'}`}
         >
             <div className={`w-1.5 h-1.5 rounded-full ${mode === 'hanisah' ? 'bg-orange-500' : 'bg-cyan-500'} animate-pulse`}></div>
-            <span className="text-[10px] font-black uppercase tracking-widest">{mode === 'hanisah' ? 'HANISAH' : 'STOIC'}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">{mode === 'hanisah' ? 'HANISAH' : 'AURELIUS'}</span>
             <div className="w-[1px] h-3 bg-current opacity-20 mx-1"></div>
             {mode === 'hanisah' ? <Flame size={12} strokeWidth={2.5} /> : <Brain size={12} strokeWidth={2.5} />}
         </button>
@@ -141,12 +141,12 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
                                     {personaMode === 'hanisah' ? <Flame size={32} /> : <Brain size={32} />}
                                 </div>
                                 <div>
-                                    <h2 className="text-4xl md:text-6xl font-black italic tracking-tighter text-black dark:text-white uppercase leading-none">{personaMode}</h2>
-                                    <p className="text-[10px] font-mono text-neutral-400 uppercase tracking-[0.3em]">{personaMode === 'hanisah' ? 'HYPER-INTUITIVE PARTNER' : 'QUANTUM LOGIC KERNEL'}</p>
+                                    <h2 className="text-4xl md:text-6xl font-black italic tracking-tighter text-black dark:text-white uppercase leading-none">{personaMode === 'hanisah' ? 'HANISAH' : 'AURELIUS'}</h2>
+                                    <p className="text-[10px] font-mono text-neutral-400 uppercase tracking-[0.3em]">{personaMode === 'hanisah' ? 'HYPER-INTUITIVE PARTNER' : 'STOIC STRATEGIC ADVISOR'}</p>
                                 </div>
                             </div>
                             <div className="w-full max-w-2xl mx-auto px-2 md:px-4 animate-slide-up relative z-20" style={{ animationDelay: '100ms' }}>
-                                <ChatInput input={input} setInput={setInput} isLoading={isLoading} onSubmit={sendMessage} onStop={stopGeneration} onNewChat={() => handleNewChat(personaMode)} onFocusChange={() => {}} aiName={personaMode.toUpperCase()} isVaultSynced={isVaultSynced} onToggleVaultSync={handleVaultToggle} personaMode={personaMode} isVaultEnabled={isVaultConfigEnabled} onTogglePersona={changePersona} variant="hero" onPollinations={generateWithPollinations} disableVisuals={isStoic} />
+                                <ChatInput input={input} setInput={setInput} isLoading={isLoading} onSubmit={sendMessage} onStop={stopGeneration} onNewChat={() => handleNewChat(personaMode)} onFocusChange={() => {}} aiName={personaMode === 'hanisah' ? 'HANISAH' : 'AURELIUS'} isVaultSynced={isVaultSynced} onToggleVaultSync={handleVaultToggle} personaMode={personaMode} isVaultEnabled={isVaultConfigEnabled} onTogglePersona={changePersona} variant="hero" onPollinations={generateWithPollinations} disableVisuals={isStoic} />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl mx-auto px-2 md:px-4 mt-8 opacity-80">
                                 {!isStoic ? <SuggestionCard icon={<SparklesIcon />} label="GENERATE VISUAL" desc="Create high-fidelity images." onClick={() => { debugService.logAction(UI_REGISTRY.CHAT_SUGGESTION_CARD, FN_REGISTRY.CHAT_SEND_MESSAGE, 'GEN_IMG'); setInput("Generate a futuristic cyberpunk city with neon lights."); }} accent="text-pink-500 group-hover:text-pink-600" delay={150} /> : <SuggestionCard icon={<Brain />} label="FIRST PRINCIPLES" desc="Deconstruct complex problems." onClick={() => { debugService.logAction(UI_REGISTRY.CHAT_SUGGESTION_CARD, FN_REGISTRY.CHAT_SEND_MESSAGE, 'LOGIC'); setInput("Analyze this problem using First Principles thinking: [Insert Problem]"); }} accent="text-cyan-500 group-hover:text-cyan-600" delay={150} />}
@@ -192,7 +192,7 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
                                 <ArrowDown size={18} strokeWidth={2.5} />
                             </button>
                         )}
-                        <ChatInput input={input} setInput={setInput} isLoading={isLoading} onSubmit={sendMessage} onStop={stopGeneration} onNewChat={() => handleNewChat(personaMode)} onFocusChange={() => {}} aiName={personaMode.toUpperCase()} isVaultSynced={isVaultSynced} onToggleVaultSync={handleVaultToggle} personaMode={personaMode} isVaultEnabled={isVaultConfigEnabled} onTogglePersona={changePersona} variant="standard" onPollinations={generateWithPollinations} disableVisuals={isStoic} />
+                        <ChatInput input={input} setInput={setInput} isLoading={isLoading} onSubmit={sendMessage} onStop={stopGeneration} onNewChat={() => handleNewChat(personaMode)} onFocusChange={() => {}} aiName={personaMode === 'hanisah' ? 'HANISAH' : 'AURELIUS'} isVaultSynced={isVaultSynced} onToggleVaultSync={handleVaultToggle} personaMode={personaMode} isVaultEnabled={isVaultConfigEnabled} onTogglePersona={changePersona} variant="standard" onPollinations={generateWithPollinations} disableVisuals={isStoic} />
                     </div>
                 </div>
             )}
