@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'istoic-cache-v27';
+const CACHE_NAME = 'istoic-cache-v29';
 const OFFLINE_URL = '/index.html';
 
 self.addEventListener('install', (event) => {
@@ -7,61 +7,89 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
-// Handle incoming messages from the main app (IStokView) to trigger System Notifications
+// BACKGROUND SYNC EVENT
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'sync-pending-messages') {
+        event.waitUntil(
+            console.log('[SW] Background Sync Triggered: Processing pending queue...')
+        );
+    }
+});
+
+// --- HIGH PRIORITY ALERT SYSTEM ---
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body, tag, data } = event.data.payload;
+    const { title, body, tag, data, type } = event.data.payload;
     
-    // Determine vibration pattern based on tag
-    let vibrationPattern = [100, 50, 100];
-    let actions = [];
-    let requireInteraction = false;
+    // 1. AGGRESSIVE VIBRATION PATTERN (Simulate Ringing)
+    // Format: [vibrate, pause, vibrate, pause...]
+    let vibrationPattern = [200, 100, 200]; // Default Message
 
-    if (tag === 'istok_call') {
-        vibrationPattern = [500, 1000, 500, 1000, 500]; // Longer, aggressive vibration for calls
-        actions = [
-            { action: 'answer', title: '📞 Jawab' },
-            { action: 'decline', title: '❌ Tolak' }
+    if (type === 'CALL' || tag === 'istok_call') {
+        // Heartbeat-like aggressive ringing vibration
+        // 1s vibrate, 0.5s pause, repeat lengthy
+        vibrationPattern = [
+            1000, 500, 1000, 500, 1000, 500, 
+            1000, 500, 1000, 500, 2000
         ];
-        requireInteraction = true;
-    } else if (tag === 'istok_req') {
-        vibrationPattern = [200, 100, 200, 100];
+    } else if (type === 'REQUEST') {
+        vibrationPattern = [500, 200, 500, 200];
+    }
+
+    // 2. ACTIONS
+    let actions = [
+        { action: 'open', title: '👁️ Buka Aplikasi' }
+    ];
+
+    if (type === 'CALL') {
         actions = [
-            { action: 'open', title: 'Lihat' }
-        ];
-        requireInteraction = true;
-    } else {
-        actions = [
-            { action: 'open', title: 'Buka' }
+            { action: 'answer', title: '📞 TERIMA PANGGILAN' },
+            { action: 'decline', title: '❌ TOLAK' }
         ];
     }
 
+    // 3. SHOW NOTIFICATION
     self.registration.showNotification(title, {
       body: body,
-      icon: 'https://grainy-gradients.vercel.app/noise.svg', // Fallback icon
+      icon: 'https://grainy-gradients.vercel.app/noise.svg', // Branding Icon
       badge: 'https://grainy-gradients.vercel.app/noise.svg',
       vibrate: vibrationPattern,
-      tag: tag, // Tag ensures notifications of same type stack or replace
-      renotify: true, // Alert user every time even if tag exists
-      data: data, // Stores metadata like peerId
+      tag: tag, // Critical for avoiding duplicate stacks, updates existing one
+      renotify: true, // TRUE = Play sound/vibrate again even if replacing old notif with same tag
+      data: { ...data, type }, 
       actions: actions,
-      requireInteraction: requireInteraction, // Keep visible until interacted
-      silent: false
+      requireInteraction: true, // TRUE = Keeps notification on screen until user interacts (Wake-like behavior)
+      silent: false,
+      timestamp: Date.now()
     });
   }
 });
 
-// Handle Notification Click (Smart Focusing & Actions)
+// --- SMART CLICK HANDLER ---
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const urlToOpen = new URL(self.location.origin).href;
-  const targetPeerId = event.notification.data ? event.notification.data.peerId : null;
+  const notificationData = event.notification.data || {};
+  const targetPeerId = notificationData.peerId;
   const action = event.action || 'open'; // 'answer', 'decline', 'open'
 
+  // Handle 'decline' action without opening window if possible, 
+  // or open window to process decline logic then close (PWA limitation)
+  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       // 1. Try to find an existing window to focus
@@ -69,12 +97,13 @@ self.addEventListener('notificationclick', (event) => {
         const client = windowClients[i];
         if (client.url.startsWith(urlToOpen) && 'focus' in client) {
           return client.focus().then((focusedClient) => {
-             // Send message to the focused client to handle the UI logic
+             // Send message to the focused client to handle the UI logic immediately
              if (focusedClient) {
                  focusedClient.postMessage({ 
                      type: 'NAVIGATE_CHAT', 
                      peerId: targetPeerId, 
-                     action: action 
+                     action: action,
+                     payload: notificationData
                  });
              }
           });

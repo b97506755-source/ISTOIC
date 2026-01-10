@@ -17,7 +17,7 @@ import { SidebarIStokContact, IStokSession, IStokProfile, IStokContact } from '.
 import { ShareConnection } from './components/ShareConnection'; 
 import { ConnectionNotification } from './components/ConnectionNotification';
 import { CallNotification } from './components/CallNotification';
-import { MessageBubble } from './components/MessageBubble'; 
+import { MessageBubble, Message } from './components/MessageBubble'; 
 import { QRScanner } from './components/QRScanner'; 
 import { compressImage } from './components/gambar';
 import { IStokUserIdentity } from './services/istokIdentity';
@@ -26,24 +26,10 @@ import { OMNI_KERNEL } from '../../services/omniRace';
 
 // --- CONSTANTS ---
 const CHUNK_SIZE = 1024 * 64; // 64KB
-const HEARTBEAT_INTERVAL = 2000; // Kirim detak jantung tiap 2 detik
-const CONNECTION_TIMEOUT = 10000; // Anggap mati jika hening 10 detik
-const HANDSHAKE_TIMEOUT = 30000; // Batas waktu notifikasi
-
-// --- TYPES ---
-interface Message {
-    id: string;
-    sender: 'ME' | 'THEM' | 'AI';
-    type: 'TEXT' | 'IMAGE' | 'AUDIO' | 'FILE' | 'AI_RESPONSE';
-    content: string; 
-    timestamp: number;
-    status: 'PENDING' | 'SENT' | 'DELIVERED' | 'READ';
-    duration?: number;
-    size?: number;
-    fileName?: string; 
-    mimeType?: string;
-    ttl?: number; 
-}
+const HEARTBEAT_INTERVAL = 2000;
+const CONNECTION_TIMEOUT = 10000;
+const HANDSHAKE_TIMEOUT = 30000;
+const CALL_TIMEOUT = 30000; // 30 Detik timeout panggilan tak terjawab
 
 type ConnectionStage = 'IDLE' | 'LOCATING' | 'HANDSHAKE' | 'SECURE' | 'RECONNECTING';
 
@@ -76,7 +62,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const [messages, setMessages] = useState<Message[]>([]);
     const [ttlMode, setTtlMode] = useState(0);
     const [isAiThinking, setIsAiThinking] = useState(false);
-    const [isPeerTyping, setIsPeerTyping] = useState(false); // New: Typing Indicator
+    const [isPeerTyping, setIsPeerTyping] = useState(false);
 
     // UI Toggles
     const [showSidebar, setShowSidebar] = useState(false);
@@ -99,8 +85,80 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const chunkBuffer = useRef<{[key:string]: {chunks:string[], count:number, total:number, lastUpdate: number}}>({});
     const reconnectTimeoutRef = useRef<any>(null);
     const requestTimeoutRef = useRef<any>(null);
-    const audioCtxRef = useRef<AudioContext | null>(null); // Audio Singleton
+    const callTimeoutRef = useRef<any>(null); // NEW: Missed call timer
+    const audioCtxRef = useRef<AudioContext | null>(null);
     const typingTimeoutRef = useRef<any>(null);
+    
+    // --- DUPLICATE PREVENTION REFS ---
+    const processedCallsRef = useRef<Set<string>>(new Set());
+    const lastNotificationRef = useRef<number>(0);
+    
+    // --- ACTIVE CHAT TRACKING (WhatsApp Logic) ---
+    const activePeerIdRef = useRef<string>(targetPeerId);
+
+    // Sync Ref with State
+    useEffect(() => {
+        activePeerIdRef.current = targetPeerId;
+        
+        // --- READ RECEIPT TRIGGER ---
+        // If we focus on this chat (and connected), send READ ACK for all pending messages
+        if (isConnected && targetPeerId && !document.hidden) {
+            const unreadIds = messages
+                .filter(m => m.sender === 'THEM' && m.status !== 'READ')
+                .map(m => m.id);
+                
+            if (unreadIds.length > 0) {
+                sendAck('ACK_READ', unreadIds);
+                // Optimistic update locally
+                setMessages(prev => prev.map(m => unreadIds.includes(m.id) ? { ...m, status: 'READ' } : m));
+            }
+        }
+    }, [targetPeerId, messages, isConnected]);
+
+    // --- HELPER: SYSTEM NOTIFICATION TRIGGER ---
+    const triggerSystemNotification = (title: string, body: string, type: 'CALL' | 'REQUEST' | 'MSG', tagId: string, payloadData: any = {}) => {
+        const now = Date.now();
+        if (now - lastNotificationRef.current < 2000) return; 
+        lastNotificationRef.current = now;
+
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'SHOW_NOTIFICATION',
+                payload: {
+                    title,
+                    body,
+                    type, 
+                    tag: tagId, 
+                    data: payloadData
+                }
+            });
+        }
+    };
+
+    // --- LISTEN TO SW MESSAGES (ACTIONS) ---
+    useEffect(() => {
+        const handleSWMessage = (event: MessageEvent) => {
+            const { type, action, peerId } = event.data;
+            if (type === 'NAVIGATE_CHAT') {
+                if (action === 'answer' && peerId) {
+                    setShowCall(true);
+                } else if (action === 'decline') {
+                    if (incomingCall) {
+                        incomingCall.close();
+                        setIncomingCall(null);
+                        handleMissedCall(); // Log as rejected/missed
+                    }
+                    if (incomingRequest) {
+                        onDeclineRequest();
+                    }
+                }
+                if (peerId) setTargetPeerId(peerId);
+            }
+        };
+        
+        navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+        return () => navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
+    }, [incomingCall, incomingRequest]);
 
     // --- SOUND ENGINE V2 (STABLE) ---
     const playSound = useCallback((type: 'MSG_IN' | 'MSG_OUT' | 'CONNECT' | 'ERROR' | 'RING') => {
@@ -148,13 +206,34 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             }
             osc.start(now); 
             osc.stop(now + 0.5);
-        } catch(e) { /* Ignore audio errors */ }
+        } catch(e) { }
+    }, []);
+
+    // --- MISSED CALL LOGIC ---
+    const handleMissedCall = useCallback(() => {
+        if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+        
+        // Log to chat
+        const missedMsg: Message = {
+            id: crypto.randomUUID(),
+            sender: 'SYSTEM',
+            type: 'MISSED_CALL',
+            content: 'Panggilan Tak Terjawab',
+            timestamp: Date.now(),
+            status: 'READ'
+        };
+        setMessages(prev => [...prev, missedMsg]);
+        setIncomingCall(null);
+        
+        // Stop vibration if any
+        if (navigator.vibrate) navigator.vibrate(0);
     }, []);
 
     // --- LIFECYCLE ---
     useEffect(() => {
         activatePrivacyShield();
-        
+        if (Notification.permission === 'default') Notification.requestPermission();
+
         const handleOnline = () => setIsNetworkOnline(true);
         const handleOffline = () => setIsNetworkOnline(false);
         window.addEventListener('online', handleOnline);
@@ -173,7 +252,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             created: Date.now()
         });
 
-        // Global Peer Monitor
         const checkPeerStatus = () => {
             if (globalPeer && !globalPeer.destroyed && !globalPeer.disconnected) {
                 setIsPeerAlive(true);
@@ -187,31 +265,24 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
 
         const interval = setInterval(checkPeerStatus, 1000);
         
-        // Garbage Collector (Cleanup stuck chunks)
         const gcInterval = setInterval(() => {
             const now = Date.now();
             Object.keys(chunkBuffer.current).forEach(key => {
-                if (now - chunkBuffer.current[key].lastUpdate > 120000) {
-                    delete chunkBuffer.current[key];
-                }
+                if (now - chunkBuffer.current[key].lastUpdate > 120000) delete chunkBuffer.current[key];
             });
+            if (processedCallsRef.current.size > 20) processedCallsRef.current.clear();
         }, 60000);
 
         checkPeerStatus(); 
-        
-        if (globalPeer) {
-            setupPeerListeners(globalPeer);
-        }
+        if (globalPeer) setupPeerListeners(globalPeer);
+        if (initialAcceptedConnection) handleAcceptedConnection(initialAcceptedConnection);
 
-        if (initialAcceptedConnection) {
-            handleAcceptedConnection(initialAcceptedConnection);
-        }
-
-        // URL Params Logic
         const urlParams = new URLSearchParams(window.location.search);
         if(urlParams.get('connect')) {
             setTargetPeerId(urlParams.get('connect')!);
             if (urlParams.get('key')) setAccessPin(urlParams.get('key')!);
+            const action = urlParams.get('action');
+            if (action === 'answer') setTimeout(() => setShowCall(true), 1000);
         }
 
         return () => {
@@ -223,12 +294,12 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         };
     }, [identity, globalPeer]);
 
-    // Cleanup Helpers
     const cleanupConnectionRefs = () => {
         if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
         if (deathCheckIntervalRef.current) clearInterval(deathCheckIntervalRef.current);
         if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
         if (requestTimeoutRef.current) clearTimeout(requestTimeoutRef.current);
+        if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
     };
 
     // Auto-Dismiss Incoming Request
@@ -249,34 +320,28 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     // --- HEARTBEAT & ZOMBIE KILLER ---
     useEffect(() => {
         if (isConnected) {
-            // 1. Sender: Send PING regularly
             heartbeatIntervalRef.current = setInterval(() => {
-                if(connRef.current?.open) {
-                    connRef.current.send({ type: 'PING' });
-                }
+                if(connRef.current?.open) connRef.current.send({ type: 'PING' });
             }, HEARTBEAT_INTERVAL);
 
-            // 2. Watcher: Check if peer is dead
             deathCheckIntervalRef.current = setInterval(() => {
                 const now = Date.now();
                 if (now - lastHeartbeat > CONNECTION_TIMEOUT) {
                     if (isDataConnectionAlive) {
-                        console.warn("⚠️ Zombie Connection Detected (No Heartbeat)");
-                        setIsDataConnectionAlive(false); // Trigger UI Reconnect
+                        console.warn("⚠️ Zombie Connection Detected");
+                        setIsDataConnectionAlive(false); 
                     }
                 }
             }, 5000);
         } else {
             cleanupConnectionRefs();
         }
-
         return () => cleanupConnectionRefs();
     }, [isConnected, lastHeartbeat, isDataConnectionAlive]);
 
     // Auto Reconnect Logic
     useEffect(() => {
         if (isConnected && !isDataConnectionAlive && isPeerAlive && targetPeerId) {
-            console.log("♻️ Auto-Reconnecting...");
             if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
             reconnectTimeoutRef.current = setTimeout(() => {
                 connectToPeer(targetPeerId, accessPin, true); 
@@ -289,12 +354,10 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const onAcceptRequest = async () => {
         if (!incomingRequest || !incomingRequest.conn) return;
         setIsHandshakeProcessing(true);
-
         try {
             const { conn } = incomingRequest;
             const ack = JSON.stringify({ type: 'HANDSHAKE_ACK' });
-            const enc = await encryptData(ack, '000000'); // Initial channel is always default
-            
+            const enc = await encryptData(ack, '000000'); 
             if (enc) conn.send({ type: 'SYS', payload: enc });
             
             connRef.current = conn;
@@ -303,11 +366,10 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             
             setIsConnected(true);
             setIsDataConnectionAlive(true);
-            setLastHeartbeat(Date.now()); // Reset timer
+            setLastHeartbeat(Date.now());
             setStage('SECURE');
             playSound('CONNECT');
 
-            // Save Session
             const newSession: IStokSession = {
                 id: conn.peer,
                 name: incomingRequest.identity,
@@ -351,8 +413,29 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const setupPeerListeners = (peer: any) => {
         peer.off('call'); 
         peer.on('call', (call: any) => {
+             const callSignature = `${call.peer}_${Date.now()}`;
+             if (incomingCall && incomingCall.peer === call.peer) return;
+
              setIncomingCall(call);
              playSound('RING');
+             
+             // 1. Set Missed Call Timer (Feature #2)
+             if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+             callTimeoutRef.current = setTimeout(() => {
+                 call.close();
+                 handleMissedCall();
+             }, CALL_TIMEOUT);
+
+             // 2. NOTIFICATION
+             if (!showCall) {
+                 triggerSystemNotification(
+                     "📞 PANGGILAN SECURE MASUK", 
+                     `ID: ${call.peer.slice(0,8)}... mencoba menghubungi.`,
+                     "CALL",
+                     `istok_call_${call.peer}`,
+                     { peerId: call.peer }
+                 );
+             }
         });
         
         peer.off('connection');
@@ -366,30 +449,26 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const setupDataConnection = (conn: any) => {
         conn.off('data'); 
         conn.on('data', (d: any) => handleIncomingData(d, conn));
-
         conn.off('close');
-        conn.on('close', () => {
-            console.warn("⚠️ Data connection closed event");
-            setIsDataConnectionAlive(false);
-        });
-
+        conn.on('close', () => setIsDataConnectionAlive(false));
         conn.off('error');
-        conn.on('error', (e: any) => {
-            console.error("⚠️ Data connection error", e);
-            setIsDataConnectionAlive(false);
-        });
+        conn.on('error', () => setIsDataConnectionAlive(false));
+    };
+
+    // --- ACK PROTOCOL ---
+    const sendAck = (type: 'ACK_DELIVERED' | 'ACK_READ', ids: string[]) => {
+        if (!connRef.current?.open) return;
+        connRef.current.send({ type: type, ids: ids });
     };
 
     // --- CORE DATA HANDLING ---
     const handleIncomingData = async (data: any, conn: any) => {
-        // 0. HANDLE PING (Heartbeat) - Tanpa Enkripsi untuk Performa
         if (data.type === 'PING') {
             setLastHeartbeat(Date.now());
-            if (!isDataConnectionAlive) setIsDataConnectionAlive(true); // Revive UI
+            if (!isDataConnectionAlive) setIsDataConnectionAlive(true);
             return;
         }
 
-        // 0. HANDLE TYPING
         if (data.type === 'TYPING') {
             setIsPeerTyping(data.isTyping);
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -397,7 +476,21 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             return;
         }
 
-        // 1. HANDLE CHUNKS
+        // --- ACK HANDLING (Feature #3) ---
+        if (data.type === 'ACK_DELIVERED' || data.type === 'ACK_READ') {
+            const targetStatus = data.type === 'ACK_DELIVERED' ? 'DELIVERED' : 'READ';
+            setMessages(prev => prev.map(m => {
+                // Update only if ID matches AND current status is lower precedence
+                // PENDING < SENT < DELIVERED < READ
+                if (data.ids.includes(m.id)) {
+                    if (targetStatus === 'READ') return { ...m, status: 'READ' };
+                    if (targetStatus === 'DELIVERED' && m.status !== 'READ') return { ...m, status: 'DELIVERED' };
+                }
+                return m;
+            }));
+            return;
+        }
+
         if (data.type === 'CHUNK') {
             const { id, idx, total, chunk } = data;
             if (!chunkBuffer.current[id]) {
@@ -416,18 +509,13 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             return;
         }
 
-        // 2. DECRYPTION & LOGIC
         const pin = accessPin || '000000';
         
         if (data.type === 'SYS') {
-            // [SECURITY] Strict Mode: Jika sudah SECURE dan punya PIN, tolak PIN '000000'
             let decrypted = null;
-            
             if (stage === 'SECURE' && pin !== '000000') {
-                 // Hanya coba PIN private
                  decrypted = await decryptData(data.payload, pin);
             } else {
-                 // Coba PIN user, fallback ke public
                  decrypted = await decryptData(data.payload, pin);
                  if (!decrypted) decrypted = await decryptData(data.payload, '000000');
             }
@@ -436,16 +524,12 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             const json = JSON.parse(decrypted);
 
             if (json.type === 'HANDSHAKE_SYN') {
-                if (isConnected) return; // Busy
+                if (isConnected) return;
                 setIncomingRequest((prev: any) => {
-                    if (prev) return prev; 
+                    if (prev && prev.peerId === conn.peer) return prev;
                     playSound('MSG_IN');
-                    return {
-                        identity: json.identity || 'Unknown',
-                        peerId: conn.peer,
-                        photo: json.photo,
-                        conn: conn
-                    };
+                    triggerSystemNotification("🔒 PERMINTAAN KONEKSI", `${json.identity || 'Unknown'} ingin terhubung.`, "REQUEST", `istok_req_${conn.peer}`, { peerId: conn.peer });
+                    return { identity: json.identity || 'Unknown', peerId: conn.peer, photo: json.photo, conn: conn };
                 });
             } 
             else if (json.type === 'HANDSHAKE_ACK') {
@@ -461,21 +545,33 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             const decrypted = await decryptData(data.payload, pin);
             if(decrypted) {
                 const msg = JSON.parse(decrypted);
+                const isChatActive = (activePeerIdRef.current === conn.peer) && !document.hidden;
+
+                // Send ACK immediately upon arrival
+                sendAck('ACK_DELIVERED', [msg.id]);
+
+                // If chat is open, send READ immediately too
+                if (isChatActive) {
+                    sendAck('ACK_READ', [msg.id]);
+                }
+
                 setMessages(prev => {
                     if (prev.some(m => m.id === msg.id)) return prev;
-                    return [...prev, { ...msg, sender: 'THEM', status: 'READ' }];
+                    if (!isChatActive) {
+                         triggerSystemNotification(`💬 Pesan Baru`, msg.type === 'TEXT' ? msg.content : `[${msg.type}]`, "MSG", `msg_${conn.peer}`, { peerId: conn.peer });
+                    }
+                    return [...prev, { ...msg, sender: 'THEM', status: isChatActive ? 'READ' : 'DELIVERED' }];
                 });
-                playSound('MSG_IN');
-                setIsPeerTyping(false); // Stop typing anim immediately on msg received
+                
+                if (isChatActive) playSound('MSG_IN');
+                setIsPeerTyping(false);
             }
         }
     };
 
     // --- OUTGOING ACTIONS ---
     const sendTypingSignal = (isTyping: boolean) => {
-        if (connRef.current?.open) {
-            connRef.current.send({ type: 'TYPING', isTyping });
-        }
+        if (connRef.current?.open) connRef.current.send({ type: 'TYPING', isTyping });
     };
 
     const connectToPeer = (id: string, pin: string, isReconnect: boolean = false) => {
@@ -487,38 +583,22 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         if (!isReconnect) setStage('LOCATING');
         
         try {
-            const conn = globalPeer.connect(id, { 
-                reliable: true,
-                serialization: 'json',
-            });
-            
+            const conn = globalPeer.connect(id, { reliable: true, serialization: 'json' });
             if (!conn) {
-                if(!isReconnect) {
-                    setStage('IDLE');
-                    alert("Gagal inisialisasi.");
-                }
+                if(!isReconnect) { setStage('IDLE'); alert("Gagal inisialisasi."); }
                 return;
             }
             
             conn.on('open', async () => {
                 if (!isReconnect) setStage('HANDSHAKE');
-                
-                const handshake = JSON.stringify({ 
-                    type: 'HANDSHAKE_SYN', 
-                    identity: identity.displayName,
-                    photo: identity.photoURL,
-                    email: identity.email 
-                });
-
+                const handshake = JSON.stringify({ type: 'HANDSHAKE_SYN', identity: identity.displayName, photo: identity.photoURL, email: identity.email });
                 const effectivePin = pin.length >= 4 ? pin : '000000';
-                
                 const encrypted = await encryptData(handshake, effectivePin);
                 if(encrypted) conn.send({ type: 'SYS', payload: encrypted });
                 
                 connRef.current = conn;
                 setupDataConnection(conn);
                 setIsDataConnectionAlive(true);
-                
                 if (isReconnect) console.log("Reconnected.");
             });
 
@@ -526,7 +606,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
                 console.error("Connection Error:", err);
                 if (!isReconnect) setStage('IDLE');
             });
-
         } catch (e) {
             console.error("Connect Exception", e);
             setStage('IDLE');
@@ -535,9 +614,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
 
     const sendMessage = async (type: string, content: string, extraData: any = {}) => {
         if (!isNetworkOnline) {
-             const pendingMsg = { 
-                 id: crypto.randomUUID(), type, content, timestamp: Date.now(), ttl: ttlMode, ...extraData, sender: 'ME', status: 'PENDING' 
-             };
+             const pendingMsg = { id: crypto.randomUUID(), type, content, timestamp: Date.now(), ttl: ttlMode, ...extraData, sender: 'ME', status: 'PENDING' };
              setMessages(prev => [...prev, pendingMsg as Message]);
              return;
         }
@@ -557,10 +634,7 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
             const chunkId = crypto.randomUUID();
             const totalChunks = Math.ceil(encrypted.length / CHUNK_SIZE);
             for (let i = 0; i < totalChunks; i++) {
-                connRef.current.send({ 
-                    type: 'CHUNK', id: chunkId, idx: i, total: totalChunks, 
-                    chunk: encrypted.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE) 
-                });
+                connRef.current.send({ type: 'CHUNK', id: chunkId, idx: i, total: totalChunks, chunk: encrypted.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE) });
             }
         } else {
             connRef.current.send({ type: 'MSG', payload: encrypted });
@@ -568,25 +642,6 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         
         setMessages(prev => [...prev, { ...msgPayload, sender: 'ME', status: 'SENT' } as Message]);
         playSound('MSG_OUT');
-    };
-
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if(e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if(file.size > 20 * 1024 * 1024) { alert("Max File 20MB"); return; }
-            
-            if(file.type.startsWith('image/')) {
-                const compressed = await compressImage(file);
-                sendMessage('IMAGE', compressed.base64, { size: compressed.size, mimeType: compressed.mimeType });
-            } else {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => {
-                    const b64 = (reader.result as string).split(',')[1];
-                    sendMessage('FILE', b64, { fileName: file.name, mimeType: file.type, size: file.size });
-                };
-            }
-        }
     };
 
     const handleDisconnectChat = () => {
@@ -597,9 +652,35 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
         setMessages([]);
         setTargetPeerId('');
     };
+    
+    // --- File Handling ---
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            
+            if (file.type.startsWith('image/')) {
+                try {
+                    const { base64: dataUrl, size, mimeType } = await compressImage(file);
+                    sendMessage('IMAGE', dataUrl, { size, mimeType });
+                } catch (err) {
+                    alert("Gagal memproses gambar.");
+                }
+            } else {
+                if (file.size > 10 * 1024 * 1024) { alert("File terlalu besar (Max 10MB via P2P)."); return; }
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const result = reader.result as string;
+                    const base64 = result.split(',')[1];
+                    sendMessage('FILE', base64, { fileName: file.name, size: file.size, mimeType: file.type });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
 
     const handleForceReconnect = () => window.location.reload(); 
-
+    
     // --- AI UTILS ---
     const handleAiSmartCompose = async (userDraft: string, mode: 'REPLY' | 'REFINE' = 'REPLY'): Promise<string> => {
         setIsAiThinking(true);
@@ -616,24 +697,11 @@ export const IStokView: React.FC<IStokViewProps> = ({ onLogout, globalPeer, init
     const handleTranslation = async (text: string, targetLang: string): Promise<string> => {
         setIsAiThinking(true);
         try {
-            // PROFESSIONAL LINGUIST PROMPT
             const systemPrompt = `[ROLE: PROFESSIONAL_LINGUIST_CHAT_TRANSLATOR]
 Anda adalah ahli bahasa dan penerjemah pesan chat profesional.
 Tugas Anda: Menerjemahkan pesan dengan sangat natural, modern, dan sesuai konteks (slang jika perlu).
-
-ATURAN UTAMA:
-1. JANGAN kaku. Gunakan bahasa gaul/slang jika pesan aslinya santai.
-2. JANGAN gunakan bahasa kamus/formal jika konteksnya adalah chat antar teman.
-3. PAHAMI IDIOM: Cari padanan yang tepat di bahasa target.
-4. INDONESIA: Gunakan 'aku/kamu', 'kok', 'sih', 'nih' agar luwes.
-5. ENGLISH: Gunakan phrasal verbs dan ekspresi native.
-6. PERTAHANKAN EMOJI: Jangan hapus atau ubah posisi emoji.
-7. JANGAN MENJAWAB SEBAGAI AI. Jadilah "tangan" user yang mengetik.
-8. OUTPUT ONLY THE TRANSLATED TEXT. NO EXPLANATION.
-
 Target Language: ${targetLang}
 INPUT TEXT: "${text}"`;
-
             const stream = OMNI_KERNEL.raceStream(text, systemPrompt);
             let result = "";
             for await (const chunk of stream) if (chunk.text) result += chunk.text;
@@ -911,7 +979,11 @@ INPUT TEXT: "${text}"`;
             {/* CALL MODALS */}
             {showCall && <TeleponanView onClose={()=>setShowCall(false)} existingPeer={globalPeer} initialTargetId={targetPeerId} incomingCall={incomingCall} secretPin={accessPin} />}
             
-            {incomingCall && !showCall && <CallNotification identity="Secure Peer" onAnswer={()=>setShowCall(true)} onDecline={()=>{incomingCall.close(); setIncomingCall(null);}} />}
+            {incomingCall && !showCall && <CallNotification identity="Secure Peer" onAnswer={()=>setShowCall(true)} onDecline={()=>{ 
+                incomingCall.close(); 
+                setIncomingCall(null);
+                handleMissedCall(); 
+            }} />}
             
             {/* IMAGE PREVIEW */}
             {viewImage && (
