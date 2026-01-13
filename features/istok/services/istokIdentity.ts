@@ -50,6 +50,16 @@ function isNative(): boolean {
   return Capacitor.isNativePlatform();
 }
 
+function isIosPwa(): boolean {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent || "";
+  const isIos = /iPad|iPhone|iPod/.test(ua);
+  const isStandalone =
+    window.matchMedia?.("(display-mode: standalone)")?.matches ||
+    (window.navigator as { standalone?: boolean }).standalone === true;
+  return isIos && isStandalone;
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs = AUTH_TIMEOUT_MS): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("Request timeout. Please try again.")), timeoutMs);
@@ -150,7 +160,7 @@ export const IstokIdentityService = {
     await ensureAuthPersistence();
 
     try {
-      if (isNative()) {
+      if (isNative() || isIosPwa()) {
         await signInWithRedirect(auth, googleProvider);
         return { status: "REDIRECT_STARTED" };
       }

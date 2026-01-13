@@ -68,7 +68,6 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = FIRESTORE_TIMEOU
 
 export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   const [identity, setIdentity] = useLocalStorage<IStokUserIdentity | null>("istok_user_identity", null);
-  const [isPinSet, setIsPinSet] = useState(isSystemPinConfigured());
   const [bioEnabled, setBioEnabled] = useLocalStorage<boolean>("bio_auth_enabled", false);
 
   const [pendingGoogleUser, setPendingGoogleUser] = useState<IStokUserIdentity | null>(null);
@@ -170,6 +169,29 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         } else {
           setStage("SETUP_PIN");
         }
+        return;
+      }
+
+      const redirectIdentity = await IstokIdentityService.finalizeRedirectIfAny();
+      if (redirectIdentity) {
+        if (redirectIdentity.istokId) {
+          setIdentity(redirectIdentity);
+
+          if (isSystemPinConfigured()) {
+            if (bioEnabled && !isHardLocked) {
+              setStage("BIOMETRIC_SCAN");
+              handleBiometricScan();
+            } else {
+              setStage("LOCKED");
+            }
+          } else {
+            setStage("SETUP_PIN");
+          }
+          return;
+        }
+
+        setPendingGoogleUser(redirectIdentity);
+        setStage("CREATE_ID");
         return;
       }
 
@@ -324,7 +346,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     }
 
     await setSystemPin(pinInput);
-    setIsPinSet(true);
 
     try {
       const available = await BiometricService.isAvailable();
