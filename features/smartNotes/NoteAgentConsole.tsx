@@ -92,7 +92,7 @@ export const NoteAgentConsole: React.FC<NoteAgentConsoleProps> = ({ isOpen, onCl
 
     return (
         <div className="fixed inset-0 z-[2500] flex items-end md:items-center justify-center p-0 md:p-6 bg-black/80 backdrop-blur-xl animate-fade-in">
-            <div className="w-full h-[100dvh] md:h-[650px] md:max-w-5xl bg-skin-card rounded-none md:rounded-[40px] border-t md:border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row relative transition-transform duration-500 ease-out translate-y-0 animate-slide-up">
+            <div className="w-full h-[100dvh] md:h-[650px] md:max-w-5xl bg-white dark:bg-[#0a0a0b] rounded-none md:rounded-[40px] border-t md:border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row relative transition-transform duration-500 ease-out translate-y-0 animate-slide-up">
                 
                 {/* CLOSE BTN (Desktop Only) */}
                 <button 
@@ -104,7 +104,7 @@ export const NoteAgentConsole: React.FC<NoteAgentConsoleProps> = ({ isOpen, onCl
 
                 {/* LEFT: AGENT MENU */}
                 <div className={`
-                    w-full md:w-[350px] flex flex-col bg-skin-surface border-r border-black/5 dark:border-white/5
+                    w-full md:w-[350px] flex flex-col bg-zinc-50 dark:bg-[#050505] border-r border-black/5 dark:border-white/5
                     ${mobileView === 'MENU' ? 'flex h-full' : 'hidden md:flex'}
                 `}>
                     <div className="p-8 pb-4 relative pt-safe md:pt-8">
@@ -167,11 +167,11 @@ export const NoteAgentConsole: React.FC<NoteAgentConsoleProps> = ({ isOpen, onCl
 
                 {/* RIGHT: RESULT AREA */}
                 <div className={`
-                    flex-1 flex flex-col bg-skin-card relative h-full
+                    flex-1 flex flex-col bg-white dark:bg-[#0a0a0b] relative h-full
                     ${mobileView === 'RESULT' ? 'flex' : 'hidden md:flex'}
                 `}>
                     {/* Mobile Back Header */}
-                    <div className="md:hidden h-16 border-b border-black/5 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-skin-card pt-safe">
+                    <div className="md:hidden h-16 border-b border-black/5 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white dark:bg-[#0a0a0b] pt-safe">
                         <button onClick={() => setMobileView('MENU')} className="flex items-center gap-2 text-neutral-500 text-xs font-bold uppercase tracking-widest bg-zinc-100 dark:bg-white/5 px-3 py-1.5 rounded-lg active:scale-95">
                             <ChevronLeft size={16} /> BACK_TO_MENU
                         </button>
@@ -256,7 +256,7 @@ export const NoteAgentConsole: React.FC<NoteAgentConsoleProps> = ({ isOpen, onCl
 
                             {/* Actions Footer */}
                             {activeAgent !== 'INSIGHT' && activeAgent !== 'INDEXING' && (
-                                <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-black/5 dark:border-white/5 bg-skin-card/95 backdrop-blur-md shrink-0 pb-safe z-20">
+                                <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-black/5 dark:border-white/5 bg-white/95 dark:bg-[#0a0a0b]/95 backdrop-blur-md shrink-0 pb-safe z-20">
                                     <button 
                                         onClick={handleApply}
                                         className="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-xl font-black uppercase text-[10px] tracking-[0.25em] hover:scale-[1.01] active:scale-95 transition-all shadow-lg"

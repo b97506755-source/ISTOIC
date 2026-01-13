@@ -295,7 +295,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     // Note: To support basic JS highlighting "visuals", we rely on CSS classes. 
     // Real syntax highlighting requires a tokenizer which is too heavy for contentEditable here.
     // However, this structure allows downstream markdown parsers to pick it up.
-    const html = `<pre style="background: var(--bg-surface); color: var(--text-main); padding: 12px; border-radius: 8px; font-family: monospace; overflow-x: auto; white-space: pre-wrap;"><code class="language-javascript">${textToWrap}</code></pre><p><br></p>`;
+    const html = `<pre style="background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 8px; font-family: monospace; overflow-x: auto; white-space: pre-wrap;"><code class="language-javascript">${textToWrap}</code></pre><p><br></p>`;
     
     document.execCommand('insertHTML', false, html);
     updateStatsAndFormats();

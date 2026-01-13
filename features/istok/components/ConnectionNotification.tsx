@@ -77,7 +77,7 @@ export const ConnectionNotification: React.FC<ConnectionNotificationProps> = ({
             <div className="
                 pointer-events-auto
                 w-full max-w-[360px]
-                bg-[var(--bg-card)] backdrop-blur-3xl 
+                bg-[#09090b] backdrop-blur-3xl 
                 border border-emerald-500/50 
                 rounded-[28px] shadow-[0_25px_80px_-15px_rgba(16,185,129,0.5)] 
                 overflow-hidden relative

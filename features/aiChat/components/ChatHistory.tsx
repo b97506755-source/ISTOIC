@@ -132,9 +132,9 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
       {/* Main Drawer Panel */}
       <div className={`
         fixed inset-y-0 right-0 w-[85%] md:w-[380px] 
-        bg-[var(--bg-card)]/95 backdrop-blur-2xl 
+        bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-2xl 
         border-l border-black/5 dark:border-white/10 
-        z-[2010] shadow-[-20px_0_50px_rgba(var(--surface-inverse),0.1)] dark:shadow-[-20px_0_50px_rgba(var(--surface-inverse),0.5)]
+        z-[2010] shadow-[-20px_0_50px_rgba(0,0,0,0.1)] dark:shadow-[-20px_0_50px_rgba(0,0,0,0.5)]
         transform transition-transform duration-500 cubic-bezier(0.22, 1, 0.36, 1)
         flex flex-col
         ${isOpen ? 'translate-x-0' : 'translate-x-full'}
@@ -196,7 +196,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                 groupContent={(index) => {
                     const label = groupNames[index];
                     return (
-                        <div className="flex items-center gap-3 px-6 py-2 bg-[var(--bg-card)]/95 backdrop-blur-xl border-b border-black/5 dark:border-white/5 z-10 sticky top-0">
+                        <div className="flex items-center gap-3 px-6 py-2 bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-xl border-b border-black/5 dark:border-white/5 z-10 sticky top-0">
                             <span className={`text-[8px] font-black tracking-[0.3em] uppercase ${label === 'PINNED' ? 'text-accent flex items-center gap-1' : 'text-neutral-500'}`}>
                               {label === 'PINNED' && <Pin size={10} className="inline" />}
                               {label}

@@ -75,7 +75,7 @@ export const ShareConnection: React.FC<ShareConnectionProps> = ({ peerId, pin, o
     // --- RENDER ---
     return (
         <div className="fixed inset-0 z-[3000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in font-sans">
-            <div className="bg-[var(--bg-card)] border border-white/10 rounded-[32px] w-full max-w-sm relative shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-[#09090b] border border-white/10 rounded-[32px] w-full max-w-sm relative shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 
                 {/* Header Decoration */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500"></div>
@@ -122,7 +122,7 @@ export const ShareConnection: React.FC<ShareConnectionProps> = ({ peerId, pin, o
                     {/* 2. MANUAL DETAILS SECTION */}
                     <div className="space-y-3">
                         {/* Access PIN */}
-                        <div className="bg-[var(--bg-surface)] border border-white/5 p-4 rounded-xl flex items-center justify-between group hover:border-white/10 transition-colors">
+                        <div className="bg-[#121214] border border-white/5 p-4 rounded-xl flex items-center justify-between group hover:border-white/10 transition-colors">
                             <div className="text-left">
                                 <p className="text-[9px] text-neutral-500 font-bold uppercase tracking-widest mb-1">Access PIN</p>
                                 <p className="text-2xl font-mono font-bold text-white tracking-[0.2em]">{pin}</p>

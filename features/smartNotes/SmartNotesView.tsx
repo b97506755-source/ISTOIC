@@ -323,7 +323,7 @@ export const SmartNotesView: React.FC<SmartNotesViewProps> = ({ notes, setNotes 
                      placeholder={isSearchFocused ? (isSemanticMode ? "NEURAL SEARCH..." : "KEYWORD SEARCH...") : "SEARCH..."}
                      className={`w-full h-12 bg-skin-card border rounded-2xl pl-11 pr-12 text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all placeholder:text-skin-muted sheen
                         ${isSemanticMode 
-                            ? 'border-purple-500/50 shadow-[0_0_20px_rgba(var(--status-purple),0.2)] text-purple-500' 
+                            ? 'border-purple-500/50 shadow-[0_0_20px_rgba(168,85,247,0.2)] text-purple-500' 
                             : 'border-skin-border focus:border-accent/50 focus:shadow-[0_0_30px_-10px_var(--accent-glow)] text-skin-text'
                         }
                      `}
@@ -561,12 +561,12 @@ export const SmartNotesView: React.FC<SmartNotesViewProps> = ({ notes, setNotes 
       {/* CUSTOM DELETE CONFIRMATION MODAL */}
       {noteToDelete && (
           <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-              <div className="bg-skin-card w-full max-w-sm rounded-[32px] border border-red-500/20 shadow-[0_20px_50px_-10px_rgba(var(--status-danger),0.15)] p-8 animate-slide-up flex flex-col items-center text-center relative overflow-hidden">
+              <div className="bg-skin-card w-full max-w-sm rounded-[32px] border border-red-500/20 shadow-[0_20px_50px_-10px_rgba(239,68,68,0.15)] p-8 animate-slide-up flex flex-col items-center text-center relative overflow-hidden">
                   
                   {/* Pulse Effect Background */}
                   <div className="absolute inset-0 bg-red-500/5 pointer-events-none animate-pulse-slow"></div>
 
-                  <div className="w-20 h-20 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6 border border-red-500/20 shadow-[0_0_30px_rgba(var(--status-danger),0.2)]">
+                  <div className="w-20 h-20 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6 border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
                       <ShieldAlert size={36} strokeWidth={1.5} />
                   </div>
 

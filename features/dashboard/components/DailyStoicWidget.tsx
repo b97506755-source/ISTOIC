@@ -72,7 +72,7 @@ export const DailyStoicWidget: React.FC = () => {
     if (!briefing && !isLoading) return null;
 
     return (
-        <div className="relative overflow-hidden rounded-[32px] bg-skin-card border border-black/5 dark:border-white/5 shadow-lg group md:col-span-6 lg:col-span-8 animate-slide-up ring-1 ring-black/5 dark:ring-white/5">
+        <div className="relative overflow-hidden rounded-[32px] bg-white dark:bg-[#0f0f11] border border-black/5 dark:border-white/5 shadow-lg group md:col-span-6 lg:col-span-8 animate-slide-up ring-1 ring-black/5 dark:ring-white/5">
             {/* Ambient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 opacity-50"></div>
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>

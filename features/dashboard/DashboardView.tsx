@@ -197,7 +197,7 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes }) => {
                                 title="Open System Mechanic"
                                 aria-label="System Uptime Status"
                             >
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(var(--status-success),0.45)]"></span>
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></span>
                                 {t.uptime}
                             </button>
                         </div>

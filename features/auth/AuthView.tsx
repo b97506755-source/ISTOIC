@@ -91,7 +91,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
 
   const triggerShake = () => {
     setShake(true);
-    setTimeout(() => setShake(false), 200);
+    setTimeout(() => setShake(false), 500);
   };
 
   const setNiceError = (msg: string) => {
@@ -417,12 +417,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     setLoading(false);
   };
 
-    if (stage === "CHECKING") {
+  if (stage === "CHECKING") {
     return (
-      <div className="fixed inset-0 bg-[var(--bg-main)] flex items-center justify-center">
+      <div className="fixed inset-0 bg-[#020202] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[var(--border-highlight)] border-t-[var(--accent-color)] rounded-full animate-[spin_0.2s_linear_infinite]"></div>
-          <p className="text-[var(--text-muted)] text-[10px] font-black tracking-[0.3em]">
+          <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
+          <p className="text-emerald-500 text-[10px] font-black tracking-[0.3em] animate-pulse">
             RESTORING IDENTITY...
           </p>
         </div>
@@ -432,16 +432,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
 
   if (stage === "BIOMETRIC_SCAN") {
     return (
-      <div className="fixed inset-0 z-[9999] bg-[var(--bg-main)] flex flex-col items-center justify-center animate-[fadeIn_0.2s_ease-out] text-[var(--text-main)]">
-        <div className="relative mb-8 text-[var(--accent-color)]">
-          <ScanFace size={64} strokeWidth={1} />
-          <div className="absolute inset-0 border-4 border-[var(--border-highlight)] rounded-full animate-[spin_0.2s_linear_infinite] w-full h-full scale-150 border-t-[var(--accent-color)]"></div>
+      <div className="fixed inset-0 z-[9999] bg-[#000000] flex flex-col items-center justify-center animate-fade-in text-emerald-500">
+        <div className="relative mb-8">
+          <ScanFace size={64} strokeWidth={1} className="animate-pulse" />
+          <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full animate-[spin_3s_linear_infinite] w-full h-full scale-150 border-t-emerald-500"></div>
         </div>
         <h2 className="text-xl font-black tracking-widest uppercase">{bioStatus}</h2>
-        <button
-          onClick={() => setStage("LOCKED")}
-          className="mt-8 text-[var(--text-muted)] text-xs font-mono hover:text-[var(--text-main)] transition-colors duration-200 ease-out"
-        >
+        <button onClick={() => setStage("LOCKED")} className="mt-8 text-neutral-500 text-xs font-mono hover:text-white">
           USE PIN
         </button>
       </div>
@@ -449,62 +446,57 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[var(--bg-main)] flex items-center justify-center p-6 overflow-hidden font-sans select-none">
-      <div className="absolute inset-0 bg-[var(--bg-surface)]/70 shadow-[inset_0_1px_0_rgba(var(--shadow-color),0.08)] pointer-events-none"></div>
+    <div className="fixed inset-0 z-[9999] bg-[#020202] flex items-center justify-center p-6 overflow-hidden font-sans select-none sheen">
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div className={`relative w-full max-w-sm ${shake ? "animate-[shake_0.2s_cubic-bezier(.36,.07,.19,.97)_both]" : ""}`}>
+      <div className={`relative w-full max-w-sm ${shake ? "animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]" : ""}`}>
         <div className={authStyles.card}>
           {stage === "WELCOME" && (
-            <div className="text-center space-y-8 animate-[slideUp_0.2s_ease-out]">
+            <div className="text-center space-y-8 animate-slide-up">
               <div className="space-y-2">
-                <h1 className="text-3xl font-black text-[var(--text-main)] italic tracking-tighter uppercase">
-                  ISTOIC <span className="text-[var(--accent-color)]">TITANIUM</span>
+                <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase">
+                  ISTOIC <span className="text-emerald-500">TITANIUM</span>
                 </h1>
-                <p className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-[0.3em]">
-                  SECURE COGNITIVE OS v101.0
-                </p>
+                <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-[0.3em]">SECURE COGNITIVE OS v101.0</p>
               </div>
 
               <div className="space-y-4">
                 <button
                   onClick={handleGoogleLogin}
                   disabled={loading}
-                  className="w-full py-4 bg-[var(--accent-color)] text-[var(--on-accent-color)] hover:brightness-110 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all duration-200 ease-out active:scale-95 group"
+                  className="w-full py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.1)] group"
                 >
-                  {loading ? (
-                    <Loader2 size={18} className="animate-[spin_0.2s_linear_infinite]" />
-                  ) : (
-                    <Chrome size={18} className="text-[var(--on-accent-color)]" />
-                  )}
+                  {loading ? <Loader2 size={18} className="animate-spin" /> : <Chrome size={18} className="text-blue-500" />}
                   LANJUTKAN DENGAN GOOGLE
                 </button>
 
                 <div className="flex items-center gap-4 px-2">
-                  <div className="h-[1px] bg-[var(--border-base)] flex-1"></div>
-                  <span className="text-[9px] text-[var(--text-muted)] font-black uppercase">ATAU</span>
-                  <div className="h-[1px] bg-[var(--border-base)] flex-1"></div>
+                  <div className="h-[1px] bg-white/10 flex-1"></div>
+                  <span className="text-[9px] text-neutral-600 font-black uppercase">ATAU</span>
+                  <div className="h-[1px] bg-white/10 flex-1"></div>
                 </div>
 
                 <button
                   onClick={() => setStage("LOGIN_MANUAL")}
                   disabled={loading}
-                  className="w-full py-4 bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-base)] text-[var(--text-main)] rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all duration-200 ease-out active:scale-95"
+                  className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95"
                 >
-                  <Mail size={18} className="text-[var(--accent-color)]" />
+                  <Mail size={18} className="text-emerald-500" />
                   LOGIN DENGAN EMAIL
                 </button>
 
                 <button
                   onClick={() => setStage("REGISTER_MANUAL")}
                   disabled={loading}
-                  className="w-full py-3 bg-[color:rgb(var(--accent-rgb)/0.12)] hover:bg-[color:rgb(var(--accent-rgb)/0.2)] border border-[color:rgb(var(--accent-rgb)/0.3)] text-[var(--accent-color)] rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all duration-200 ease-out active:scale-95"
+                  className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95"
                 >
                   BUAT AKUN BARU
                 </button>
 
                 <button
                   onClick={() => setStage("FORGOT_ACCOUNT")}
-                  className="text-[9px] font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors duration-200 ease-out flex items-center gap-2 mx-auto pt-2"
+                  className="text-[9px] font-bold text-neutral-500 hover:text-white transition-colors flex items-center gap-2 mx-auto pt-2"
                 >
                   <HelpCircle size={10} /> LUPA AKUN?
                 </button>
@@ -514,7 +506,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 {isSystemPinConfigured() && (
                   <button
                     onClick={() => setStage("LOCKED")}
-                    className="text-[10px] font-bold text-[var(--text-muted)] hover:text-[var(--accent-color)] transition-colors duration-200 ease-out flex items-center justify-center gap-2 mx-auto"
+                    className="text-[10px] font-bold text-neutral-400 hover:text-emerald-500 transition-colors flex items-center justify-center gap-2 mx-auto"
                   >
                     <KeyRound size={12} /> AKSES PERANGKAT
                   </button>
@@ -522,7 +514,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
               </div>
 
               {error && (
-                <div className="p-3 bg-[var(--bg-surface)] border border-[var(--border-highlight)] rounded-xl text-[var(--accent-color)] text-xs font-medium mt-4">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-medium mt-4">
                   {error}
                 </div>
               )}
@@ -530,42 +522,42 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           )}
 
           {stage === "CREATE_ID" && (
-            <div className="space-y-6 animate-[slideUp_0.2s_ease-out]">
+            <div className="space-y-6 animate-slide-up">
               <div className="text-center">
                 <h2 className={authStyles.title}>Setup Identitas</h2>
-                <p className="text-xs text-[var(--text-muted)] mt-2">Buat Callsign unik untuk jaringan IStok.</p>
+                <p className="text-xs text-neutral-500 mt-2">Buat Callsign unik untuk jaringan IStok.</p>
               </div>
 
-              <div className="bg-[var(--bg-surface)] border border-[var(--border-base)] rounded-2xl px-4 py-4 focus-within:border-[var(--accent-color)] transition-all duration-200 ease-out flex items-center">
-                <span className="text-[var(--accent-color)] font-black text-sm mr-1 select-none">ISTOIC-</span>
+              <div className="bg-[#121214] border border-white/10 rounded-2xl px-4 py-4 focus-within:border-emerald-500 transition-all flex items-center">
+                <span className="text-emerald-500 font-black text-sm mr-1 select-none">ISTOIC-</span>
                 <input
                   value={codename}
                   onChange={(e) => setCodename(e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())}
-                  className="bg-transparent border-none outline-none text-[var(--text-main)] font-bold text-lg w-full uppercase"
+                  className="bg-transparent border-none outline-none text-white font-bold text-lg w-full uppercase"
                   placeholder="BARISTA"
                   maxLength={12}
                 />
               </div>
 
-              {error && <div className="text-[var(--accent-color)] text-[10px] text-center font-bold">{error}</div>}
+              {error && <div className="text-red-500 text-[10px] text-center font-bold">{error}</div>}
 
               <button
                 onClick={handleCreateIdentity}
                 disabled={loading}
-                className="w-full py-4 bg-[var(--accent-color)] text-[var(--on-accent-color)] rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all duration-200 ease-out hover:brightness-110"
+                className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2"
               >
-                {loading ? <Loader2 className="animate-[spin_0.2s_linear_infinite]" /> : <ArrowRight />} SIMPAN & LANJUT
+                {loading ? <Loader2 className="animate-spin" /> : <ArrowRight />} SIMPAN & LANJUT
               </button>
             </div>
           )}
 
           {stage === "SETUP_PIN" && (
-            <div className="space-y-6 animate-[slideUp_0.2s_ease-out] text-center">
-              <div className="w-16 h-16 bg-[var(--bg-surface)] text-[var(--accent-color)] rounded-full flex items-center justify-center mx-auto border border-[var(--border-highlight)] mb-4">
+            <div className="space-y-6 animate-slide-up text-center">
+              <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto border border-amber-500/20 mb-4">
                 <KeyRound size={28} />
               </div>
               <h2 className={authStyles.title}>Kunci Perangkat</h2>
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-xs text-neutral-500">
                 PIN ini hanya tersimpan di perangkat ini untuk enkripsi lokal. Login berikutnya HANYA menggunakan PIN ini.
               </p>
 
@@ -574,51 +566,44 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 inputMode="numeric"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value.slice(0, 6))}
-                className="w-full bg-[var(--bg-surface)] border border-[var(--border-base)] rounded-2xl py-5 text-center text-3xl font-black text-[var(--text-main)] tracking-[0.5em] focus:border-[var(--accent-color)] outline-none transition-all duration-200 ease-out"
+                className="w-full bg-[#121214] border border-white/10 rounded-2xl py-5 text-center text-3xl font-black text-white tracking-[0.5em] focus:border-amber-500 outline-none"
                 placeholder="••••"
               />
 
-              {error && <p className="text-[var(--accent-color)] text-[10px] font-bold">{error}</p>}
+              {error && <p className="text-red-500 text-[10px] font-bold">{error}</p>}
 
-              <button
-                onClick={handleSetupPin}
-                className="w-full py-4 bg-[var(--accent-color)] text-[var(--on-accent-color)] rounded-2xl font-black uppercase text-xs tracking-widest transition-all duration-200 ease-out hover:brightness-110"
-              >
+              <button onClick={handleSetupPin} className="w-full py-4 bg-amber-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest">
                 SET PASSCODE
               </button>
             </div>
           )}
 
           {stage === "LOCKED" && (
-            <form onSubmit={handleUnlock} className="space-y-6 animate-[slideUp_0.2s_ease-out]">
+            <form onSubmit={handleUnlock} className="space-y-6 animate-slide-up">
               <div className="text-center space-y-2 mb-8">
                 <div
-                  className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center mb-4 transition-all duration-200 ease-out ${
+                  className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center mb-4 transition-all duration-500 ${
                     isHardLocked
-                      ? "bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-base)]"
-                      : "bg-[var(--bg-surface)] text-[var(--accent-color)] shadow-[0_10px_30px_-18px_rgba(var(--shadow-color),0.2)]"
+                      ? "bg-red-500/20 text-red-500"
+                      : "bg-emerald-500/10 text-emerald-500 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)]"
                   }`}
                 >
                   {isHardLocked ? <Lock size={32} /> : identity ? <Fingerprint size={32} /> : <Terminal size={32} />}
                 </div>
-                <h2 className="text-xl font-bold text-[var(--text-main)] uppercase tracking-tight">
+                <h2 className="text-xl font-bold text-white uppercase tracking-tight">
                   {identity?.displayName || "SYSTEM LOCKED"}
                 </h2>
-                <p className="text-[10px] font-mono text-[var(--text-muted)] tracking-wider">
-                  {identity?.istokId || "AUTH_REQUIRED"}
-                </p>
+                <p className="text-[10px] font-mono text-emerald-500 tracking-wider">{identity?.istokId || "AUTH_REQUIRED"}</p>
               </div>
 
               <div className="space-y-4">
                 {isHardLocked ? (
-                  <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border-highlight)] rounded-2xl text-center">
+                  <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <ShieldAlert size={24} className="text-[var(--accent-color)]" />
-                      <p className="text-[10px] font-black text-[var(--accent-color)] uppercase tracking-widest">
-                        SECURITY LOCKOUT
-                      </p>
+                      <ShieldAlert size={24} className="text-red-500" />
+                      <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">SECURITY LOCKOUT</p>
                     </div>
-                    <p className="text-2xl font-mono text-[var(--text-main)] font-bold mt-2">
+                    <p className="text-2xl font-mono text-white font-bold mt-2">
                       00:{Math.floor(countdown / 60)
                         .toString()
                         .padStart(2, "0")}
@@ -637,8 +622,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                       setPinInput(e.target.value.slice(0, 6));
                       setError(null);
                     }}
-                    className={`w-full bg-[var(--bg-surface)] border rounded-2xl py-5 text-center text-3xl font-black text-[var(--text-main)] tracking-[0.5em] focus:outline-none transition-all duration-200 ease-out placeholder:text-[var(--text-muted)] ${
-                      error ? "border-[var(--accent-color)]" : "border-[var(--border-base)] focus:border-[var(--accent-color)]"
+                    className={`w-full bg-[#121214] border rounded-2xl py-5 text-center text-3xl font-black text-white tracking-[0.5em] focus:outline-none transition-all placeholder:text-neutral-800 ${
+                      error ? "border-red-500/50" : "border-white/10 focus:border-emerald-500"
                     }`}
                     placeholder="••••••"
                     disabled={loading}
@@ -647,7 +632,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 )}
 
                 {error && !isHardLocked && (
-                  <p className="text-center text-[10px] text-[var(--accent-color)] font-bold tracking-widest">{error}</p>
+                  <p className="text-center text-[10px] text-red-500 font-bold tracking-widest">{error}</p>
                 )}
               </div>
 
@@ -656,16 +641,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                   <button
                     type="submit"
                     disabled={loading || pinInput.length < 4}
-                    className="w-full py-4 bg-[var(--accent-color)] text-[var(--on-accent-color)] hover:brightness-110 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all duration-200 ease-out active:scale-95 disabled:opacity-50"
+                    className="w-full py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
                   >
-                    {loading ? <Loader2 className="animate-[spin_0.2s_linear_infinite]" /> : <ArrowRight />} BUKA
+                    {loading ? <Loader2 className="animate-spin" /> : <ArrowRight />} BUKA
                   </button>
 
                   {bioEnabled && (
                     <button
                       type="button"
                       onClick={handleBiometricScan}
-                      className="w-full py-3 bg-[color:rgb(var(--accent-rgb)/0.12)] hover:bg-[color:rgb(var(--accent-rgb)/0.2)] text-[var(--accent-color)] rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all duration-200 ease-out active:scale-95 border border-[color:rgb(var(--accent-rgb)/0.3)]"
+                      className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-emerald-500/30"
                     >
                       <ScanFace size={16} /> RETRY FACE ID
                     </button>
@@ -675,14 +660,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                     <button
                       type="button"
                       onClick={() => setStage("FORGOT_PIN")}
-                      className="text-[var(--text-muted)] text-[10px] font-bold tracking-widest hover:text-[var(--text-main)] transition-colors duration-200 ease-out"
+                      className="text-neutral-500 text-[10px] font-bold tracking-widest hover:text-white transition-colors"
                     >
                       LUPA PIN?
                     </button>
                     <button
                       type="button"
                       onClick={() => setStage("WELCOME")}
-                      className="text-[var(--text-muted)] text-[10px] font-bold tracking-widest hover:text-[var(--text-main)] transition-colors duration-200 ease-out"
+                      className="text-neutral-500 text-[10px] font-bold tracking-widest hover:text-white transition-colors"
                     >
                       GANTI AKUN
                     </button>

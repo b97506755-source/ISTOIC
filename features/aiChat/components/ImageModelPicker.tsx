@@ -32,7 +32,7 @@ export const ImageModelPicker: React.FC<ImageModelPickerProps> = ({ isOpen, onCl
         <div className="fixed inset-0 z-[2000] flex items-end md:items-center justify-center p-0 md:p-4 animate-fade-in font-sans">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity" onClick={onClose} />
             
-            <div className="relative z-10 w-full md:max-w-xl bg-[var(--bg-card)] rounded-t-[32px] md:rounded-[32px] border border-white/10 shadow-2xl overflow-hidden ring-1 ring-white/5 animate-slide-up">
+            <div className="relative z-10 w-full md:max-w-xl bg-[#09090b] rounded-t-[32px] md:rounded-[32px] border border-white/10 shadow-2xl overflow-hidden ring-1 ring-white/5 animate-slide-up">
                 <div className="h-16 border-b border-white/5 bg-white/[0.02] flex items-center justify-between px-6 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center border border-pink-500/20 shadow-inner text-pink-500">

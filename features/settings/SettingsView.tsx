@@ -19,11 +19,24 @@ import { BiometricService } from '../../services/biometricService';
 import { HANISAH_KERNEL } from '../../services/melsaKernel';
 import { HANISAH_BRAIN } from '../../services/melsaBrain';
 import { type FeatureID } from '../../constants';
-import { THEME_COLORS } from '../../constants/themeColors';
 
 interface SettingsViewProps {
     onNavigate: (feature: FeatureID) => void;
 }
+
+// --- CONSTANTS ---
+const THEME_COLORS: Record<string, string> = {
+  cyan: '#00F0FF',
+  lime: '#CCFF00',
+  purple: '#BF00FF',
+  orange: '#FF5F00',
+  silver: '#94a3b8',
+  blue: '#0066FF',
+  green: '#00FF94',
+  red: '#FF003C',
+  pink: '#FF0099',
+  gold: '#FFD700'
+};
 
 // --- OPTIMIZED SUB-COMPONENTS (Memoized) ---
 
@@ -63,7 +76,7 @@ const ProviderToggleRow: React.FC<{ id: string, name: string, isVisible: boolean
     return (
         <div className="flex items-center justify-between p-3 bg-skin-card border border-skin-border rounded-xl">
             <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${hasKey ? 'bg-emerald-500 shadow-[0_0_8px_rgba(var(--status-success),0.45)]' : 'bg-red-500'}`}></div>
+                <div className={`w-2 h-2 rounded-full ${hasKey ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-red-500'}`}></div>
                 <div>
                     <div className="text-[10px] font-black uppercase tracking-wider">{name}</div>
                     <div className="text-[8px] font-mono text-skin-muted">{hasKey ? 'CONNECTED' : 'MISSING_KEY'}</div>
@@ -103,7 +116,7 @@ const PromptEditorModal: React.FC<{
                 <textarea 
                     value={value}
                     onChange={e => setValue(e.target.value)}
-                    className="flex-1 bg-[var(--bg-surface)] text-[var(--text-main)] font-mono text-xs p-6 resize-none focus:outline-none"
+                    className="flex-1 bg-[#0a0a0b] text-white font-mono text-xs p-6 resize-none focus:outline-none"
                     spellCheck={false}
                 />
                 <div className="p-4 border-t border-skin-border bg-skin-surface flex justify-between items-center shrink-0">
@@ -123,7 +136,7 @@ const PromptEditorModal: React.FC<{
 const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
     // --- GLOBAL STATE ---
     const [localPersona, setLocalPersona] = useLocalStorage('user_persona_config', getUserPersona());
-    const [appTheme, setAppTheme] = useLocalStorage('app_theme', 'stone');
+    const [appTheme, setAppTheme] = useLocalStorage('app_theme', 'cyan');
     const [appLanguage, setAppLanguage] = useLocalStorage('app_language', 'id');
     const [colorScheme, setColorScheme] = useLocalStorage('app_color_scheme', 'system');
     const [identity] = useLocalStorage<any>('istok_user_identity', null);

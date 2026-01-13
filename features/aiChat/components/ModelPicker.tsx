@@ -199,7 +199,7 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({
 
       {/* Main Card with Premium Animation */}
       <div 
-        className="relative z-10 w-full md:max-w-5xl h-[92vh] md:h-[85vh] bg-[var(--bg-main)] rounded-t-[32px] md:rounded-[24px] border-t md:border border-white/10 shadow-[0_0_50px_rgba(var(--surface-inverse),0.8)] flex flex-col overflow-hidden ring-1 ring-white/5 animate-slide-up transform-gpu transition-all duration-300 ease-out"
+        className="relative z-10 w-full md:max-w-5xl h-[92vh] md:h-[85vh] bg-[#050505] rounded-t-[32px] md:rounded-[24px] border-t md:border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden ring-1 ring-white/5 animate-slide-up transform-gpu transition-all duration-300 ease-out"
         style={{ willChange: 'transform, opacity' }}
       >
         
@@ -228,7 +228,7 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({
 
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
             {/* Sidebar Tabs */}
-            <div className="w-full md:w-64 bg-[var(--bg-surface)] border-b md:border-b-0 md:border-r border-white/5 flex flex-row md:flex-col p-2 gap-1 overflow-x-auto md:overflow-y-auto no-scrollbar shrink-0">
+            <div className="w-full md:w-64 bg-[#08080a] border-b md:border-b-0 md:border-r border-white/5 flex flex-row md:flex-col p-2 gap-1 overflow-x-auto md:overflow-y-auto no-scrollbar shrink-0">
                 {visibleTabs.map((key) => {
                     const data = tabs[key as keyof typeof tabs];
                     const isActive = activeTab === key;
@@ -256,7 +256,7 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({
 
                             <div className={`
                                 w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0
-                                ${isActive ? `${data.bg} ${data.accent} shadow-[0_0_15px_rgba(var(--surface-inverse),0.5)]` : 'bg-white/5 text-neutral-500 group-hover:text-white'}
+                                ${isActive ? `${data.bg} ${data.accent} shadow-[0_0_15px_rgba(0,0,0,0.5)]` : 'bg-white/5 text-neutral-500 group-hover:text-white'}
                             `}>
                                 {data.icon}
                             </div>
@@ -267,7 +267,7 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({
                                         {data.label}
                                     </span>
                                     {key !== 'AUTO' && (
-                                        <div className={`w-1.5 h-1.5 rounded-full ${isHealthy ? 'bg-emerald-500' : 'bg-red-500'} ${isHealthy ? 'shadow-[0_0_5px_rgba(var(--status-success),0.45)]' : ''}`}></div>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${isHealthy ? 'bg-emerald-500' : 'bg-red-500'} ${isHealthy ? 'shadow-[0_0_5px_#10b981]' : ''}`}></div>
                                     )}
                                 </div>
                                 <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-wide group-hover:text-neutral-500 truncate block">
@@ -280,7 +280,7 @@ export const ModelPicker: React.FC<ModelPickerProps> = ({
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 bg-[var(--bg-card)] relative flex flex-col min-h-0">
+            <div className="flex-1 bg-[#09090b] relative flex flex-col min-h-0">
                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none mix-blend-overlay"></div>
                 
                 {/* Description Header */}
@@ -353,7 +353,7 @@ const ArchitectureCard: React.FC<{
         ${isActive ? borderColorClass : 'hover:border-white/10'}
       `}
     >
-        <div className="bg-[var(--bg-surface)] rounded-[19px] p-5 relative z-10 h-full flex flex-col md:flex-row gap-6">
+        <div className="bg-[#0c0c0e] rounded-[19px] p-5 relative z-10 h-full flex flex-col md:flex-row gap-6">
             
             {isActive && <div className={`absolute inset-0 bg-${accent.split('-')[1]}-500/5 opacity-[0.03] pointer-events-none`}></div>}
             

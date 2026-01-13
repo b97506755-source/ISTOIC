@@ -9,7 +9,7 @@ interface SystemLauncherProps {
 
 export const SystemLauncher: React.FC<SystemLauncherProps> = ({ onSelectSystem, onLock }) => {
     return (
-        <div className="fixed inset-0 bg-[var(--bg-main)] flex items-center justify-center p-6 z-[9000] font-sans">
+        <div className="fixed inset-0 bg-[#050505] flex items-center justify-center p-6 z-[9000] font-sans">
             {/* Background Ambience */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.1)_0%,transparent_70%)] pointer-events-none"></div>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
@@ -19,7 +19,7 @@ export const SystemLauncher: React.FC<SystemLauncherProps> = ({ onSelectSystem, 
                 {/* CHOICE 1: ISTOIC AI (MAIN) */}
                 <button 
                     onClick={() => onSelectSystem('ISTOIC')}
-                    className="group relative h-80 md:h-96 rounded-[32px] border border-white/10 bg-[var(--bg-card)] overflow-hidden transition-all duration-500 hover:border-cyan-500/50 hover:shadow-[0_0_50px_rgba(6,182,212,0.2)] flex flex-col items-center justify-center gap-6"
+                    className="group relative h-80 md:h-96 rounded-[32px] border border-white/10 bg-[#0a0a0b] overflow-hidden transition-all duration-500 hover:border-cyan-500/50 hover:shadow-[0_0_50px_rgba(6,182,212,0.2)] flex flex-col items-center justify-center gap-6"
                 >
                     <div className="absolute inset-0 bg-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     
@@ -40,7 +40,7 @@ export const SystemLauncher: React.FC<SystemLauncherProps> = ({ onSelectSystem, 
                 {/* CHOICE 2: ISTOK (SECURE LINE) */}
                 <button 
                     onClick={() => onSelectSystem('ISTOK')}
-                    className="group relative h-80 md:h-96 rounded-[32px] border border-white/10 bg-[var(--bg-card)] overflow-hidden transition-all duration-500 hover:border-red-600/50 hover:shadow-[0_0_50px_rgba(220,38,38,0.2)] flex flex-col items-center justify-center gap-6"
+                    className="group relative h-80 md:h-96 rounded-[32px] border border-white/10 bg-[#050000] overflow-hidden transition-all duration-500 hover:border-red-600/50 hover:shadow-[0_0_50px_rgba(220,38,38,0.2)] flex flex-col items-center justify-center gap-6"
                 >
                     {/* Scanlines for IStok */}
                     <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-0 bg-[length:100%_4px,6px_100%] opacity-20 pointer-events-none"></div>

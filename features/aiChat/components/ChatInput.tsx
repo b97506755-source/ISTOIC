@@ -295,7 +295,7 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
 
       {/* Emoji Picker Popover */}
       {showEmojiPicker && (
-          <div className="absolute bottom-[110%] left-0 w-full sm:w-80 bg-[var(--bg-card)]/95 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-[24px] shadow-2xl z-30 animate-slide-up flex flex-col overflow-hidden ring-1 ring-white/5">
+          <div className="absolute bottom-[110%] left-0 w-full sm:w-80 bg-white/95 dark:bg-[#0a0a0b]/95 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-[24px] shadow-2xl z-30 animate-slide-up flex flex-col overflow-hidden ring-1 ring-white/5">
               <div className="flex p-1 border-b border-black/5 dark:border-white/5 overflow-x-auto no-scrollbar">
                   {Object.keys(EMOJI_CATEGORIES).map((cat) => (
                       <button
@@ -327,7 +327,7 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
       {/* Dictation Overlay Indicator */}
       {isDictating && (
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-fade-in z-20 pointer-events-none">
-              <div className="bg-red-500/90 backdrop-blur-md text-white px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-3 shadow-[0_0_30px_rgba(var(--status-danger),0.4)] border border-red-400">
+              <div className="bg-red-500/90 backdrop-blur-md text-white px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-3 shadow-[0_0_30px_rgba(239,68,68,0.4)] border border-red-400">
                   <div className="flex gap-1 items-center h-3">
                       <div className="w-1 bg-white animate-[music-bar_0.8s_ease-in-out_infinite]"></div>
                       <div className="w-1 bg-white animate-[music-bar_0.6s_ease-in-out_infinite]"></div>
@@ -349,12 +349,12 @@ export const ChatInput: React.FC<ChatInputProps> = memo(({
       <div 
         className={`
             w-full transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
-            bg-[var(--bg-card)]/80 backdrop-blur-xl
+            bg-white/80 dark:bg-[#0f0f11]/80 backdrop-blur-xl
             border 
             rounded-[36px] p-2 flex flex-col
-            shadow-[0_20px_50px_-10px_rgba(var(--surface-inverse),0.1)] dark:shadow-[0_20px_50px_-10px_rgba(var(--surface-inverse),0.5)]
+            shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)]
             ${isDictating 
-                ? 'border-red-500/50 ring-4 ring-red-500/10 shadow-[0_0_30px_rgba(var(--status-danger),0.2)]' 
+                ? 'border-red-500/50 ring-4 ring-red-500/10 shadow-[0_0_30px_rgba(239,68,68,0.2)]' 
                 : pasteFlash
                     ? 'border-emerald-500/50 ring-4 ring-emerald-500/10'
                     : isFocused || isDragOver 

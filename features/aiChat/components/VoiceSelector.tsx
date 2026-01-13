@@ -19,7 +19,7 @@ const VOICES = [
 
 export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onSelect, onClose }) => {
     return (
-        <div className="absolute bottom-24 left-0 right-0 mx-6 bg-[var(--bg-card)]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl animate-slide-up z-50">
+        <div className="absolute bottom-24 left-0 right-0 mx-6 bg-[#0a0a0b]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl animate-slide-up z-50">
             <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/5">
                 <div className="flex items-center gap-2">
                     <Sparkles size={14} className="text-[var(--accent-color)]" />

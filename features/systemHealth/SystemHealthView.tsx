@@ -61,7 +61,7 @@ const ProviderNode: React.FC<{ provider: ProviderStatus }> = ({ provider }) => {
                      <Globe size={14} className={isHealthy ? "text-emerald-400" : "text-neutral-500"}/>}
                     <span className="text-[9px] font-black uppercase tracking-wider text-white">{provider.id}</span>
                 </div>
-                <div className={`w-1.5 h-1.5 rounded-full ${isHealthy ? 'bg-emerald-500 shadow-[0_0_8px_rgba(var(--status-success),0.45)]' : isCooldown ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`}></div>
+                <div className={`w-1.5 h-1.5 rounded-full ${isHealthy ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : isCooldown ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`}></div>
             </div>
             
             <div className="flex justify-between items-end">
@@ -262,7 +262,7 @@ export const SystemHealthView: React.FC = () => {
             <div className="max-w-[1600px] mx-auto w-full h-full flex flex-col gap-6 relative z-10">
                 
                 {/* HEADER */}
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-4 shrink-0 bg-[var(--bg-main)]/50 backdrop-blur-xl sticky top-0 z-30 pt-2 rounded-xl px-4 mt-2">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-4 shrink-0 bg-[#050505]/50 backdrop-blur-xl sticky top-0 z-30 pt-2 rounded-xl px-4 mt-2">
                     <div className="space-y-2">
                         <div className="flex items-center gap-3">
                             <Activity size={16} className={`text-accent ${features.AUTO_DIAGNOSTICS ? 'animate-pulse' : ''}`} />
@@ -312,7 +312,7 @@ export const SystemHealthView: React.FC = () => {
                                             trendData={latencyHistory} 
                                             icon={<Network size={16} />} 
                                             status={health.avgLatency > 1000 ? 'danger' : 'good'} 
-                                            color="rgb(var(--status-success))"
+                                            color="#10b981"
                                         />
                                         <VitalsCard 
                                             label="MEMORY_HEAP" 
@@ -320,9 +320,9 @@ export const SystemHealthView: React.FC = () => {
                                             trendData={memoryHistory} 
                                             icon={<HardDrive size={16} />} 
                                             status={health.memoryMb > 800 ? 'warning' : 'good'} 
-                                            color="rgb(var(--status-warning))"
+                                            color="#f59e0b"
                                         />
-                                        <div onClick={runPingTest} className="cursor-pointer group p-5 rounded-[24px] border border-white/5 bg-[var(--bg-card)] hover:border-accent/30 transition-all flex flex-col justify-between h-32 relative overflow-hidden">
+                                        <div onClick={runPingTest} className="cursor-pointer group p-5 rounded-[24px] border border-white/5 bg-[#0a0a0b] hover:border-accent/30 transition-all flex flex-col justify-between h-32 relative overflow-hidden">
                                             <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             <div className="flex justify-between items-start z-10">
                                                 <div className="flex items-center gap-2 text-neutral-400 group-hover:text-blue-400">
@@ -340,8 +340,8 @@ export const SystemHealthView: React.FC = () => {
                                     </div>
 
                                     {/* 2. Network Topology */}
-                                    <div className="bg-[var(--bg-card)] rounded-[32px] border border-white/10 overflow-hidden shadow-2xl relative">
-                                        <div className="absolute inset-0 bg-[linear-gradient(rgba(var(--text-inverse),0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(var(--text-inverse),0.02)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+                                    <div className="bg-[#0a0a0b] rounded-[32px] border border-white/10 overflow-hidden shadow-2xl relative">
+                                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
                                         
                                         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02] relative z-10">
                                             <div className="flex items-center gap-3">
@@ -374,7 +374,7 @@ export const SystemHealthView: React.FC = () => {
                                 </div>
 
                                 {/* 4. Hanisah AI Diagnostic Panel */}
-                                <div className="lg:col-span-4 flex flex-col h-full bg-[var(--bg-card)] rounded-[32px] border border-white/10 overflow-hidden shadow-2xl relative ring-1 ring-white/5">
+                                <div className="lg:col-span-4 flex flex-col h-full bg-[#0a0a0b] rounded-[32px] border border-white/10 overflow-hidden shadow-2xl relative ring-1 ring-white/5">
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 blur-[100px] rounded-full pointer-events-none"></div>
                                     
                                     <div className="p-6 border-b border-white/5 bg-accent/5 flex justify-between items-center relative z-10">
@@ -421,7 +421,7 @@ export const SystemHealthView: React.FC = () => {
 
                     {/* --- TERMINAL TAB (UPDATED) --- */}
                     {activeTab === 'TERMINAL' && (
-                        <div className={`h-full bg-[var(--bg-main)] rounded-[24px] border flex flex-col shadow-2xl relative overflow-hidden font-mono animate-slide-up terminal-scanlines transition-colors duration-500 ${isStreamFrozen ? 'border-amber-500/30 ring-1 ring-amber-500/20' : 'border-white/10'}`}>
+                        <div className={`h-full bg-[#050505] rounded-[24px] border flex flex-col shadow-2xl relative overflow-hidden font-mono animate-slide-up terminal-scanlines transition-colors duration-500 ${isStreamFrozen ? 'border-amber-500/30 ring-1 ring-amber-500/20' : 'border-white/10'}`}>
                             {/* Terminal Top Bar */}
                             <div className="p-3 border-b border-white/10 flex items-center justify-between bg-white/[0.02] backdrop-blur-md relative z-20 shrink-0">
                                 <div className="flex items-center gap-4">
@@ -452,7 +452,7 @@ export const SystemHealthView: React.FC = () => {
                             </div>
                             
                             {/* Logs Display */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scroll text-[10px] relative z-10 bg-[var(--bg-main)]">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scroll text-[10px] relative z-10 bg-[#050505]">
                                 {filteredLogs.map(log => (
                                     <div key={log.id} className="flex gap-2 hover:bg-white/[0.03] px-2 py-0.5 rounded transition-colors group">
                                         <span className="text-neutral-600 font-mono shrink-0 select-none">{log.timestamp.split('T')[1].replace('Z','')}</span>
@@ -470,7 +470,7 @@ export const SystemHealthView: React.FC = () => {
                             </div>
                             
                             {/* CLI Input */}
-                            <div className="p-3 bg-[var(--bg-card)] border-t border-white/10 relative z-20 shrink-0">
+                            <div className="p-3 bg-[#0a0a0b] border-t border-white/10 relative z-20 shrink-0">
                                 <div className="relative flex items-center group bg-black/50 border border-white/10 rounded-lg overflow-hidden focus-within:border-accent/50 transition-colors">
                                     <span className="pl-3 text-accent font-black text-xs animate-pulse">{'>'}</span>
                                     <input 
@@ -501,8 +501,8 @@ export const SystemHealthView: React.FC = () => {
 };
 
 // --- SUB-COMPONENT: VITALS CARD ---
-const VitalsCard: React.FC<{ label: string, value: string, icon: React.ReactNode, status: 'good'|'warning'|'danger', subtext: string, trendData?: number[], color?: string }> = ({ label, value, icon, status, subtext, trendData, color = 'rgb(var(--status-success))' }) => (
-    <div className={`relative overflow-hidden p-5 rounded-[24px] border transition-all h-32 flex flex-col justify-between ${status === 'danger' ? 'bg-red-500/5 border-red-500/20' : status === 'warning' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-[var(--bg-card)] border-white/5 hover:border-accent/20'}`}>
+const VitalsCard: React.FC<{ label: string, value: string, icon: React.ReactNode, status: 'good'|'warning'|'danger', subtext: string, trendData?: number[], color?: string }> = ({ label, value, icon, status, subtext, trendData, color = '#10b981' }) => (
+    <div className={`relative overflow-hidden p-5 rounded-[24px] border transition-all h-32 flex flex-col justify-between ${status === 'danger' ? 'bg-red-500/5 border-red-500/20' : status === 'warning' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-[#0a0a0b] border-white/5 hover:border-accent/20'}`}>
         <div className="flex justify-between items-start z-10 relative">
             <div className="flex items-center gap-2 text-neutral-400">
                 {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
@@ -543,7 +543,7 @@ const ProtocolButton: React.FC<{ icon: React.ReactNode, label: string, desc: str
             className={`flex flex-col items-center justify-center gap-2 p-5 rounded-[24px] border transition-all hover:scale-[1.02] active:scale-95 relative overflow-hidden group ${
                 danger 
                 ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10 text-red-500' 
-                : 'bg-[var(--bg-card)] border-white/5 hover:border-white/20 text-neutral-400 hover:text-white'
+                : 'bg-[#0a0a0b] border-white/5 hover:border-white/20 text-neutral-400 hover:text-white'
             }`}
         >
             <div className={`absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>

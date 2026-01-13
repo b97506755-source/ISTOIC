@@ -83,7 +83,7 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
         }
     }, []);
 
-    if (!isThreadsLoaded) return <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-[var(--bg-card)] animate-fade-in"><Loader2 size={32} className="animate-spin text-[var(--accent-color)]" /><span className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500 animate-pulse">RESTORING_MEMORY_BANKS...</span></div>;
+    if (!isThreadsLoaded) return <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-white dark:bg-[#0a0a0b] animate-fade-in"><Loader2 size={32} className="animate-spin text-[var(--accent-color)]" /><span className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500 animate-pulse">RESTORING_MEMORY_BANKS...</span></div>;
 
     const handleVaultToggle = useCallback(() => {
         if (!isVaultConfigEnabled || isTransitioning) return;
@@ -115,7 +115,7 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
             
             {/* --- 1. HEADER (FIXED TOP) --- */}
             <header className="shrink-0 z-50 flex justify-center pt-[env(safe-area-inset-top)] px-4 w-full">
-                <div className={`mt-2 backdrop-blur-2xl border rounded-[20px] p-1.5 flex items-center justify-between gap-1 shadow-sm ring-1 transition-all duration-500 sheen ${isHydraActive ? 'bg-black/80 dark:bg-zinc-900/90 border-emerald-500/30 ring-emerald-500/20 shadow-emerald-500/5' : 'bg-[var(--bg-card)]/80 border-black/5 dark:border-white/10 ring-black/5 dark:ring-white/5'}`}>
+                <div className={`mt-2 backdrop-blur-2xl border rounded-[20px] p-1.5 flex items-center justify-between gap-1 shadow-sm ring-1 transition-all duration-500 sheen ${isHydraActive ? 'bg-black/80 dark:bg-zinc-900/90 border-emerald-500/30 ring-emerald-500/20 shadow-emerald-500/5' : 'bg-white/80 dark:bg-[#0f0f11]/90 border-black/5 dark:border-white/10 ring-black/5 dark:ring-white/5'}`}>
                     <button className={`flex items-center gap-2 group py-1.5 px-3 rounded-xl transition-all cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 active:scale-95`} onClick={() => { debugService.logAction(UI_REGISTRY.CHAT_BTN_MODEL_PICKER, FN_REGISTRY.CHAT_SELECT_MODEL, 'OPEN'); setShowModelPicker(true); }}>
                         <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${isHydraActive ? 'text-emerald-500' : 'text-neutral-500 group-hover:text-black dark:group-hover:text-white'}`}>
                             {isHydraActive ? <Infinity size={14} className="animate-pulse" /> : <Zap size={14} />}
@@ -174,7 +174,7 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
                 <div className={`shrink-0 z-50 w-full flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)] px-4 md:px-0 transition-all duration-300 ${isMobileNavVisible ? 'mb-16' : ''}`}>
                     <div className="w-full max-w-[900px] pointer-events-auto relative">
                         {showScrollBtn && (
-                            <button onClick={() => scrollToBottom()} className="absolute -top-16 right-0 z-20 w-10 h-10 rounded-full bg-[var(--bg-card)] shadow-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-accent animate-bounce">
+                            <button onClick={() => scrollToBottom()} className="absolute -top-16 right-0 z-20 w-10 h-10 rounded-full bg-white dark:bg-[#0a0a0b] shadow-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-accent animate-bounce">
                                 <ArrowDown size={18} strokeWidth={2.5} />
                             </button>
                         )}

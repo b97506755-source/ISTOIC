@@ -85,7 +85,7 @@ export const NeuralLinkOverlay: React.FC<NeuralLinkOverlayProps> = ({
       setVolume(avg); 
       setIsSpeaking(avg > 10); 
 
-      ctx.fillStyle = 'rgba(var(--surface-inverse), 0.2)'; 
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height); 
       
       const centerX = canvas.width / 2;
@@ -142,7 +142,7 @@ export const NeuralLinkOverlay: React.FC<NeuralLinkOverlayProps> = ({
       >
           <div className={`relative w-[280px] h-[280px] rounded-full blur-[80px] opacity-40 animate-pulse ${personaMode === 'hanisah' ? 'bg-orange-500' : 'bg-cyan-500'} ${status === 'THINKING' ? 'animate-ping' : ''}`}></div>
           <div className="absolute inset-0 flex items-center justify-center">
-               <div className={`w-32 h-32 rounded-full border-2 border-white/20 flex items-center justify-center backdrop-blur-md shadow-[0_0_50px_rgba(var(--text-inverse),0.1)] ${status === 'ACTIVE' || status === 'SPEAKING' ? 'animate-[spin_10s_linear_infinite]' : ''}`}> 
+               <div className={`w-32 h-32 rounded-full border-2 border-white/20 flex items-center justify-center backdrop-blur-md shadow-[0_0_50px_rgba(255,255,255,0.1)] ${status === 'ACTIVE' || status === 'SPEAKING' ? 'animate-[spin_10s_linear_infinite]' : ''}`}>
                     {personaMode === 'hanisah' ? <Flame size={48} className="text-white opacity-80" /> : <Brain size={48} className="text-white opacity-80" />}
                </div>
           </div>

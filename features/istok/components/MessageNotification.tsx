@@ -36,14 +36,14 @@ export const MessageNotification: React.FC<MessageNotificationProps> = ({ sender
             className="fixed top-[calc(env(safe-area-inset-top)+12px)] left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:max-w-sm z-[12000] animate-slide-down cursor-pointer pointer-events-auto"
             onClick={onClick}
         >
-            <div className="relative overflow-hidden bg-[var(--bg-card)]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
+            <div className="relative overflow-hidden bg-[#09090b]/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
                 
                 {/* Content Container */}
                 <div className="p-3.5 flex items-start gap-3.5">
                     {/* Icon / Avatar Placeholder */}
                     <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-900/10 flex items-center justify-center text-emerald-500 shrink-0 border border-emerald-500/20 shadow-inner">
                         <MessageSquare size={16} fill="currentColor" className="opacity-90" />
-                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[var(--bg-card)] rounded-full flex items-center justify-center">
+                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#09090b] rounded-full flex items-center justify-center">
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
                         </div>
                     </div>

@@ -60,9 +60,9 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
           score = Math.max(0, Math.min(100, score));
           
           setHealthScore(score);
-          if (score >= 80) setHealthColor('bg-emerald-500 shadow-[0_0_15px_rgba(var(--status-success),0.45)]');
-          else if (score >= 50) setHealthColor('bg-amber-500 shadow-[0_0_15px_rgba(var(--status-warning),0.45)]');
-          else setHealthColor('bg-red-500 shadow-[0_0_15px_rgba(var(--status-danger),0.45)]');
+          if (score >= 80) setHealthColor('bg-emerald-500 shadow-[0_0_15px_#10b981]');
+          else if (score >= 50) setHealthColor('bg-amber-500 shadow-[0_0_15px_#f59e0b]');
+          else setHealthColor('bg-red-500 shadow-[0_0_15px_#ef4444]');
       };
 
       checkHealth();
@@ -120,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
           border-r border-skin-border/80
           ${transitionClass}
           ${isExpanded 
-              ? 'w-[280px] shadow-[20px_0_60px_-12px_rgba(var(--surface-inverse),0.18)] dark:shadow-[20px_0_60px_-12px_rgba(var(--surface-inverse),0.5)] translate-x-0' 
+              ? 'w-[280px] shadow-[20px_0_60px_-12px_rgba(0,0,0,0.18)] dark:shadow-[20px_0_60px_-12px_rgba(0,0,0,0.5)] translate-x-0' 
               : 'w-[88px] translate-x-0'}
           ${isForcedStealth ? 'opacity-0 pointer-events-none -translate-x-10' : 'opacity-100'}
         `}

@@ -165,13 +165,13 @@ export const SidebarIStokContact: React.FC<SidebarIStokContactProps> = ({
 
             {/* Sidebar Panel */}
             <div className={`
-                fixed inset-y-0 right-0 w-full max-w-xs bg-[var(--bg-card)] border-l border-white/10 z-[2010] 
+                fixed inset-y-0 right-0 w-full max-w-xs bg-[#09090b] border-l border-white/10 z-[2010] 
                 flex flex-col transform transition-transform duration-300 shadow-2xl font-sans
                 ${isOpen ? 'translate-x-0' : 'translate-x-full'}
             `}>
                 
                 {/* 1. Header Profile (Safe Area Top) */}
-                <div className="pt-safe px-6 pb-6 border-b border-white/10 bg-[var(--bg-main)] relative overflow-hidden shrink-0">
+                <div className="pt-safe px-6 pb-6 border-b border-white/10 bg-[#050505] relative overflow-hidden shrink-0">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full pointer-events-none"></div>
                     
                     <div className="flex justify-between items-start mb-6 relative z-10 pt-4">
@@ -216,7 +216,7 @@ export const SidebarIStokContact: React.FC<SidebarIStokContactProps> = ({
                 </div>
 
                 {/* 2. Controls & Search */}
-                <div className="px-4 py-3 space-y-3 bg-[var(--bg-card)] shrink-0">
+                <div className="px-4 py-3 space-y-3 bg-[#09090b] shrink-0">
                     <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
                         <button 
                             onClick={() => setActiveTab('CHATS')} 
@@ -277,7 +277,7 @@ export const SidebarIStokContact: React.FC<SidebarIStokContactProps> = ({
                                                         {(s.displayName || '?').substring(0, 2).toUpperCase()}
                                                     </div>
                                                 )}
-                                                {s.status === 'ONLINE' && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[var(--bg-card)]"></div>}
+                                                {s.status === 'ONLINE' && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#09090b]"></div>}
                                             </div>
                                             
                                             <div className="flex-1 min-w-0">

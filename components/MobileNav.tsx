@@ -37,7 +37,7 @@ export const MobileNav: React.FC<MobileNavProps> = memo(({ activeFeature, setAct
         bg-skin-card/90 backdrop-blur-2xl 
         border border-skin-border/80 
         rounded-[24px] 
-        shadow-[0_12px_40px_-14px_rgba(var(--surface-inverse),0.2)]
+        shadow-[0_12px_40px_-14px_rgba(0,0,0,0.2)]
         ring-1 ring-black/5 dark:ring-white/5
       ">
         

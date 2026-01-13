@@ -130,7 +130,7 @@ export const IStokInput = memo(({
 
     return (
         // KEY FIX: Added pb-[max(...)] for iPhone XR notch/safe area
-        <div className="bg-[var(--bg-card)]/90 backdrop-blur-md border-t border-white/10 p-3 z-20 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 shrink-0 shadow-2xl">
+        <div className="bg-[#09090b]/90 backdrop-blur-md border-t border-white/10 p-3 z-20 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 shrink-0 shadow-2xl">
             
             {/* AI Control Bar (When active or menu open) */}
             {(showAiMenu || translateLang) && (

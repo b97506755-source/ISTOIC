@@ -249,11 +249,11 @@ export const IStokAuth: React.FC<IStokAuthProps> = ({
                 
                 {/* Connecting Overlay */}
                 {isConnecting && (
-                    <div className="absolute inset-0 z-50 bg-[var(--bg-card)]/95 backdrop-blur-md rounded-[32px] flex flex-col items-center justify-center text-center p-6 animate-fade-in border border-emerald-500/20">
+                    <div className="absolute inset-0 z-50 bg-[#09090b]/95 backdrop-blur-md rounded-[32px] flex flex-col items-center justify-center text-center p-6 animate-fade-in border border-emerald-500/20">
                         <div className="relative mb-6">
                             {/* Radar Effect */}
                             <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping"></div>
-                            <div className="w-24 h-24 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin relative z-10 flex items-center justify-center bg-[var(--bg-card)]">
+                            <div className="w-24 h-24 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin relative z-10 flex items-center justify-center bg-[#09090b]">
                                 <Activity size={32} className="text-emerald-500" />
                             </div>
                         </div>
@@ -281,7 +281,7 @@ export const IStokAuth: React.FC<IStokAuthProps> = ({
                                 value={targetId}
                                 onChange={(e) => processRawInput(e.target.value)}
                                 placeholder="Paste ID or Link..." 
-                                className="w-full bg-[var(--bg-surface)] border border-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-neutral-600 pr-12"
+                                className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-neutral-600 pr-12"
                                 autoFocus
                             />
                             <button 
@@ -304,7 +304,7 @@ export const IStokAuth: React.FC<IStokAuthProps> = ({
                                 inputMode="numeric"
                                 maxLength={6}
                                 placeholder="******" 
-                                className="w-full bg-[var(--bg-surface)] border border-white/10 rounded-2xl px-5 py-4 text-sm font-mono text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-neutral-600 text-center tracking-[0.5em]"
+                                className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 text-sm font-mono text-white focus:outline-none focus:border-blue-500 transition-all placeholder:text-neutral-600 text-center tracking-[0.5em]"
                             />
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none" size={16} />
                         </div>

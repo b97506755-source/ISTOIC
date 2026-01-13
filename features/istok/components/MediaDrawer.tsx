@@ -20,7 +20,7 @@ export const MediaDrawer: React.FC<MediaDrawerProps> = ({ isOpen, onClose, messa
 
     return (
         <div className={`
-            fixed inset-y-0 right-0 w-80 bg-[var(--bg-card)]/95 backdrop-blur-xl border-l border-white/10 z-[2020]
+            fixed inset-y-0 right-0 w-80 bg-[#09090b]/95 backdrop-blur-xl border-l border-white/10 z-[2020]
             transform transition-transform duration-300 ease-out shadow-2xl flex flex-col
             ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}>

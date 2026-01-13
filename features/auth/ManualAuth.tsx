@@ -179,7 +179,7 @@ export const LoginManual: React.FC<{ onBack: () => void; onSuccess: ManualAuthSu
               placeholder="nama@email.com"
               autoComplete="email"
             />
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
           </div>
         </div>
         <div className="space-y-2">
@@ -193,7 +193,7 @@ export const LoginManual: React.FC<{ onBack: () => void; onSuccess: ManualAuthSu
               placeholder="••••••••"
               autoComplete="current-password"
             />
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
           </div>
         </div>
         <button onClick={handleLogin} disabled={loading} className={authStyles.buttonPrimary}>
@@ -293,7 +293,7 @@ export const RegisterManual: React.FC<{ onBack: () => void; onSuccess: ManualAut
               placeholder="Nama Anda"
               autoComplete="name"
             />
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
           </div>
         </div>
         <div className="space-y-2">
@@ -307,7 +307,7 @@ export const RegisterManual: React.FC<{ onBack: () => void; onSuccess: ManualAut
               placeholder="nama@email.com"
               autoComplete="email"
             />
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
           </div>
         </div>
         <div className="space-y-2">
@@ -321,15 +321,15 @@ export const RegisterManual: React.FC<{ onBack: () => void; onSuccess: ManualAut
               placeholder="Minimal 8 karakter"
               autoComplete="new-password"
             />
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
           </div>
           <p
-            className={`text-[10px] font-semibold ${
+            className={`text-[10px] font-bold ${
               passwordScore === 'strong'
-                ? 'text-[var(--success)]'
+                ? 'text-emerald-400'
                 : passwordScore === 'medium'
-                  ? 'text-[var(--warning)]'
-                  : 'text-[var(--text-muted)]'
+                  ? 'text-amber-400'
+                  : 'text-neutral-500'
             }`}
           >
             {passwordScore === 'empty'
@@ -352,7 +352,7 @@ export const RegisterManual: React.FC<{ onBack: () => void; onSuccess: ManualAut
               placeholder="Ulangi password"
               autoComplete="new-password"
             />
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
           </div>
         </div>
         <button onClick={handleRegister} disabled={loading} className={authStyles.buttonSecondary}>
@@ -410,11 +410,11 @@ export const ForgotPin: React.FC<{ onBack: () => void; onSuccess: () => void; ex
   return (
     <div className="w-full animate-slide-up">
       <div className="text-center mb-6">
-        <div className="w-16 h-16 mx-auto bg-[var(--warning-soft)] rounded-full flex items-center justify-center border border-[var(--warning)] mb-4 text-[var(--warning)]">
+        <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center border border-amber-500/20 mb-4 text-amber-500">
           <KeyRound size={32} />
         </div>
         <h2 className={authStyles.title}>Reset PIN Akses</h2>
-        <p className="text-[10px] text-[var(--text-muted)] mt-2 max-w-[250px] mx-auto leading-relaxed">
+        <p className="text-[10px] text-neutral-500 mt-2 max-w-[250px] mx-auto leading-relaxed">
           PIN hanya tersimpan di perangkat ini. Reset PIN akan membuat data terenkripsi lama tidak terbuka.
         </p>
       </div>
@@ -442,11 +442,11 @@ export const ForgotPin: React.FC<{ onBack: () => void; onSuccess: () => void; ex
             maxLength={6}
             value={newPin}
             onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
-            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] px-[var(--space-5)] py-[var(--space-4)] text-center text-2xl font-mono text-[var(--text-primary)] focus:border-[var(--warning)] outline-none tracking-[0.4em]"
+            className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 text-center text-2xl font-mono text-white focus:border-amber-500 outline-none tracking-[0.5em]"
             placeholder="BARU"
           />
         </div>
-        <label className="flex items-start gap-2 text-[10px] text-[var(--text-muted)]">
+        <label className="flex items-start gap-2 text-[10px] text-neutral-400">
           <input
             type="checkbox"
             checked={ackRisk}
@@ -459,7 +459,7 @@ export const ForgotPin: React.FC<{ onBack: () => void; onSuccess: () => void; ex
         <button
           onClick={handleReset}
           disabled={loading}
-          className={authStyles.buttonPrimary}
+          className="w-full py-4 bg-amber-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-amber-900/20 disabled:opacity-70"
         >
           {loading ? <Loader2 className="animate-spin" /> : <RefreshCw size={16} />} ATUR ULANG PIN
         </button>
@@ -506,42 +506,42 @@ export const ForgotAccount: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   return (
     <div className="w-full animate-slide-up">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 mx-auto bg-[var(--surface)] rounded-full flex items-center justify-center border border-[var(--border)] mb-4 text-[var(--text-secondary)]">
+        <div className="w-16 h-16 mx-auto bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20 mb-4 text-blue-500">
           <HelpCircle size={32} />
         </div>
         <h2 className={authStyles.title}>Pemulihan Akun</h2>
-        <p className="text-xs text-[var(--text-muted)] mt-2">Masukkan email terdaftar untuk menerima link reset password.</p>
+        <p className="text-xs text-neutral-400 mt-2">Masukkan email terdaftar untuk menerima link reset password.</p>
       </div>
 
       <div className="space-y-3">
-        <div className="p-4 bg-[var(--surface)] rounded-[var(--radius-md)] border border-[var(--border)] text-left space-y-3">
-          <h4 className="text-[10px] font-semibold text-[var(--text-primary)] uppercase tracking-[0.2em] flex items-center gap-2">
+        <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-left space-y-3">
+          <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
             <Mail size={12} /> Email Recovery
           </h4>
           <div className="flex gap-2">
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-[var(--radius-sm)] px-3 py-2 text-xs text-[var(--text-primary)]"
+              className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
               placeholder="email@anda.com"
             />
             <button
               onClick={handleSendReset}
               disabled={loading}
-              className="bg-[var(--accent)] text-[var(--accent-foreground)] px-4 py-2 rounded-[var(--radius-sm)] text-[10px] font-semibold uppercase tracking-[0.2em] disabled:opacity-60"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold disabled:opacity-60"
             >
               {loading ? '...' : 'KIRIM'}
             </button>
           </div>
-          {status && <p className="text-[10px] text-[var(--success)]">{status}</p>}
-          {error && <p className="text-[10px] text-[var(--danger)]">{error}</p>}
+          {status && <p className="text-[10px] text-emerald-400">{status}</p>}
+          {error && <p className="text-[10px] text-red-400">{error}</p>}
         </div>
 
-        <div className="p-4 bg-[var(--warning-soft)] rounded-[var(--radius-md)] border border-[var(--warning)] text-left flex gap-3">
-          <AlertTriangle size={20} className="text-[var(--warning)] shrink-0" />
+        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 text-left flex gap-3">
+          <AlertTriangle size={20} className="text-amber-500 shrink-0" />
           <div>
-            <h4 className="text-[10px] font-semibold text-[var(--warning)] uppercase tracking-[0.2em] mb-1">Manual Support</h4>
-            <p className="text-[10px] text-[var(--text-muted)]">
+            <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Manual Support</h4>
+            <p className="text-[10px] text-neutral-400">
               Jika kehilangan akses total, silakan hubungi tim IT IStoic melalui channel aman.
             </p>
           </div>

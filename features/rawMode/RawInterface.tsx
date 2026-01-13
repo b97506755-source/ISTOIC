@@ -39,13 +39,13 @@ export const RawInterface: React.FC<RawInterfaceProps> = ({ notes, setNotes }) =
     }, [input]);
 
     const theme = {
-        bg: 'bg-[var(--bg-main)]',
-        text: 'text-[var(--text-main)]',
-        meta: 'text-[var(--text-muted)]',
-        border: 'border-[var(--border-base)]',
-        inputBg: 'bg-[var(--bg-surface)]',
+        bg: isDark ? 'bg-[#0a0a0a]' : 'bg-[#ffffff]',
+        text: isDark ? 'text-[#e5e5e5]' : 'text-[#1a1a1a]',
+        meta: isDark ? 'text-[#525252]' : 'text-[#a3a3a3]',
+        border: isDark ? 'border-[#262626]' : 'border-[#e5e5e5]',
+        inputBg: isDark ? 'bg-[#0a0a0a]' : 'bg-[#ffffff]',
         placeholder: isDark ? 'placeholder-neutral-700' : 'placeholder-neutral-300',
-        hover: 'hover:bg-[var(--bg-surface-hover)]'
+        hover: isDark ? 'hover:bg-[#262626]' : 'hover:bg-[#f5f5f5]'
     };
 
     return (

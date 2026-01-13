@@ -112,7 +112,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, on
               width: rect.width + 20,
               height: rect.height + 20,
               opacity: 1,
-              boxShadow: '0 0 0 9999px var(--overlay-scrim-strong), 0 0 30px rgba(var(--accent-rgb), 0.5)'
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.85), 0 0 30px rgba(var(--accent-rgb), 0.5)'
           });
       } else {
           setSpotlightStyle({});
@@ -191,7 +191,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, on
         {/* Main Content Card - Centered but avoids spotlight if possible (simplified to center for now) */}
         <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-auto">
             <div className={`
-                relative w-full max-w-2xl bg-[var(--bg-card)] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden
+                relative w-full max-w-2xl bg-[#0a0a0b] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden
                 flex flex-col md:flex-row transform transition-all duration-500 ring-1 ring-white/5
                 ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-10 scale-95'}
             `}>
@@ -279,7 +279,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onComplete, on
                                 onClick={handleNext} 
                                 className="
                                     h-12 px-6 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] 
-                                    flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-[0_0_20px_rgba(var(--text-inverse),0.1)]
+                                    flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]
                                     bg-white text-black hover:scale-[1.02] active:scale-95
                                 "
                             >

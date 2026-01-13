@@ -53,7 +53,7 @@ export const NoteBatchActions: React.FC<NoteBatchActionsProps> = ({
             ${isVisible ? 'translate-y-0 opacity-100 scale-100 pointer-events-auto' : 'translate-y-[150%] opacity-0 scale-90 pointer-events-none'}
         `}>
             <div 
-                className="bg-skin-card/95 backdrop-blur-2xl border border-black/5 dark:border-white/10 shadow-[0_20px_50px_-10px_rgba(var(--surface-inverse),0.5)] rounded-[32px] p-2 pr-3 flex items-center gap-3 ring-1 ring-white/10 pointer-events-auto"
+                className="bg-white/95 dark:bg-[#0a0a0b]/95 backdrop-blur-2xl border border-black/5 dark:border-white/10 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] rounded-[32px] p-2 pr-3 flex items-center gap-3 ring-1 ring-white/10 pointer-events-auto"
                 onClick={(e) => e.stopPropagation()} // Prevent clicks from bubbling to background
             >
                 

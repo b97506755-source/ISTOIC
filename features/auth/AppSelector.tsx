@@ -8,7 +8,7 @@ interface AppSelectorProps {
 
 export const AppSelector: React.FC<AppSelectorProps> = ({ onSelect }) => {
     return (
-        <div className="fixed inset-0 bg-[var(--bg-main)] flex items-center justify-center p-6 animate-fade-in z-[9999]">
+        <div className="fixed inset-0 bg-[#050505] flex items-center justify-center p-6 animate-fade-in z-[9999]">
             <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
                 
                 {/* OPTION 1: ISTOIC AI */}

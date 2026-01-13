@@ -10,9 +10,9 @@ import { useFeatures, type SystemFeature } from '../../../contexts/FeatureContex
 // --- UI ELEMENT NODE ---
 const UIElementNode: React.FC<{ id: string, status: UIStatus, errors: number, usage: number, onToggle: () => void }> = ({ id, status, errors, usage, onToggle }) => {
     const getStatusColor = () => {
-        if (status === 'DISABLED') return 'bg-red-900/10 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(var(--status-danger),0.2)]';
+        if (status === 'DISABLED') return 'bg-red-900/10 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]';
         if (status === 'UNSTABLE') return 'bg-amber-900/10 border-amber-500/50 text-amber-500 animate-pulse';
-        return 'bg-emerald-900/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(var(--status-success),0.2)]';
+        return 'bg-emerald-900/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]';
     };
 
     const cleanName = id.replace(/UI_|BTN_/g, '').replace(/_/g, ' ');
@@ -104,11 +104,11 @@ export const IntegrityMatrix: React.FC = () => {
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 relative z-20 bg-[var(--bg-card)] rounded-[32px] border border-white/5 shadow-2xl animate-slide-up">
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 relative z-20 bg-[#0a0a0b] rounded-[32px] border border-white/5 shadow-2xl animate-slide-up">
             
             {/* Background Circuit Pattern */}
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none"></div>
-            <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(rgba(var(--text-inverse),0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(var(--text-inverse),0.01)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
 
             {/* SECTION 1: KERNEL PROTOCOLS */}
             <div className="mb-8 relative z-10">

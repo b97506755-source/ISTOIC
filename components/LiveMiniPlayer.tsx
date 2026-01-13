@@ -77,7 +77,7 @@ export const LiveMiniPlayer: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="p-3 border-t border-white/10 flex justify-between gap-2 bg-[var(--bg-main)]">
+                <div className="p-3 border-t border-white/10 flex justify-between gap-2 bg-[#050505]">
                     <button 
                         onClick={toggleMinimize}
                         className="flex-1 bg-white/10 hover:bg-white/20 text-white rounded-lg py-2 flex items-center justify-center transition-all"

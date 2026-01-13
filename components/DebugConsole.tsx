@@ -379,7 +379,7 @@ export const DebugConsole: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                                 </button>
                             ))}
                         </div>
-                        <div className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-card)]">
+                        <div className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0b]">
                             {selectedStorageKey ? (
                                 <>
                                     <div className="p-3 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
@@ -409,7 +409,7 @@ export const DebugConsole: React.FC<{ isOpen: boolean; onClose: () => void }> = 
             </div>
 
             {/* CLI FOOTER */}
-            <div className="p-3 bg-[var(--bg-card)] border-t border-white/10 shrink-0 relative z-20">
+            <div className="p-3 bg-[#0a0a0b] border-t border-white/10 shrink-0 relative z-20">
                 <form onSubmit={handleCLI} className="relative flex items-center group">
                     <span className="absolute left-3 text-[var(--accent-color)] font-black text-xs animate-pulse">{'>'}</span>
                     <input 

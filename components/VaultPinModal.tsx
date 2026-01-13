@@ -60,17 +60,17 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({ isOpen, onClose, o
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-[var(--overlay-scrim)] backdrop-blur-md animate-fade-in">
+        <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
             <div className={`
-                relative w-full max-w-sm bg-[var(--bg-card)] border border-black/5 dark:border-white/10 rounded-[32px] p-8 
-                shadow-[0_20px_50px_rgba(var(--surface-inverse),0.3)] flex flex-col items-center gap-6
+                relative w-full max-w-sm bg-white dark:bg-[#0a0a0b] border border-black/5 dark:border-white/10 rounded-[32px] p-8 
+                shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex flex-col items-center gap-6
                 ${shake ? 'animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]' : ''}
             `}>
                 <button onClick={onClose} className="absolute top-6 right-6 text-neutral-400 hover:text-black dark:hover:text-white transition-colors">
                     <X size={20} />
                 </button>
 
-                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center transition-all duration-200 ${error ? 'bg-red-500/10 text-red-500 shadow-[0_0_30px_rgba(var(--status-danger),0.2)]' : 'bg-accent/10 text-accent shadow-[0_0_30px_var(--accent-glow)]'}`}>
+                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center transition-all duration-500 ${error ? 'bg-red-500/10 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'bg-accent/10 text-accent shadow-[0_0_30px_var(--accent-glow)]'}`}>
                     {isConfigured ? (error ? <AlertCircle size={32} /> : <Shield size={32} />) : <Settings size={32} />}
                 </div>
 
