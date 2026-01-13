@@ -1,24 +1,24 @@
 export const authStyles = {
-  card: "backdrop-blur-2xl border border-white/10 bg-[var(--bg-card)]/80 rounded-[32px] p-8 shadow-2xl relative overflow-hidden",
-  title: "text-xl font-black text-white uppercase tracking-tight",
-  subtitle: "text-[10px] text-neutral-500 font-mono mt-1 uppercase tracking-[0.2em]",
-  label: "text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1",
+  card: "relative overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--card)]/92 p-[var(--space-6)] shadow-[var(--shadow)] backdrop-blur-xl",
+  title: "text-xl font-semibold text-[var(--text-primary)] uppercase tracking-tight",
+  subtitle: "text-[10px] text-[var(--text-muted)] font-mono mt-[var(--space-1)] uppercase tracking-[0.2em]",
+  label: "text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest ml-[var(--space-1)]",
   input:
-    "w-full bg-[var(--bg-surface)] border border-white/10 rounded-2xl px-5 py-4 text-sm font-semibold text-white focus:border-emerald-500 outline-none transition-all placeholder:text-neutral-700",
+    "w-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] px-[var(--space-5)] py-[var(--space-4)] text-sm font-semibold text-[var(--text-primary)] focus:border-accent focus:ring-2 focus:ring-[rgba(var(--accent-rgb),0.25)] outline-none transition-all placeholder:text-[var(--text-muted)]",
   inputIconWrap:
-    "w-full bg-[var(--bg-surface)] border border-white/10 rounded-2xl px-5 py-4 pl-12 text-sm font-semibold text-white focus:border-emerald-500 outline-none transition-all placeholder:text-neutral-700",
-  inputError: "border-red-500/50 focus:border-red-500",
+    "w-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] px-[var(--space-5)] py-[var(--space-4)] pl-[var(--space-6)] text-sm font-semibold text-[var(--text-primary)] focus:border-accent focus:ring-2 focus:ring-[rgba(var(--accent-rgb),0.25)] outline-none transition-all placeholder:text-[var(--text-muted)]",
+  inputError: "border-[var(--danger)] focus:border-[var(--danger)]",
   buttonPrimary:
-    "w-full py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-70",
+    "w-full py-[var(--space-4)] bg-[var(--accent)] text-[var(--accent-foreground)] hover:brightness-105 rounded-[var(--radius-md)] font-semibold uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-[var(--space-2)] transition-all duration-200 shadow-[var(--shadow)] active:scale-[0.98] disabled:opacity-60",
   buttonSecondary:
-    "w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-70",
+    "w-full py-[var(--space-4)] bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] rounded-[var(--radius-md)] font-semibold uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-[var(--space-2)] shadow-[var(--shadow)] active:scale-[0.98] disabled:opacity-60",
   buttonGhost:
-    "w-full py-3 text-[10px] font-bold text-neutral-500 hover:text-white uppercase tracking-widest flex items-center justify-center gap-2",
-  linkMuted: "text-[9px] font-bold text-neutral-500 hover:text-white",
+    "w-full py-[var(--space-3)] text-[10px] font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] uppercase tracking-[0.2em] flex items-center justify-center gap-[var(--space-2)]",
+  linkMuted: "text-[9px] font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)]",
   alertError:
-    "p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center mb-4 flex items-center justify-center gap-2",
+    "p-[var(--space-3)] bg-[var(--danger-soft)] border border-[var(--danger)] rounded-[var(--radius-sm)] text-[var(--danger)] text-xs font-semibold text-center mb-[var(--space-4)] flex items-center justify-center gap-[var(--space-2)]",
   alertInfo:
-    "p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-xs font-bold text-center mb-4",
+    "p-[var(--space-3)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-sm)] text-[var(--text-secondary)] text-xs font-semibold text-center mb-[var(--space-4)]",
   alertSuccess:
-    "p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-bold text-center mb-4",
+    "p-[var(--space-3)] bg-[var(--success-soft)] border border-[var(--success)] rounded-[var(--radius-sm)] text-[var(--success)] text-xs font-semibold text-center mb-[var(--space-4)]",
 };

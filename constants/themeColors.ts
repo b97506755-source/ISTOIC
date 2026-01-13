@@ -1,12 +1,12 @@
 export const THEME_COLORS: Record<string, string> = {
-  cyan: '#00F0FF',
-  lime: '#CCFF00',
-  purple: '#BF00FF',
-  orange: '#FF5F00',
-  silver: '#94a3b8',
-  blue: '#0066FF',
-  green: '#00FF94',
-  red: '#FF003C',
-  pink: '#FF0099',
-  gold: '#FFD700'
+  cyan: '#8f8a80',
+  lime: '#9a947f',
+  purple: '#8a7f74',
+  orange: '#9c7a64',
+  silver: '#7f858d',
+  blue: '#6f747b',
+  green: '#7d8572',
+  red: '#8b6a63',
+  pink: '#917a73',
+  gold: '#a08d72',
 };
