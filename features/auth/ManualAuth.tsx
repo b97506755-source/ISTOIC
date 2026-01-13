@@ -1,467 +1,556 @@
-
-import React, { useState } from 'react';
-import { 
-    Mail, Lock, ArrowRight, ArrowLeft, KeyRound, 
-    ShieldCheck, Loader2, RefreshCw, Send, CheckCircle2,
-    HelpCircle, AlertTriangle
+import React, { useMemo, useState } from 'react';
+import {
+  Mail,
+  Lock,
+  ArrowRight,
+  ArrowLeft,
+  KeyRound,
+  ShieldCheck,
+  Loader2,
+  RefreshCw,
+  Send,
+  CheckCircle2,
+  HelpCircle,
+  AlertTriangle,
+  User,
 } from 'lucide-react';
-import { auth, db } from '../../services/firebaseConfig';
-// @ts-ignore
-import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { auth, db, ensureAuthPersistence, firebaseConfigError } from '../../services/firebaseConfig';
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateProfile,
+} from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { IstokIdentityService, IStokUserIdentity } from '../istok/services/istokIdentity';
 import { setSystemPin } from '../../utils/crypto';
+import { authStyles } from './authStyles';
+
+const AUTH_TIMEOUT_MS = 15000;
+
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = AUTH_TIMEOUT_MS): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Request timeout. Coba lagi.')), timeoutMs);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+
+const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value);
+
+const normalizeAuthError = (error: any): string => {
+  const message = error?.message || 'Terjadi kesalahan. Coba lagi.';
+  const code = error?.code || '';
+
+  if (code === 'auth/invalid-credential' || message.includes('invalid-credential')) {
+    return 'Email atau password salah.';
+  }
+  if (code === 'auth/user-not-found' || message.includes('user-not-found')) {
+    return 'Akun tidak ditemukan.';
+  }
+  if (code === 'auth/wrong-password' || message.includes('wrong-password')) {
+    return 'Password salah.';
+  }
+  if (code === 'auth/email-already-in-use' || message.includes('email-already-in-use')) {
+    return 'Email sudah terdaftar.';
+  }
+  if (code === 'auth/weak-password' || message.includes('weak-password')) {
+    return 'Password terlalu lemah. Gunakan minimal 8 karakter.';
+  }
+  if (code === 'auth/network-request-failed') {
+    return 'Koneksi bermasalah. Periksa jaringan Anda.';
+  }
+
+  return message;
+};
 
 type ManualAuthSuccess = (identity: IStokUserIdentity) => void;
 
-const buildFallbackIdentity = (uid: string, email: string): IStokUserIdentity => {
-    const baseName = email.split('@')[0] || 'USER';
-    return {
-        uid,
-        email,
-        displayName: baseName,
-        photoURL: '',
-        istokId: IstokIdentityService.formatId(baseName),
-        codename: baseName.toUpperCase(),
-    };
+const buildFallbackIdentity = (uid: string, email: string, displayName?: string): IStokUserIdentity => {
+  const baseName = displayName?.trim() || email.split('@')[0] || 'USER';
+  return {
+    uid,
+    email,
+    displayName: baseName,
+    photoURL: '',
+    istokId: IstokIdentityService.formatId(baseName),
+    codename: baseName.toUpperCase(),
+  };
 };
 
-// --- SUB-COMPONENT: LOGIN MANUAL ---
-export const LoginManual: React.FC<{ onBack: () => void, onSuccess: ManualAuthSuccess, onForgot: () => void }> = ({ onBack, onSuccess, onForgot }) => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [info, setInfo] = useState('');
+const AuthAlert: React.FC<{ tone: 'error' | 'info' | 'success'; message: string }> = ({ tone, message }) => {
+  const className =
+    tone === 'error' ? authStyles.alertError : tone === 'success' ? authStyles.alertSuccess : authStyles.alertInfo;
 
-    const handleLogin = async () => {
-        if (!email.includes('@') || !email.includes('.')) { 
-            setError('Format email tidak valid'); 
-            return; 
+  return (
+    <div className={className}>
+      {tone === 'error' && <AlertTriangle size={12} />}
+      {message}
+    </div>
+  );
+};
+
+export const LoginManual: React.FC<{ onBack: () => void; onSuccess: ManualAuthSuccess; onForgot: () => void }> = ({
+  onBack,
+  onSuccess,
+  onForgot,
+}) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+
+  const handleLogin = async () => {
+    if (firebaseConfigError || !auth) {
+      setError(firebaseConfigError || 'Firebase belum dikonfigurasi.');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('Format email tidak valid.');
+      return;
+    }
+    if (!password) {
+      setError('Password wajib diisi.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setInfo('');
+
+    try {
+      await ensureAuthPersistence('local');
+      const userCredential = await withTimeout(signInWithEmailAndPassword(auth, email, password));
+      const user = userCredential.user;
+
+      if (!user.emailVerified) {
+        await withTimeout(sendEmailVerification(user));
+        setInfo('Email belum diverifikasi. Link verifikasi dikirim ulang.');
+      }
+
+      let identity: IStokUserIdentity | null = null;
+      if (db) {
+        const snap = await withTimeout(getDoc(doc(db, 'users', user.uid)));
+        if (snap.exists()) {
+          identity = snap.data() as IStokUserIdentity;
         }
-        if (!password) {
-            setError('Password wajib diisi');
-            return;
-        }
+      }
 
-        setLoading(true);
-        setError('');
-        setInfo('');
+      if (!identity) {
+        identity = buildFallbackIdentity(user.uid, email, user.displayName || undefined);
+        await IstokIdentityService.createProfile(identity);
+      }
 
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+      onSuccess(identity);
+    } catch (e: any) {
+      setError(normalizeAuthError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            if (!user.emailVerified) {
-                await sendEmailVerification(user);
-                setInfo('Email belum diverifikasi. Link verifikasi dikirim ulang.');
-            }
+  return (
+    <div className="w-full animate-slide-up">
+      <div className="text-center mb-6">
+        <h2 className={authStyles.title}>Login Email</h2>
+        <p className={authStyles.subtitle}>Secure login access</p>
+      </div>
 
-            let identity: IStokUserIdentity | null = null;
-            if (db) {
-                const snap = await getDoc(doc(db, 'users', user.uid));
-                if (snap.exists()) {
-                    identity = snap.data() as IStokUserIdentity;
-                }
-            }
+      {error && <AuthAlert tone="error" message={error} />}
+      {info && <AuthAlert tone="info" message={info} />}
 
-            if (!identity) {
-                identity = buildFallbackIdentity(user.uid, email);
-                await IstokIdentityService.createProfile(identity);
-            }
-
-            onSuccess(identity);
-        } catch (e: any) {
-            let msg = e?.message || 'Gagal login.';
-            if (msg.includes('auth/invalid-credential')) msg = 'Email atau password salah.';
-            if (msg.includes('auth/user-not-found')) msg = 'Akun tidak ditemukan.';
-            if (msg.includes('auth/wrong-password')) msg = 'Password salah.';
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="w-full animate-slide-up">
-            <div className="text-center mb-6">
-                <h2 className="text-xl font-black text-white uppercase tracking-tight">LOGIN EMAIL</h2>
-                <p className="text-[10px] text-neutral-500 font-mono mt-1">SECURE LOGIN ACCESS</p>
-            </div>
-
-            {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center mb-4 flex items-center justify-center gap-2"><AlertTriangle size={12}/> {error}</div>}
-            {info && <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-bold text-center mb-4">{info}</div>}
-
-            <div className="space-y-4">
-                <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Email Address</label>
-                    <div className="relative">
-                        <input 
-                            type="email" value={email} onChange={e => setEmail(e.target.value)}
-                            className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 pl-12 text-sm font-bold text-white focus:border-emerald-500 outline-none transition-all"
-                            placeholder="nama@email.com"
-                        />
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
-                    </div>
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Password</label>
-                    <div className="relative">
-                        <input 
-                            type="password" value={password} onChange={e => setPassword(e.target.value)}
-                            className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 pl-12 text-sm font-bold text-white focus:border-emerald-500 outline-none transition-all"
-                            placeholder="••••••••"
-                        />
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
-                    </div>
-                </div>
-                <button onClick={handleLogin} disabled={loading} className="w-full py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-70">
-                    {loading ? <Loader2 className="animate-spin" size={16}/> : <ArrowRight size={16}/>} MASUK
-                </button>
-                <button onClick={onForgot} className="w-full text-[9px] font-bold text-neutral-500 hover:text-white">
-                    LUPA AKUN?
-                </button>
-            </div>
-
-            <button onClick={onBack} className="w-full mt-4 py-3 text-[10px] font-bold text-neutral-500 hover:text-white uppercase tracking-widest flex items-center justify-center gap-2">
-                <ArrowLeft size={12} /> KEMBALI
-            </button>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className={authStyles.label}>Email Address</label>
+          <div className="relative">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={authStyles.inputIconWrap}
+              placeholder="nama@email.com"
+              autoComplete="email"
+            />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+          </div>
         </div>
-    );
-};
-
-// --- SUB-COMPONENT: REGISTER MANUAL (REAL EMAIL OTP) ---
-export const RegisterManual: React.FC<{ onBack: () => void, onSuccess: ManualAuthSuccess }> = ({ onBack, onSuccess }) => {
-    const [step, setStep] = useState<'EMAIL' | 'CODE' | 'PASSWORD'>('EMAIL');
-    const [email, setEmail] = useState('');
-    const [code, setCode] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [info, setInfo] = useState('');
-    
-    // Server-side code simulation (In memory for client-side verify)
-    const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
-
-    const handleSendCode = async () => {
-        if (!email.includes('@') || !email.includes('.')) { 
-            setError("Format email tidak valid"); 
-            return; 
-        }
-
-        setLoading(true);
-        setError('');
-        setInfo('');
-
-        // 1. Generate 6-Digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        setGeneratedOtp(otp);
-
-        // 2. Prepare EmailJS Payload
-        // Pastikan Anda sudah setup .env dengan:
-        // VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, VITE_EMAILJS_PUBLIC_KEY
-        const serviceId = (import.meta as any).env.VITE_EMAILJS_SERVICE_ID;
-        const templateId = (import.meta as any).env.VITE_EMAILJS_TEMPLATE_ID;
-        const publicKey = (import.meta as any).env.VITE_EMAILJS_PUBLIC_KEY;
-
-        // Fallback untuk development jika env belum diset (Simulasi log)
-        if (!serviceId || !templateId || !publicKey) {
-            console.warn("DEV MODE: EmailJS keys missing. OTP logged to console:", otp);
-            setTimeout(() => {
-                setLoading(false);
-                setStep('CODE');
-                alert(`[DEV_MODE] EmailJS belum dikonfigurasi. Kode OTP Anda: ${otp}`);
-            }, 1500);
-            return;
-        }
-
-        try {
-            const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    service_id: serviceId,
-                    template_id: templateId,
-                    user_id: publicKey,
-                    template_params: {
-                        to_email: email,
-                        otp_code: otp,
-                        company_name: "IStoicAI Secure Terminal"
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error("Gagal mengirim email. Cek koneksi atau kuota.");
-            }
-
-            setLoading(false);
-            setStep('CODE');
-        } catch (e: any) {
-            console.error(e);
-            setError("Gagal mengirim kode. " + e.message);
-            setLoading(false);
-        }
-    };
-
-    const handleVerifyCode = () => {
-        if (code !== generatedOtp) { 
-            setError("Kode verifikasi salah!"); 
-            return; 
-        }
-        
-        setLoading(true);
-        // Artificial delay for UX
-        setTimeout(() => {
-            setLoading(false);
-            setStep('PASSWORD');
-            setError('');
-        }, 800);
-    };
-
-    const handleRegister = async () => {
-        if (password.length < 6) { setError("Password min 6 karakter"); return; }
-        setLoading(true);
-        try {
-            // Create Firebase Auth User
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-            await sendEmailVerification(userCredential.user);
-            
-            // Create Istok Profile
-            const identity = buildFallbackIdentity(userCredential.user.uid, email);
-            await IstokIdentityService.createProfile(identity);
-
-            setInfo('Email verifikasi dikirim. Silakan cek inbox.');
-            onSuccess(identity);
-        } catch (e: any) {
-            let msg = e.message;
-            if (msg.includes('email-already-in-use')) msg = "Email sudah terdaftar.";
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="w-full animate-slide-up">
-            <div className="text-center mb-6">
-                <h2 className="text-xl font-black text-white uppercase tracking-tight">DAFTAR MANUAL</h2>
-                <p className="text-[10px] text-neutral-500 font-mono mt-1">SECURE ENCRYPTED REGISTRATION</p>
-            </div>
-
-            {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center mb-4 flex items-center justify-center gap-2"><AlertTriangle size={12}/> {error}</div>}
-            {info && <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-bold text-center mb-4">{info}</div>}
-
-            {step === 'EMAIL' && (
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Email Address</label>
-                        <div className="relative">
-                            <input 
-                                type="email" value={email} onChange={e => setEmail(e.target.value)}
-                                className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 pl-12 text-sm font-bold text-white focus:border-emerald-500 outline-none transition-all"
-                                placeholder="nama@email.com"
-                            />
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
-                        </div>
-                    </div>
-                    <button onClick={handleSendCode} disabled={loading} className="w-full py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-70">
-                        {loading ? <Loader2 className="animate-spin" size={16}/> : <Send size={16}/>} KIRIM KODE VERIFIKASI
-                    </button>
-                    <p className="text-[9px] text-neutral-600 text-center leading-relaxed px-4">
-                        Kode 6-digit akan dikirim ke inbox email Anda untuk memverifikasi kepemilikan.
-                    </p>
-                </div>
-            )}
-
-            {step === 'CODE' && (
-                <div className="space-y-4 animate-fade-in">
-                     <p className="text-xs text-center text-neutral-400">Kode dikirim ke <span className="text-white font-bold">{email}</span></p>
-                     <div className="relative">
-                        <input 
-                            type="text" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/[^0-9]/g, ''))}
-                            className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 text-center text-2xl font-mono text-white focus:border-emerald-500 outline-none tracking-[0.5em]"
-                            placeholder="000000"
-                            autoFocus
-                        />
-                    </div>
-                    <button onClick={handleVerifyCode} disabled={loading} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-70">
-                        {loading ? <Loader2 className="animate-spin" size={16}/> : <CheckCircle2 size={16}/>} VERIFIKASI KODE
-                    </button>
-                    <button onClick={() => setStep('EMAIL')} className="w-full text-[9px] font-bold text-neutral-500 hover:text-white mt-2">
-                        SALAH EMAIL? UBAH
-                    </button>
-                </div>
-            )}
-
-            {step === 'PASSWORD' && (
-                <div className="space-y-4 animate-fade-in">
-                    <div className="space-y-2">
-                        <label className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest ml-1">Setup Password</label>
-                        <div className="relative">
-                            <input 
-                                type="password" value={password} onChange={e => setPassword(e.target.value)}
-                                className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 pl-12 text-sm font-bold text-white focus:border-emerald-500 outline-none transition-all"
-                                placeholder="••••••••"
-                                autoFocus
-                            />
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
-                        </div>
-                    </div>
-                    <button onClick={handleRegister} disabled={loading} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-70">
-                        {loading ? <Loader2 className="animate-spin" size={16}/> : <ShieldCheck size={16}/>} SELESAI & MASUK
-                    </button>
-                </div>
-            )}
-
-            <button onClick={onBack} className="w-full mt-4 py-3 text-[10px] font-bold text-neutral-500 hover:text-white uppercase tracking-widest flex items-center justify-center gap-2">
-                <ArrowLeft size={12} /> KEMBALI
-            </button>
+        <div className="space-y-2">
+          <label className={authStyles.label}>Password</label>
+          <div className="relative">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={authStyles.inputIconWrap}
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+          </div>
         </div>
-    );
+        <button onClick={handleLogin} disabled={loading} className={authStyles.buttonPrimary}>
+          {loading ? <Loader2 className="animate-spin" size={16} /> : <ArrowRight size={16} />} MASUK
+        </button>
+        <button onClick={onForgot} className={authStyles.linkMuted}>
+          LUPA AKUN?
+        </button>
+      </div>
+
+      <button onClick={onBack} className={authStyles.buttonGhost}>
+        <ArrowLeft size={12} /> KEMBALI
+      </button>
+    </div>
+  );
 };
 
-// --- SUB-COMPONENT: FORGOT PIN (RESET VIA AUTH) ---
-export const ForgotPin: React.FC<{ onBack: () => void, onSuccess: () => void, expectedEmail?: string }> = ({ onBack, onSuccess, expectedEmail }) => {
-    const [loading, setLoading] = useState(false);
-    const [newPin, setNewPin] = useState('');
-    const [emailCheck, setEmailCheck] = useState('');
+export const RegisterManual: React.FC<{ onBack: () => void; onSuccess: ManualAuthSuccess }> = ({ onBack, onSuccess }) => {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
 
-    const handleReset = async () => {
-        if (expectedEmail && emailCheck.trim().toLowerCase() !== expectedEmail.toLowerCase()) {
-            alert('Email tidak cocok dengan akun yang tersimpan.');
-            return;
-        }
-        if (newPin.length < 4) return alert("PIN min 4 digit");
-        if (!confirm("Reset PIN akan menghapus akses ke data terenkripsi lama jika tidak dibackup. Lanjutkan?")) return;
-        
-        setLoading(true);
-        // Simulate re-auth check or just overwrite local PIN for this MVP
-        setTimeout(async () => {
-            await setSystemPin(newPin);
-            setLoading(false);
-            alert("PIN Baru berhasil diatur.");
-            onSuccess();
-        }, 1500);
-    };
+  const passwordScore = useMemo(() => {
+    if (!password) return 'empty';
+    if (password.length < 8) return 'weak';
+    if (/[A-Z]/.test(password) && /[0-9]/.test(password)) return 'strong';
+    return 'medium';
+  }, [password]);
 
-    return (
-        <div className="w-full animate-slide-up">
-            <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center border border-amber-500/20 mb-4 text-amber-500">
-                    <KeyRound size={32} />
-                </div>
-                <h2 className="text-xl font-black text-white uppercase tracking-tight">RESET PIN AKSES</h2>
-                <p className="text-[10px] text-neutral-500 mt-2 max-w-[250px] mx-auto leading-relaxed">
-                    Untuk keamanan, Anda harus mengatur ulang PIN lokal perangkat ini.
-                </p>
-            </div>
+  const handleRegister = async () => {
+    if (firebaseConfigError || !auth) {
+      setError(firebaseConfigError || 'Firebase belum dikonfigurasi.');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('Format email tidak valid.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password minimal 8 karakter.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Konfirmasi password tidak sama.');
+      return;
+    }
 
-            <div className="space-y-4">
-                 {expectedEmail && (
-                    <div className="relative">
-                        <input 
-                            type="email"
-                            value={emailCheck} onChange={e => setEmailCheck(e.target.value)}
-                            className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-3 text-sm text-white focus:border-amber-500 outline-none"
-                            placeholder="Konfirmasi email akun"
-                        />
-                    </div>
-                 )}
-                 <div className="relative">
-                    <input 
-                        type="password" inputMode="numeric" maxLength={6}
-                        value={newPin} onChange={e => setNewPin(e.target.value)}
-                        className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 text-center text-2xl font-mono text-white focus:border-amber-500 outline-none tracking-[0.5em]"
-                        placeholder="BARU"
-                    />
-                </div>
-                
-                <button onClick={handleReset} disabled={loading} className="w-full py-4 bg-amber-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-amber-900/20">
-                    {loading ? <Loader2 className="animate-spin"/> : <RefreshCw size={16}/>} ATUR ULANG PIN
-                </button>
-            </div>
+    setLoading(true);
+    setError('');
+    setInfo('');
 
-            <button onClick={onBack} className="w-full mt-6 py-3 text-[10px] font-bold text-neutral-500 hover:text-white uppercase tracking-widest">
-                BATAL
-            </button>
+    try {
+      await ensureAuthPersistence('local');
+      const userCredential = await withTimeout(createUserWithEmailAndPassword(auth, email, password));
+
+      if (fullName.trim()) {
+        await withTimeout(updateProfile(userCredential.user, { displayName: fullName.trim() }));
+      }
+
+      await withTimeout(sendEmailVerification(userCredential.user));
+
+      const identity = buildFallbackIdentity(userCredential.user.uid, email, fullName.trim());
+      await IstokIdentityService.createProfile(identity);
+
+      setInfo('Email verifikasi dikirim. Silakan cek inbox Anda.');
+      onSuccess(identity);
+    } catch (e: any) {
+      setError(normalizeAuthError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-full animate-slide-up">
+      <div className="text-center mb-6">
+        <h2 className={authStyles.title}>Daftar Akun</h2>
+        <p className={authStyles.subtitle}>Secure encrypted registration</p>
+      </div>
+
+      {error && <AuthAlert tone="error" message={error} />}
+      {info && <AuthAlert tone="success" message={info} />}
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className={authStyles.label}>Nama Lengkap</label>
+          <div className="relative">
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className={authStyles.inputIconWrap}
+              placeholder="Nama Anda"
+              autoComplete="name"
+            />
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+          </div>
         </div>
-    );
+        <div className="space-y-2">
+          <label className={authStyles.label}>Email Address</label>
+          <div className="relative">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={authStyles.inputIconWrap}
+              placeholder="nama@email.com"
+              autoComplete="email"
+            />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className={authStyles.label}>Password</label>
+          <div className="relative">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={authStyles.inputIconWrap}
+              placeholder="Minimal 8 karakter"
+              autoComplete="new-password"
+            />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+          </div>
+          <p
+            className={`text-[10px] font-bold ${
+              passwordScore === 'strong'
+                ? 'text-emerald-400'
+                : passwordScore === 'medium'
+                  ? 'text-amber-400'
+                  : 'text-neutral-500'
+            }`}
+          >
+            {passwordScore === 'empty'
+              ? 'Gunakan kombinasi huruf, angka, dan simbol.'
+              : passwordScore === 'weak'
+                ? 'Password lemah, tambah panjang dan variasi.'
+                : passwordScore === 'medium'
+                  ? 'Password cukup, tambah angka/huruf besar untuk kuat.'
+                  : 'Password kuat.'}
+          </p>
+        </div>
+        <div className="space-y-2">
+          <label className={authStyles.label}>Konfirmasi Password</label>
+          <div className="relative">
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={authStyles.inputIconWrap}
+              placeholder="Ulangi password"
+              autoComplete="new-password"
+            />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
+          </div>
+        </div>
+        <button onClick={handleRegister} disabled={loading} className={authStyles.buttonSecondary}>
+          {loading ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />} SELESAI & MASUK
+        </button>
+      </div>
+
+      <button onClick={onBack} className={authStyles.buttonGhost}>
+        <ArrowLeft size={12} /> KEMBALI
+      </button>
+    </div>
+  );
 };
 
-// --- SUB-COMPONENT: FORGOT ACCOUNT ---
+export const ForgotPin: React.FC<{ onBack: () => void; onSuccess: () => void; expectedEmail?: string }> = ({
+  onBack,
+  onSuccess,
+  expectedEmail,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [emailCheck, setEmailCheck] = useState('');
+  const [ackRisk, setAckRisk] = useState(false);
+  const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+
+  const handleReset = async () => {
+    if (expectedEmail && emailCheck.trim().toLowerCase() !== expectedEmail.toLowerCase()) {
+      setError('Email tidak cocok dengan akun yang tersimpan.');
+      return;
+    }
+    if (newPin.length < 4) {
+      setError('PIN minimal 4 digit.');
+      return;
+    }
+    if (!ackRisk) {
+      setError('Konfirmasi risiko harus disetujui.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await withTimeout(setSystemPin(newPin));
+      setInfo('PIN baru berhasil diatur.');
+      onSuccess();
+    } catch (e: any) {
+      setError(e?.message || 'Gagal mengatur PIN baru.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-full animate-slide-up">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 mx-auto bg-amber-500/10 rounded-full flex items-center justify-center border border-amber-500/20 mb-4 text-amber-500">
+          <KeyRound size={32} />
+        </div>
+        <h2 className={authStyles.title}>Reset PIN Akses</h2>
+        <p className="text-[10px] text-neutral-500 mt-2 max-w-[250px] mx-auto leading-relaxed">
+          PIN hanya tersimpan di perangkat ini. Reset PIN akan membuat data terenkripsi lama tidak terbuka.
+        </p>
+      </div>
+
+      {error && <AuthAlert tone="error" message={error} />}
+      {info && <AuthAlert tone="success" message={info} />}
+
+      <div className="space-y-4">
+        {expectedEmail && (
+          <div className="relative">
+            <input
+              type="email"
+              value={emailCheck}
+              onChange={(e) => setEmailCheck(e.target.value)}
+              className={authStyles.input}
+              placeholder="Konfirmasi email akun"
+              autoComplete="email"
+            />
+          </div>
+        )}
+        <div className="relative">
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            value={newPin}
+            onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
+            className="w-full bg-[#121214] border border-white/10 rounded-2xl px-5 py-4 text-center text-2xl font-mono text-white focus:border-amber-500 outline-none tracking-[0.5em]"
+            placeholder="BARU"
+          />
+        </div>
+        <label className="flex items-start gap-2 text-[10px] text-neutral-400">
+          <input
+            type="checkbox"
+            checked={ackRisk}
+            onChange={(e) => setAckRisk(e.target.checked)}
+            className="mt-0.5"
+          />
+          Saya memahami bahwa reset PIN dapat membuat data terenkripsi lama tidak bisa diakses.
+        </label>
+
+        <button
+          onClick={handleReset}
+          disabled={loading}
+          className="w-full py-4 bg-amber-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-amber-900/20 disabled:opacity-70"
+        >
+          {loading ? <Loader2 className="animate-spin" /> : <RefreshCw size={16} />} ATUR ULANG PIN
+        </button>
+      </div>
+
+      <button onClick={onBack} className={authStyles.buttonGhost}>
+        BATAL
+      </button>
+    </div>
+  );
+};
+
 export const ForgotAccount: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const [email, setEmail] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState('');
-    const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
 
-    const handleSendReset = async () => {
-        if (!email.includes('@') || !email.includes('.')) {
-            setError('Format email tidak valid');
-            return;
-        }
+  const handleSendReset = async () => {
+    if (firebaseConfigError || !auth) {
+      setError(firebaseConfigError || 'Firebase belum dikonfigurasi.');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('Format email tidak valid');
+      return;
+    }
 
-        setLoading(true);
-        setError('');
-        setStatus('');
+    setLoading(true);
+    setError('');
+    setStatus('');
 
-        try {
-            await sendPasswordResetEmail(auth, email);
-            setStatus('Link reset password dikirim ke email Anda.');
-        } catch (e: any) {
-            let msg = e?.message || 'Gagal mengirim reset email.';
-            if (msg.includes('auth/user-not-found')) msg = 'Email tidak ditemukan.';
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+      await ensureAuthPersistence('local');
+      await withTimeout(sendPasswordResetEmail(auth, email));
+      setStatus('Link reset password dikirim ke email Anda.');
+    } catch (e: any) {
+      setError(normalizeAuthError(e));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="w-full animate-slide-up">
-            <div className="text-center mb-8">
-                 <div className="w-16 h-16 mx-auto bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20 mb-4 text-blue-500">
-                    <HelpCircle size={32} />
-                </div>
-                <h2 className="text-xl font-black text-white uppercase tracking-tight">PEMULIHAN AKUN</h2>
-                <p className="text-xs text-neutral-400 mt-2">Hubungi administrator sistem atau gunakan email pemulihan.</p>
-            </div>
-
-            <div className="space-y-3">
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-left">
-                    <h4 className="text-[10px] font-black text-white uppercase tracking-widest mb-1 flex items-center gap-2">
-                        <Mail size={12} /> EMAIL RECOVERY
-                    </h4>
-                    <p className="text-xs text-neutral-400">Masukkan email yang terdaftar untuk menerima link reset.</p>
-                    <div className="flex gap-2 mt-3">
-                        <input 
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
-                            placeholder="email@anda.com"
-                        />
-                        <button onClick={handleSendReset} disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold disabled:opacity-60">
-                            {loading ? '...' : 'KIRIM'}
-                        </button>
-                    </div>
-                    {status && <p className="text-[10px] text-emerald-400 mt-2">{status}</p>}
-                    {error && <p className="text-[10px] text-red-400 mt-2">{error}</p>}
-                </div>
-
-                <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 text-left flex gap-3">
-                    <AlertTriangle size={20} className="text-amber-500 shrink-0" />
-                    <div>
-                        <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">MANUAL SUPPORT</h4>
-                        <p className="text-[10px] text-neutral-400">Jika kehilangan akses total, silakan hubungi tim IT IStoic melalui channel aman.</p>
-                    </div>
-                </div>
-            </div>
-
-            <button onClick={onBack} className="w-full mt-6 py-3 text-[10px] font-bold text-neutral-500 hover:text-white uppercase tracking-widest">
-                KEMBALI KE LOGIN
-            </button>
+  return (
+    <div className="w-full animate-slide-up">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 mx-auto bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20 mb-4 text-blue-500">
+          <HelpCircle size={32} />
         </div>
-    );
+        <h2 className={authStyles.title}>Pemulihan Akun</h2>
+        <p className="text-xs text-neutral-400 mt-2">Masukkan email terdaftar untuk menerima link reset password.</p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-left space-y-3">
+          <h4 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <Mail size={12} /> Email Recovery
+          </h4>
+          <div className="flex gap-2">
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
+              placeholder="email@anda.com"
+            />
+            <button
+              onClick={handleSendReset}
+              disabled={loading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-bold disabled:opacity-60"
+            >
+              {loading ? '...' : 'KIRIM'}
+            </button>
+          </div>
+          {status && <p className="text-[10px] text-emerald-400">{status}</p>}
+          {error && <p className="text-[10px] text-red-400">{error}</p>}
+        </div>
+
+        <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 text-left flex gap-3">
+          <AlertTriangle size={20} className="text-amber-500 shrink-0" />
+          <div>
+            <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Manual Support</h4>
+            <p className="text-[10px] text-neutral-400">
+              Jika kehilangan akses total, silakan hubungi tim IT IStoic melalui channel aman.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <button onClick={onBack} className={authStyles.buttonGhost}>
+        KEMBALI KE LOGIN
+      </button>
+    </div>
+  );
 };

@@ -25,9 +25,10 @@ import useLocalStorage from "../../hooks/useLocalStorage";
 import { IstokIdentityService, IStokUserIdentity } from "../istok/services/istokIdentity";
 import { LoginManual, RegisterManual, ForgotAccount, ForgotPin } from "./ManualAuth";
 
-import { auth, db } from "../../services/firebaseConfig";
+import { auth, db, firebaseConfigError } from "../../services/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { authStyles } from "./authStyles";
 
 interface AuthViewProps {
   onAuthSuccess: () => void;
@@ -46,37 +47,44 @@ type AuthStage =
   | "FORGOT_ACCOUNT";
 
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 Minutes
+const LOCKOUT_DURATION_MS = 5 * 60 * 1000;
 
-// 🔒 Optional dev bypass (DISABLE by default)
-// Set VITE_ENABLE_DEV_BYPASS=true in .env ONLY if you really need it in dev builds
 const DEV_BYPASS_ENABLED = String(import.meta.env.VITE_ENABLE_DEV_BYPASS || "").toLowerCase() === "true";
+const FIRESTORE_TIMEOUT_MS = 15000;
+
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = FIRESTORE_TIMEOUT_MS): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Request timeout. Coba lagi.")), timeoutMs);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
 
 export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
-  // --- GLOBAL STATE ---
   const [identity, setIdentity] = useLocalStorage<IStokUserIdentity | null>("istok_user_identity", null);
   const [isPinSet, setIsPinSet] = useState(isSystemPinConfigured());
   const [bioEnabled, setBioEnabled] = useLocalStorage<boolean>("bio_auth_enabled", false);
 
-  // Pending google user for CREATE_ID stage (replaces window.tempGoogleUser)
   const [pendingGoogleUser, setPendingGoogleUser] = useState<IStokUserIdentity | null>(null);
 
-  // --- SECURITY PERSISTENCE ---
   const [failedAttempts, setFailedAttempts] = useLocalStorage<number>("auth_failed_count", 0);
   const [lockoutUntil, setLockoutUntil] = useLocalStorage<number>("auth_lockout_until", 0);
 
-  // --- UI STATE ---
   const [stage, setStage] = useState<AuthStage>("CHECKING");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
   const [bioStatus, setBioStatus] = useState("SCANNING...");
 
-  // --- INPUTS ---
   const [codename, setCodename] = useState("");
   const [pinInput, setPinInput] = useState("");
 
-  // --- LOCKOUT LOGIC ---
   const [isHardLocked, setIsHardLocked] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
@@ -92,7 +100,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     triggerShake();
   };
 
-  // --- SECURITY CHECK ON MOUNT ---
   useEffect(() => {
     const checkLockout = () => {
       const now = Date.now();
@@ -114,14 +121,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     return () => clearInterval(interval);
   }, [lockoutUntil, isHardLocked, setFailedAttempts, setLockoutUntil]);
 
-  // Focus helper
   useEffect(() => {
     if (stage === "LOCKED" && !isHardLocked && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [stage, isHardLocked]);
 
-  // --- BIOMETRIC HANDLER ---
   const handleBiometricScan = async () => {
     if (isHardLocked) return;
 
@@ -142,20 +147,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     }
   };
 
-  /**
-   * --- SMART AUTO FLOW ---
-   * Priority:
-   * 1) If local identity exists -> go PIN/biometric flow
-   * 2) If Firebase session exists -> load profile -> set identity or request CREATE_ID
-   * 3) Else -> WELCOME
-   */
   useEffect(() => {
     let unsub: (() => void) | undefined;
 
     const initFlow = async () => {
       setError(null);
 
-      // 1) FAST PATH: Local identity already in storage
+      if (firebaseConfigError) {
+        setStage("WELCOME");
+        setNiceError(firebaseConfigError);
+        return;
+      }
+
       if (identity && identity.istokId) {
         if (isSystemPinConfigured()) {
           if (bioEnabled && !isHardLocked) {
@@ -170,7 +173,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         return;
       }
 
-      // 2) SLOW PATH: Firebase silent restore
       if (auth && db) {
         unsub = onAuthStateChanged(auth, async (user) => {
           if (!user) {
@@ -179,12 +181,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           }
 
           try {
-            const snap = await getDoc(doc(db, "users", user.uid));
+            const snap = await withTimeout(getDoc(doc(db, "users", user.uid)));
             if (snap.exists()) {
               const data = snap.data() as IStokUserIdentity;
               setIdentity(data);
 
-              // Immediately continue to PIN/biometric logic
               if (isSystemPinConfigured()) {
                 if (bioEnabled && !isHardLocked) {
                   setStage("BIOMETRIC_SCAN");
@@ -196,7 +197,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 setStage("SETUP_PIN");
               }
             } else {
-              // New user: needs CREATE_ID
               const tmp: IStokUserIdentity = {
                 uid: user.uid,
                 email: user.email || "",
@@ -225,7 +225,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identity?.istokId, bioEnabled, isHardLocked]);
 
-  // --- GOOGLE LOGIN (Redirect-safe) ---
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
@@ -233,9 +232,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     try {
       const res = await IstokIdentityService.loginWithGoogle();
 
-      // NEW contract: handle status-based flow
       if (res.status === "REDIRECT_STARTED") {
-        // Normal: app will leave to browser, do nothing
         return;
       }
 
@@ -245,7 +242,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         if (userProfile?.istokId) {
           setIdentity(userProfile);
 
-          // Continue flow
           if (isSystemPinConfigured()) {
             if (bioEnabled && !isHardLocked) {
               setStage("BIOMETRIC_SCAN");
@@ -259,7 +255,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
           return;
         }
 
-        // New user without istokId -> CREATE_ID
         setPendingGoogleUser(userProfile);
         setStage("CREATE_ID");
         return;
@@ -275,7 +270,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         return;
       }
 
-      // Fallback
       setNiceError("Login Failed");
     } catch (err: any) {
       setNiceError(err?.message || "Login Failed");
@@ -284,7 +278,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     }
   };
 
-  // --- CREATE ID ---
   const handleCreateIdentity = async () => {
     setError(null);
 
@@ -322,7 +315,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     }
   };
 
-  // --- SETUP PIN ---
   const handleSetupPin = async () => {
     setError(null);
 
@@ -334,7 +326,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     await setSystemPin(pinInput);
     setIsPinSet(true);
 
-    // Biometric opt-in
     try {
       const available = await BiometricService.isAvailable();
       if (available) {
@@ -351,7 +342,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     onAuthSuccess();
   };
 
-  // --- UNLOCK (PIN) + OPTIONAL DEV BYPASS ---
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isHardLocked) return;
@@ -359,10 +349,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     setLoading(true);
     setError(null);
 
-    // Delay for brute-force reduction
     await new Promise((r) => setTimeout(r, 600));
 
-    // 0) Optional DEV bypass (DISABLED by default)
     if (DEV_BYPASS_ENABLED) {
       const isMaster = await verifyMasterPin(pinInput);
       if (isMaster) {
@@ -384,7 +372,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       }
     }
 
-    // 1) Check USER pin
     const isValid = await verifySystemPin(pinInput);
     if (isValid) {
       setFailedAttempts(0);
@@ -393,7 +380,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       return;
     }
 
-    // Invalid
     const newCount = failedAttempts + 1;
     setFailedAttempts(newCount);
     setPinInput("");
@@ -410,7 +396,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
     setLoading(false);
   };
 
-  // --- RENDERERS ---
   if (stage === "CHECKING") {
     return (
       <div className="fixed inset-0 bg-[#020202] flex items-center justify-center">
@@ -441,22 +426,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-[#020202] flex items-center justify-center p-6 overflow-hidden font-sans select-none sheen">
-      {/* Background FX */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none"></div>
 
       <div className={`relative w-full max-w-sm ${shake ? "animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]" : ""}`}>
-        <div className="backdrop-blur-2xl border border-white/10 bg-[#0a0a0b]/80 rounded-[32px] p-8 shadow-2xl relative overflow-hidden">
-          {/* WELCOME */}
+        <div className={authStyles.card}>
           {stage === "WELCOME" && (
             <div className="text-center space-y-8 animate-slide-up">
               <div className="space-y-2">
                 <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase">
                   ISTOIC <span className="text-emerald-500">TITANIUM</span>
                 </h1>
-                <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-[0.3em]">
-                  SECURE COGNITIVE OS v101.0
-                </p>
+                <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-[0.3em]">SECURE COGNITIVE OS v101.0</p>
               </div>
 
               <div className="space-y-4">
@@ -519,11 +500,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
             </div>
           )}
 
-          {/* CREATE_ID */}
           {stage === "CREATE_ID" && (
             <div className="space-y-6 animate-slide-up">
               <div className="text-center">
-                <h2 className="text-xl font-bold text-white uppercase tracking-tight">Setup Identitas</h2>
+                <h2 className={authStyles.title}>Setup Identitas</h2>
                 <p className="text-xs text-neutral-500 mt-2">Buat Callsign unik untuk jaringan IStok.</p>
               </div>
 
@@ -550,13 +530,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
             </div>
           )}
 
-          {/* SETUP_PIN */}
           {stage === "SETUP_PIN" && (
             <div className="space-y-6 animate-slide-up text-center">
               <div className="w-16 h-16 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto border border-amber-500/20 mb-4">
                 <KeyRound size={28} />
               </div>
-              <h2 className="text-xl font-bold text-white uppercase">Kunci Perangkat</h2>
+              <h2 className={authStyles.title}>Kunci Perangkat</h2>
               <p className="text-xs text-neutral-500">
                 PIN ini hanya tersimpan di perangkat ini untuk enkripsi lokal. Login berikutnya HANYA menggunakan PIN ini.
               </p>
@@ -578,7 +557,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
             </div>
           )}
 
-          {/* LOCKED */}
           {stage === "LOCKED" && (
             <form onSubmit={handleUnlock} className="space-y-6 animate-slide-up">
               <div className="text-center space-y-2 mb-8">
@@ -605,8 +583,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                       <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">SECURITY LOCKOUT</p>
                     </div>
                     <p className="text-2xl font-mono text-white font-bold mt-2">
-                      00:{Math.floor(countdown / 60).toString().padStart(2, "0")}:
-                      {Math.floor(countdown % 60).toString().padStart(2, "0")}
+                      00:{Math.floor(countdown / 60)
+                        .toString()
+                        .padStart(2, "0")}
+                      :{Math.floor(countdown % 60)
+                        .toString()
+                        .padStart(2, "0")}
                     </p>
                   </div>
                 ) : (
@@ -706,9 +688,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
             />
           )}
 
-          {stage === "FORGOT_ACCOUNT" && (
-            <ForgotAccount onBack={() => setStage("WELCOME")} />
-          )}
+          {stage === "FORGOT_ACCOUNT" && <ForgotAccount onBack={() => setStage("WELCOME")} />}
         </div>
       </div>
     </div>
