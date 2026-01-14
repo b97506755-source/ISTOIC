@@ -11,6 +11,8 @@ import { NeuralLinkOverlay } from './components/NeuralLinkOverlay';
 import { ChatInput } from './components/ChatInput'; 
 import { ChatWindow } from './components/ChatWindow'; 
 import { VaultPinModal } from '../../components/VaultPinModal';
+import { Card } from '../../components/ui/Card';
+import { cn } from '../../utils/cn';
 import { useLiveSession } from '../../contexts/LiveSessionContext';
 import { useNavigationIntelligence } from '../../hooks/useNavigationIntelligence';
 import { useFeatures } from '../../contexts/FeatureContext';
@@ -25,34 +27,38 @@ const PersonaToggle: React.FC<{ mode: 'hanisah' | 'stoic'; onToggle: () => void;
     return (
         <button 
             onClick={onToggle}
-            className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 ${
-              mode === 'hanisah'
-                ? 'bg-[var(--accent)]/10 border-[color:var(--accent)]/30 text-[var(--accent)]'
-                : 'bg-[var(--surface-2)] border-[color:var(--border)] text-[var(--text)]'
-            }`}
+            className={cn(
+                'group relative flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] border transition-all duration-300',
+                mode === 'hanisah'
+                    ? 'bg-accent/10 border-accent/30 text-accent'
+                    : 'bg-surface-2 border-border text-text'
+            )}
         >
-            <div className={`w-1.5 h-1.5 rounded-full ${mode === 'hanisah' ? 'bg-[var(--accent)]' : 'bg-[var(--text-muted)]'} animate-pulse`}></div>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.08em]">{mode === 'hanisah' ? 'Hanisah' : 'Stoic'}</span>
+            <div className={cn('w-1.5 h-1.5 rounded-full', mode === 'hanisah' ? 'bg-accent' : 'bg-text-muted')} />
+            <span className="caption">{mode === 'hanisah' ? 'Hanisah' : 'Stoic'}</span>
             <div className="w-[1px] h-3 bg-current opacity-20 mx-1"></div>
-            {mode === 'hanisah' ? <Flame size={12} strokeWidth={2.5} /> : <Brain size={12} strokeWidth={2.5} />}
+            {mode === 'hanisah' ? <Flame size={12} strokeWidth={2.2} /> : <Brain size={12} strokeWidth={2.2} />}
         </button>
     );
 });
 
-const SuggestionCard: React.FC<{ icon: React.ReactNode, label: string, desc: string, onClick: () => void, accent?: string, delay?: number }> = React.memo(({ icon, label, desc, onClick, accent = "text-[var(--text-muted)] group-hover:text-[var(--accent)]", delay = 0 }) => (
-    <button 
+const SuggestionCard: React.FC<{ icon: React.ReactNode, label: string, desc: string, onClick: () => void, accent?: string, delay?: number }> = React.memo(({ icon, label, desc, onClick, accent = "text-text-muted group-hover:text-accent", delay = 0 }) => (
+    <Card
+        as="button"
+        interactive
+        padding="md"
         onClick={onClick}
         style={{ animationDelay: `${delay}ms` }}
-        className={`relative overflow-hidden group bg-[var(--surface)]/90 backdrop-blur-sm border border-[color:var(--border)] rounded-[20px] p-4 text-left transition-all duration-300 ease-out hover:border-[color:var(--accent)]/30 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] flex items-center gap-4 h-full animate-slide-up sheen`}
+        className="relative overflow-hidden group text-left transition-all duration-300 ease-out hover:-translate-y-0.5 active:scale-[0.98] flex items-center gap-4 h-full animate-slide-up"
     >
-        <div className={`w-10 h-10 rounded-xl bg-[var(--surface-2)] flex items-center justify-center transition-all duration-300 group-hover:scale-110 ${accent} border border-[color:var(--border)]`}>
+        <div className={cn('w-10 h-10 rounded-[var(--radius-md)] bg-surface-2 flex items-center justify-center transition-all duration-300 group-hover:scale-110 border border-border', accent)}>
             {React.cloneElement(icon as React.ReactElement<any>, { size: 18, strokeWidth: 2 })}
         </div>
         <div className="flex-1 min-w-0">
-            <h4 className="text-[11px] font-black uppercase tracking-widest text-[var(--text)] transition-colors truncate">{label}</h4>
-            <p className="text-[11px] text-[var(--text-muted)] font-medium truncate opacity-80 group-hover:opacity-100 transition-opacity">{desc}</p>
+            <h4 className="section-title text-text truncate">{label}</h4>
+            <p className="caption text-text-muted truncate opacity-80 group-hover:opacity-100 transition-opacity">{desc}</p>
         </div>
-    </button>
+    </Card>
 ));
 
 const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
@@ -87,7 +93,14 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
         }
     }, []);
 
-    if (!isThreadsLoaded) return <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-[var(--bg)] text-[var(--text)] animate-fade-in"><Loader2 size={32} className="animate-spin text-[var(--accent-color)]" /><span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[var(--text-muted)] animate-pulse">RESTORING MEMORY...</span></div>;
+    if (!isThreadsLoaded) {
+        return (
+            <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-bg text-text animate-fade-in">
+                <Loader2 size={32} className="animate-spin text-accent" />
+                <span className="caption text-text-muted">Loading conversations...</span>
+            </div>
+        );
+    }
 
     const handleVaultToggle = useCallback(() => {
         if (!isVaultConfigEnabled || isTransitioning) return;
@@ -115,7 +128,7 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
                         <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${isHydraActive ? 'text-[var(--success)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>
                             {isHydraActive ? <Infinity size={14} className="animate-pulse" /> : <Zap size={14} />}
                         </div>
-                        <span className={`text-[10px] font-black uppercase tracking-widest leading-none ${isHydraActive ? 'text-[var(--success)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text)]'}`}>{isHydraActive ? 'HYDRA' : (activeModel?.name?.split(' ')[0] || 'MODEL')}</span>
+                        <span className={`caption font-semibold leading-none ${isHydraActive ? 'text-success' : 'text-text-muted group-hover:text-text'}`}>{isHydraActive ? 'Hydra' : (activeModel?.name?.split(' ')[0] || 'Model')}</span>
                     </button>
                     <div className="h-4 w-[1px] bg-[color:var(--border)] mx-1"></div>
                     <PersonaToggle mode={personaMode} onToggle={changePersona} />

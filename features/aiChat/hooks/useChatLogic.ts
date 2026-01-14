@@ -86,7 +86,9 @@ export const useChatLogic = (notes: Note[], setNotes: (notes: Note[]) => void) =
     imageModelId
   });
 
-  useEffect(() => stopGeneration, [stopGeneration]);
+  useEffect(() => {
+    return () => stopGeneration('cleanup');
+  }, [stopGeneration]);
 
   // --- 7. MEMORY OPERATIONS ---
   const triggerMemoryConsolidation = useCallback(() => {
@@ -98,7 +100,7 @@ export const useChatLogic = (notes: Note[], setNotes: (notes: Note[]) => void) =
   const deleteThreadWrapper = useCallback(
     (id: string) => {
       if (activeThreadId === id) {
-        stopGeneration();
+        stopGeneration('replace');
         triggerMemoryConsolidation();
         setActiveThreadId(null);
       } else {
@@ -113,7 +115,7 @@ export const useChatLogic = (notes: Note[], setNotes: (notes: Note[]) => void) =
   // --- 8. SESSION HANDLERS ---
   const handleNewChat = useCallback(
     async (persona: 'hanisah' | 'stoic' = 'stoic') => {
-      stopGeneration();
+      stopGeneration('replace');
       triggerMemoryConsolidation();
 
       const welcome = persona === 'hanisah' ? HANISAH_WELCOME : STOIC_WELCOME;
@@ -138,7 +140,7 @@ export const useChatLogic = (notes: Note[], setNotes: (notes: Note[]) => void) =
       const sendPersona = personaOverride || personaMode;
       if (!retryMessageId) setInput('');
 
-      stopGeneration();
+      stopGeneration('replace');
 
       let currentThreadId = activeThreadId;
       const threadExists = threads.some((t) => t.id === currentThreadId);
@@ -206,6 +208,7 @@ export const useChatLogic = (notes: Note[], setNotes: (notes: Note[]) => void) =
         };
         addMessage(targetThreadId, errorMsg);
       }
+    },
     [
       input,
       isLoading,

@@ -19,6 +19,9 @@ import { BiometricService } from '../../services/biometricService';
 import { HANISAH_KERNEL } from '../../services/melsaKernel';
 import { HANISAH_BRAIN } from '../../services/melsaBrain';
 import { type FeatureID } from '../../constants';
+import { Button } from '../../components/ui/Button';
+import { Input, Textarea } from '../../components/ui/Input';
+import { Dialog } from '../../components/ui/Dialog';
 
 interface SettingsViewProps {
     onNavigate: (feature: FeatureID) => void;
@@ -42,11 +45,11 @@ const THEME_COLORS: Record<string, string> = {
 
 const SettingsSection: React.FC<{ title: string, icon: React.ReactNode, children: React.ReactNode, className?: string }> = memo(({ title, icon, children, className }) => (
     <div className={`space-y-4 mb-8 ${className} content-visibility-auto`}>
-        <div className="flex items-center gap-2 text-skin-muted px-2">
+        <div className="flex items-center gap-2 text-text-muted px-2">
             {React.cloneElement(icon as React.ReactElement<any>, { size: 16 })}
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">{title}</h3>
+            <h3 className="overline text-text-muted">{title}</h3>
         </div>
-        <div className="space-y-3 transform-gpu">
+        <div className="space-y-3">
             {children}
         </div>
     </div>
@@ -55,18 +58,18 @@ const SettingsSection: React.FC<{ title: string, icon: React.ReactNode, children
 const ToolRow: React.FC<{ label: string, desc: string, icon: React.ReactNode, isActive: boolean, onToggle: () => void }> = memo(({ label, desc, icon, isActive, onToggle }) => (
     <button 
         onClick={onToggle}
-        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all active:scale-[0.98] sheen ${isActive ? 'bg-skin-surface border-accent/30' : 'bg-transparent border-skin-border opacity-60'}`}
+        className={`w-full flex items-center justify-between p-4 rounded-[var(--radius-md)] border transition-all active:scale-[0.98] ${isActive ? 'bg-surface border-accent/30' : 'bg-surface-2 border-border'}`}
     >
         <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isActive ? 'bg-accent/10 text-accent' : 'bg-skin-surface text-skin-muted'}`}>
+            <div className={`p-2 rounded-lg ${isActive ? 'bg-accent/10 text-accent' : 'bg-surface text-text-muted'}`}>
                 {icon}
             </div>
             <div className="text-left">
-                <div className="text-[10px] font-bold uppercase tracking-wider">{label}</div>
-                <div className="text-[9px] text-skin-muted">{desc}</div>
+                <div className="section-title text-text">{label}</div>
+                <div className="caption text-text-muted">{desc}</div>
             </div>
         </div>
-        {isActive ? <ToggleRight className="text-accent" size={20}/> : <ToggleLeft className="text-skin-muted" size={20}/>}
+        {isActive ? <ToggleRight className="text-accent" size={20}/> : <ToggleLeft className="text-text-muted" size={20}/>}
     </button>
 ));
 
@@ -74,16 +77,16 @@ const ProviderToggleRow: React.FC<{ id: string, name: string, isVisible: boolean
     // Memoize key check if possible, or accept prop. For now calling lightweight getter is fine.
     const hasKey = !!KEY_MANAGER.getKey(id);
     return (
-        <div className="flex items-center justify-between p-3 bg-skin-card border border-skin-border rounded-xl">
+        <div className="flex items-center justify-between p-3 bg-surface border border-border rounded-xl">
             <div className="flex items-center gap-3">
                 <div className={`w-2 h-2 rounded-full ${hasKey ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-red-500'}`}></div>
                 <div>
-                    <div className="text-[10px] font-black uppercase tracking-wider">{name}</div>
-                    <div className="text-[8px] font-mono text-skin-muted">{hasKey ? 'CONNECTED' : 'MISSING_KEY'}</div>
+                    <div className="section-title text-text">{name}</div>
+                    <div className="caption text-text-muted">{hasKey ? 'Connected' : 'Missing key'}</div>
                 </div>
             </div>
-            <button onClick={onToggle} disabled={!hasKey} className={`text-[9px] font-bold px-3 py-1 rounded-lg border transition-all active:scale-95 ${isVisible ? 'bg-accent/10 text-accent border-accent/20' : 'bg-skin-surface text-skin-muted border-skin-border'}`}>
-                {isVisible ? 'ACTIVE' : 'HIDDEN'}
+            <button onClick={onToggle} disabled={!hasKey} className={`text-xs font-semibold px-3 py-1 rounded-lg border transition-all active:scale-95 ${isVisible ? 'bg-accent/10 text-accent border-accent/20' : 'bg-surface-2 text-text-muted border-border'}`}>
+                {isVisible ? 'Visible' : 'Hidden'}
             </button>
         </div>
     );
@@ -101,33 +104,39 @@ const PromptEditorModal: React.FC<{
     
     useEffect(() => { setValue(currentPrompt); }, [currentPrompt]);
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-[3000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 pt-[calc(env(safe-area-inset-top)+2rem)] pb-[calc(env(safe-area-inset-bottom)+2rem)] animate-fade-in will-change-opacity">
-            <div className="w-full max-w-2xl bg-skin-card border border-skin-border rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-full transform-gpu will-change-transform animate-slide-up">
-                <div className="p-4 border-b border-skin-border flex justify-between items-center bg-skin-surface shrink-0">
-                    <div className="flex items-center gap-2">
-                        <Terminal size={16} className="text-accent"/>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">SYSTEM_PROMPT_OVERRIDE</span>
+        <Dialog
+            open={isOpen}
+            onClose={onClose}
+            title="System prompt"
+            size="lg"
+            footer={
+                <div className="flex items-center justify-between w-full gap-3">
+                    <span className="caption text-text-muted">{value.length} characters</span>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" onClick={() => { onReset(); onClose(); }}>
+                            Reset default
+                        </Button>
+                        <Button variant="primary" onClick={() => { onSave(value); onClose(); }}>
+                            Save
+                        </Button>
                     </div>
-                    <button onClick={onClose}><X size={18} className="text-skin-muted hover:text-skin-text"/></button>
                 </div>
-                <textarea 
+            }
+        >
+            <div className="space-y-3">
+                <div className="flex items-center gap-2 text-text-muted">
+                    <Terminal size={16} />
+                    <span className="caption">Editing {persona === 'hanisah' ? 'Hanisah' : 'Stoic'} prompt</span>
+                </div>
+                <Textarea
                     value={value}
                     onChange={e => setValue(e.target.value)}
-                    className="flex-1 bg-[#0a0a0b] text-white font-mono text-xs p-6 resize-none focus:outline-none"
+                    className="min-h-[260px] font-mono text-sm"
                     spellCheck={false}
                 />
-                <div className="p-4 border-t border-skin-border bg-skin-surface flex justify-between items-center shrink-0">
-                    <div className="text-[9px] font-mono text-skin-muted">{value.length} CHARS</div>
-                    <div className="flex gap-2">
-                        <button onClick={() => { onReset(); onClose(); }} className="px-4 py-2 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-[9px] font-bold transition-all">RESET DEFAULT</button>
-                        <button onClick={() => { onSave(value); onClose(); }} className="px-6 py-2 rounded-lg bg-accent text-black font-black text-[9px] uppercase tracking-widest hover:brightness-110 transition-all">SAVE KERNEL</button>
-                    </div>
-                </div>
             </div>
-        </div>
+        </Dialog>
     );
 });
 
@@ -279,7 +288,7 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
     }, [setProviderVisibility]);
 
     return (
-        <div className="h-full flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] md:px-8 md:pt-12 lg:px-12 overflow-hidden font-sans animate-fade-in text-skin-text relative">
+        <div className="h-full flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] md:px-8 md:pt-12 lg:px-12 overflow-hidden font-sans animate-fade-in text-text relative">
             
             <PromptEditorModal 
                 isOpen={isPromptModalOpen} 
@@ -291,39 +300,38 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
             />
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-skin-border pb-4 shrink-0 gap-4">
-                <div className="w-full">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black italic tracking-tighter uppercase break-words leading-[0.85]">
-                        SYSTEM <span className="text-accent">CONFIG</span>
-                    </h1>
-                    <p className="text-[10px] tech-mono font-bold text-skin-muted uppercase tracking-[0.3em] mt-2">
-                        {t.title}
-                    </p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-border pb-4 shrink-0 gap-4">
+                <div className="w-full space-y-2">
+                    <p className="caption text-text-muted">Settings</p>
+                    <h1 className="page-title text-text">{t.title}</h1>
+                    <p className="body-sm text-text-muted">Manage appearance, identity, and security preferences.</p>
                 </div>
-                <button 
+                <Button 
                     onClick={handleSavePersona}
                     disabled={isSaving}
-                    className="px-6 py-3 bg-skin-text text-skin-card hover:bg-accent hover:text-black rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-50 shrink-0 transform-gpu"
+                    variant="primary"
+                    size="md"
+                    className="gap-2"
                 >
                     {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} {isSaving ? t.saved : t.save}
-                </button>
+                </Button>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scroll pr-2 space-y-2 pb-[calc(env(safe-area-inset-bottom)+4rem)]">
                 
                 {/* 1. VISUAL & LANGUAGE */}
-                <SettingsSection title={t.theme_label || "VISUAL_INTERFACE"} icon={<Palette size={18} />}>
-                    <div className="p-6 bg-skin-card rounded-[24px] border border-skin-border grid grid-cols-1 md:grid-cols-2 gap-6">
+                <SettingsSection title={t.theme_label || "Appearance & language"} icon={<Palette size={18} />}>
+                    <div className="p-6 bg-surface rounded-[24px] border border-border grid grid-cols-1 md:grid-cols-2 gap-6">
                         
                         {/* Theme Toggle */}
                         <div className="space-y-3">
-                            <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest pl-1">COLOR SCHEME</label>
-                            <div className="flex bg-skin-surface p-1 rounded-xl border border-skin-border">
+                            <label className="caption text-text-muted pl-1">Color scheme</label>
+                            <div className="flex bg-surface-2 p-1 rounded-xl border border-border">
                                 {['light', 'system', 'dark'].map((mode) => (
                                     <button 
                                         key={mode}
                                         onClick={() => setColorScheme(mode as any)}
-                                        className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 ${colorScheme === mode ? 'bg-skin-card text-accent shadow-sm border border-skin-border' : 'text-skin-muted hover:text-skin-text'}`}
+                                        className={`flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 ${colorScheme === mode ? 'bg-surface text-accent shadow-sm border border-border' : 'text-text-muted hover:text-text'}`}
                                     >
                                         {mode === 'light' && <Sun size={12} />}
                                         {mode === 'dark' && <Moon size={12} />}
@@ -336,15 +344,15 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
 
                         {/* Language */}
                         <div className="space-y-3">
-                            <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest pl-1 flex items-center gap-2">
-                                <Globe size={12} /> LANGUAGE
+                            <label className="caption text-text-muted pl-1 flex items-center gap-2">
+                                <Globe size={12} /> Language
                             </label>
-                            <div className="flex bg-skin-surface p-1 rounded-xl border border-skin-border">
+                            <div className="flex bg-surface-2 p-1 rounded-xl border border-border">
                                 {['id', 'en', 'bn'].map((lang) => (
                                     <button 
                                         key={lang}
                                         onClick={() => { setAppLanguage(lang); window.location.reload(); }}
-                                        className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 ${appLanguage === lang ? 'bg-skin-card text-accent shadow-sm border border-skin-border' : 'text-skin-muted hover:text-skin-text'}`}
+                                        className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all active:scale-95 ${appLanguage === lang ? 'bg-surface text-accent shadow-sm border border-border' : 'text-text-muted hover:text-text'}`}
                                     >
                                         {lang}
                                     </button>
@@ -353,14 +361,14 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                         </div>
 
                         {/* ACCENT PALETTE */}
-                        <div className="space-y-3 col-span-1 md:col-span-2 border-t border-skin-border pt-4">
-                            <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest pl-1">NEURAL ACCENT (PALETTE)</label>
-                            <div className="flex flex-wrap gap-3 p-3 bg-skin-surface rounded-xl border border-skin-border">
+                        <div className="space-y-3 col-span-1 md:col-span-2 border-t border-border pt-4">
+                            <label className="caption text-text-muted pl-1">Accent color</label>
+                            <div className="flex flex-wrap gap-3 p-3 bg-surface-2 rounded-xl border border-border">
                                 {Object.entries(THEME_COLORS).map(([key, color]) => (
                                     <button
                                         key={key}
                                         onClick={() => setAppTheme(key)}
-                                        className={`relative w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center transform hover:scale-110 active:scale-95 ${appTheme === key ? 'border-skin-text scale-110 shadow-lg' : 'border-transparent'}`}
+                                        className={`relative w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center transform hover:scale-110 active:scale-95 ${appTheme === key ? 'border-text scale-110 shadow-lg' : 'border-transparent'}`}
                                         style={{ backgroundColor: color }}
                                         aria-label={`Select ${key} theme`}
                                     >
@@ -374,14 +382,14 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                 </SettingsSection>
 
                 {/* 2. IDENTITY MATRIX */}
-                <SettingsSection title={t.identity_title || "USER PROFILE"} icon={<UserCheck size={18} />}>
-                    <div className="p-6 bg-skin-card rounded-[24px] border border-skin-border space-y-6">
+                <SettingsSection title={t.identity_title || "Profile"} icon={<UserCheck size={18} />}>
+                    <div className="p-6 bg-surface rounded-[24px] border border-border space-y-6">
                         
                         {/* ID EDITOR */}
-                        <div className="space-y-3 pb-6 border-b border-skin-border">
-                            <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest pl-1">ISTOIC ID (CODENAME)</label>
+                        <div className="space-y-3 pb-6 border-b border-border">
+                            <label className="caption text-text-muted pl-1">Account ID</label>
                             {!isEditingId ? (
-                                <div className="flex justify-between items-center bg-skin-surface p-4 rounded-2xl border border-skin-border">
+                                <div className="flex justify-between items-center bg-surface-2 p-4 rounded-2xl border border-border">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
                                             <Shield size={18} />
@@ -390,35 +398,35 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                                             <span className="block text-sm font-black text-emerald-500 tracking-wider">
                                                 {identity?.istokId || 'GUEST_USER'}
                                             </span>
-                                            <span className="text-[9px] text-skin-muted font-mono">{identity?.email || 'Local Session'}</span>
+                                            <span className="caption text-text-muted">{identity?.email || 'Local Session'}</span>
                                         </div>
                                     </div>
-                                    <button onClick={() => setIsEditingId(true)} className="px-4 py-2 bg-skin-card rounded-xl text-[9px] font-bold border border-skin-border hover:border-emerald-500 hover:text-emerald-500 transition-all uppercase tracking-wider active:scale-95">
-                                        CHANGE ID
+                                    <button onClick={() => setIsEditingId(true)} className="px-4 py-2 bg-surface rounded-xl text-sm font-semibold border border-border hover:border-emerald-500 hover:text-emerald-500 transition-all active:scale-95">
+                                        Edit
                                     </button>
                                 </div>
                             ) : (
-                                <div className="space-y-3 bg-skin-surface p-4 rounded-2xl border border-emerald-500/30">
+                                <div className="space-y-3 bg-surface-2 p-4 rounded-2xl border border-emerald-500/30">
                                     <div className="flex gap-2">
-                                        <div className="flex-1 flex items-center bg-skin-card rounded-xl border border-skin-border px-3 focus-within:border-emerald-500 transition-colors">
-                                            <span className="text-[10px] font-black text-emerald-600 mr-2 select-none">ISTOIC-</span>
+                                        <div className="flex-1 flex items-center bg-surface rounded-xl border border-border px-3 focus-within:border-emerald-500 transition-colors">
+                                            <span className="caption font-semibold text-emerald-600 mr-2 select-none">ISTOIC-</span>
                                             <input 
                                                 value={newCodenameInput}
                                                 onChange={e => setNewCodenameInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                                                className="flex-1 bg-transparent py-3 text-sm font-bold outline-none uppercase text-skin-text placeholder:text-skin-muted"
+                                                className="flex-1 bg-transparent py-3 text-sm font-bold outline-none uppercase text-text placeholder:text-text-muted"
                                                 placeholder="NEW_CODENAME"
                                                 maxLength={12}
                                                 autoFocus
                                             />
                                         </div>
-                                        <button onClick={handleChangeId} disabled={isSaving} className="px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 active:scale-95">
-                                            {isSaving ? '...' : 'SAVE'}
+                                        <button onClick={handleChangeId} disabled={isSaving} className="px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold text-sm transition-all disabled:opacity-50 active:scale-95">
+                                            {isSaving ? '...' : 'Save'}
                                         </button>
-                                        <button onClick={() => setIsEditingId(false)} className="px-3 bg-skin-card border border-skin-border rounded-xl text-skin-muted hover:text-skin-text transition-all active:scale-95">
+                                        <button onClick={() => setIsEditingId(false)} className="px-3 bg-surface border border-border rounded-xl text-text-muted hover:text-text transition-all active:scale-95">
                                             <X size={16} />
                                         </button>
                                     </div>
-                                    {idUpdateMsg && <p className={`text-[10px] font-bold uppercase tracking-wide ${idUpdateMsg.toLowerCase().includes('success') ? 'text-emerald-500' : 'text-red-500'}`}>{idUpdateMsg}</p>}
+                                    {idUpdateMsg && <p className={`caption ${idUpdateMsg.toLowerCase().includes('success') ? 'text-emerald-500' : 'text-danger'}`}>{idUpdateMsg}</p>}
                                 </div>
                             )}
                         </div>
@@ -426,30 +434,30 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                         {/* Profile Fields */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest pl-1 flex items-center gap-2">
+                                <label className="caption text-text-muted pl-1 flex items-center gap-2">
                                     <User size={12}/> {t.user_name || "DISPLAY NAME"}
                                 </label>
-                                <input 
+                                <Input 
                                     type="text" 
                                     value={localPersona.nama} 
                                     onChange={(e) => setLocalPersona({...localPersona, nama: e.target.value})} 
-                                    className="w-full bg-skin-surface border border-skin-border rounded-2xl px-5 py-4 text-sm font-bold text-skin-text focus:outline-none focus:border-accent/50 focus:bg-skin-card transition-all"
+                                    className="text-sm font-semibold"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center pr-1">
-                                    <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest pl-1 flex items-center gap-2">
+                                    <label className="caption text-text-muted pl-1 flex items-center gap-2">
                                         <Database size={12}/> {t.user_bio || "CONTEXT"}
                                     </label>
-                                    <button onClick={handleAutoGenBio} className="text-[9px] font-bold text-accent flex items-center gap-1 hover:underline">
-                                        {isGeneratingBio ? <RefreshCw size={10} className="animate-spin"/> : <Sparkles size={10}/>} AUTO-GEN
+                                    <button onClick={handleAutoGenBio} className="caption font-semibold text-accent flex items-center gap-1 hover:underline">
+                                        {isGeneratingBio ? <RefreshCw size={12} className="animate-spin"/> : <Sparkles size={12}/>} Auto-generate
                                     </button>
                                 </div>
-                                <input 
+                                <Input 
                                     type="text" 
                                     value={localPersona.bio} 
                                     onChange={(e) => setLocalPersona({...localPersona, bio: e.target.value})} 
-                                    className="w-full bg-skin-surface border border-skin-border rounded-2xl px-5 py-4 text-sm font-bold text-skin-text focus:outline-none focus:border-accent/50 focus:bg-skin-card transition-all"
+                                    className="text-sm font-semibold"
                                 />
                             </div>
                         </div>
@@ -457,67 +465,67 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                 </SettingsSection>
 
                 {/* 3. ASSISTANT PERSONALITY */}
-                <SettingsSection title="ASSISTANT_PERSONALITY" icon={<Brain size={18} />}>
-                    <div className="p-6 bg-skin-card rounded-[24px] border border-skin-border">
-                        <div className="flex bg-skin-surface p-1 rounded-xl border border-skin-border mb-6">
-                             <button onClick={() => setActiveConfigTab('HANISAH')} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 ${activeConfigTab === 'HANISAH' ? 'bg-skin-card text-orange-500 shadow-sm' : 'text-skin-muted hover:text-skin-text'}`}>
-                                <Zap size={12}/> HANISAH (CREATIVE)
+                <SettingsSection title="Assistant profile" icon={<Brain size={18} />}>
+                    <div className="p-6 bg-surface rounded-[24px] border border-border">
+                        <div className="flex bg-surface-2 p-1 rounded-xl border border-border mb-6">
+                             <button onClick={() => setActiveConfigTab('HANISAH')} className={`flex-1 py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 ${activeConfigTab === 'HANISAH' ? 'bg-surface text-orange-500 shadow-sm' : 'text-text-muted hover:text-text'}`}>
+                                <Zap size={12}/> Hanisah (Creative)
                              </button>
-                             <button onClick={() => setActiveConfigTab('STOIC')} className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 ${activeConfigTab === 'STOIC' ? 'bg-skin-card text-cyan-500 shadow-sm' : 'text-skin-muted hover:text-skin-text'}`}>
-                                <Brain size={12}/> LOGIC CORE
+                             <button onClick={() => setActiveConfigTab('STOIC')} className={`flex-1 py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 ${activeConfigTab === 'STOIC' ? 'bg-surface text-cyan-500 shadow-sm' : 'text-text-muted hover:text-text'}`}>
+                                <Brain size={12}/> Stoic (Logic)
                              </button>
                         </div>
 
                         {activeConfigTab === 'HANISAH' && (
                             <div className="space-y-4 animate-fade-in">
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest">VOICE MODULE</label>
-                                    <select value={hanisahVoice} onChange={e => setHanisahVoice(e.target.value)} className="w-full bg-skin-surface border border-skin-border rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-orange-500/50">
+                                    <label className="caption text-text-muted">Voice</label>
+                                    <select value={hanisahVoice} onChange={e => setHanisahVoice(e.target.value)} className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500/50">
                                         <option value="Hanisah">Hanisah (Default)</option>
                                         <option value="Kore">Kore (Balanced)</option>
                                         <option value="Zephyr">Zephyr (Soft)</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest">CAPABILITIES</label>
-                                    <ToolRow label="VAULT ACCESS" desc="Allow reading/writing notes" icon={<Database size={14}/>} isActive={hanisahTools.vault} onToggle={toggleHanisahVault} />
-                                    <ToolRow label="VISUAL CORTEX" desc="Image Generation & Vision" icon={<Layers size={14}/>} isActive={hanisahTools.visual} onToggle={toggleHanisahVisual} />
-                                    <ToolRow label="WEB UPLINK" desc="Google Search Access" icon={<Globe size={14}/>} isActive={hanisahTools.search} onToggle={toggleHanisahSearch} />
+                                    <label className="caption text-text-muted">Capabilities</label>
+                                    <ToolRow label="Vault access" desc="Allow reading and writing notes." icon={<Database size={14}/>} isActive={hanisahTools.vault} onToggle={toggleHanisahVault} />
+                                    <ToolRow label="Visual generation" desc="Enable image generation and vision." icon={<Layers size={14}/>} isActive={hanisahTools.visual} onToggle={toggleHanisahVisual} />
+                                    <ToolRow label="Web search" desc="Allow web search." icon={<Globe size={14}/>} isActive={hanisahTools.search} onToggle={toggleHanisahSearch} />
                                 </div>
-                                <button onClick={() => handleOpenPromptEditor('hanisah')} className="w-full py-3 mt-2 border border-orange-500/20 text-orange-500 hover:bg-orange-500/10 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95">
-                                    <Edit3 size={12}/> EDIT SYSTEM PROMPT
-                                </button>
+                                <Button onClick={() => handleOpenPromptEditor('hanisah')} variant="secondary" className="w-full mt-2">
+                                    <Edit3 size={14}/> Edit system prompt
+                                </Button>
                             </div>
                         )}
 
                         {activeConfigTab === 'STOIC' && (
                             <div className="space-y-4 animate-fade-in">
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest">VOICE MODULE</label>
-                                    <select value={stoicVoice} onChange={e => setStoicVoice(e.target.value)} className="w-full bg-skin-surface border border-skin-border rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-cyan-500/50">
+                                    <label className="caption text-text-muted">Voice</label>
+                                    <select value={stoicVoice} onChange={e => setStoicVoice(e.target.value)} className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-cyan-500/50">
                                         <option value="Fenrir">Fenrir (Deep)</option>
                                         <option value="Puck">Puck (Clear)</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-skin-muted uppercase tracking-widest">CAPABILITIES</label>
-                                    <ToolRow label="VAULT ACCESS" desc="Allow reading/writing notes" icon={<Database size={14}/>} isActive={stoicTools.vault} onToggle={toggleStoicVault} />
-                                    <div className="p-3 rounded-xl border border-skin-border bg-skin-surface opacity-50 flex items-center gap-3">
-                                        <div className="p-2 bg-skin-card rounded-lg text-skin-muted"><Layers size={14}/></div>
-                                        <div><div className="text-[10px] font-bold">VISUAL CORTEX</div><div className="text-[9px]">Disabled for Logic Core</div></div>
+                                    <label className="caption text-text-muted">Capabilities</label>
+                                    <ToolRow label="Vault access" desc="Allow reading and writing notes." icon={<Database size={14}/>} isActive={stoicTools.vault} onToggle={toggleStoicVault} />
+                                    <div className="p-3 rounded-xl border border-border bg-surface-2 opacity-50 flex items-center gap-3">
+                                        <div className="p-2 bg-surface rounded-lg text-text-muted"><Layers size={14}/></div>
+                                        <div><div className="text-sm font-semibold">Visual generation</div><div className="caption text-text-muted">Disabled for Stoic.</div></div>
                                     </div>
                                 </div>
-                                <button onClick={() => handleOpenPromptEditor('stoic')} className="w-full py-3 mt-2 border border-cyan-500/20 text-cyan-500 hover:bg-cyan-500/10 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95">
-                                    <Edit3 size={12}/> EDIT SYSTEM PROMPT
-                                </button>
+                                <Button onClick={() => handleOpenPromptEditor('stoic')} variant="secondary" className="w-full mt-2">
+                                    <Edit3 size={14}/> Edit system prompt
+                                </Button>
                             </div>
                         )}
                     </div>
                 </SettingsSection>
 
                 {/* 4. NEURAL UPLINKS */}
-                <SettingsSection title="NEURAL_UPLINKS" icon={<Server size={18} />}>
-                    <div className="p-6 bg-skin-card rounded-[24px] border border-skin-border grid grid-cols-1 md:grid-cols-2 gap-3">
+                <SettingsSection title="AI providers" icon={<Server size={18} />}>
+                    <div className="p-6 bg-surface rounded-[24px] border border-border grid grid-cols-1 md:grid-cols-2 gap-3">
                         {['GEMINI', 'GROQ', 'OPENAI', 'DEEPSEEK', 'MISTRAL', 'HUGGINGFACE', 'ELEVENLABS'].map(p => (
                             <ProviderToggleRow 
                                 key={p} 
@@ -531,64 +539,64 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                 </SettingsSection>
 
                 {/* 5. SECURITY PROTOCOLS */}
-                <SettingsSection title="SECURITY_PROTOCOLS" icon={<Lock size={18} />}>
-                    <div className="p-6 bg-skin-card rounded-[24px] border border-skin-border space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-skin-surface rounded-xl border border-skin-border">
+                <SettingsSection title="Security" icon={<Lock size={18} />}>
+                    <div className="p-6 bg-surface rounded-[24px] border border-border space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-surface-2 rounded-xl border border-border">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-skin-card rounded-lg text-skin-text"><Key size={16}/></div>
+                                <div className="p-2 bg-surface rounded-lg text-text"><Key size={16}/></div>
                                 <div>
-                                    <div className="text-[10px] font-black uppercase tracking-wider">VAULT PIN</div>
-                                    <div className="text-[9px] text-skin-muted">SHA-256 ENCRYPTED</div>
+                                    <div className="section-title text-text">Vault PIN</div>
+                                    <div className="caption text-text-muted">SHA-256 encrypted</div>
                                 </div>
                             </div>
-                            <button className="text-[9px] font-bold px-4 py-2 bg-skin-card border border-skin-border rounded-lg hover:border-accent/50 transition-all active:scale-95">RESET PIN</button>
+                            <Button variant="secondary" size="sm">Reset PIN</Button>
                         </div>
 
                         {isBioAvailable && (
                             <button 
                                 onClick={handleToggleBio}
-                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all active:scale-[0.98] ${bioEnabled ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-skin-surface border-skin-border'}`}
+                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all active:scale-[0.98] ${bioEnabled ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-surface-2 border-border'}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg ${bioEnabled ? 'bg-emerald-500 text-white' : 'bg-skin-card text-skin-muted'}`}>
+                                    <div className={`p-2 rounded-lg ${bioEnabled ? 'bg-emerald-500 text-white' : 'bg-surface text-text-muted'}`}>
                                         <Fingerprint size={16}/>
                                     </div>
                                     <div className="text-left">
-                                        <div className={`text-[10px] font-black uppercase tracking-wider ${bioEnabled ? 'text-emerald-500' : 'text-skin-text'}`}>BIOMETRIC ACCESS</div>
-                                        <div className="text-[9px] text-skin-muted">Hardware Security Module</div>
+                                    <div className={`section-title ${bioEnabled ? 'text-emerald-500' : 'text-text'}`}>Biometric access</div>
+                                    <div className="caption text-text-muted">Hardware security module</div>
                                     </div>
                                 </div>
-                                {bioEnabled ? <ToggleRight size={24} className="text-emerald-500"/> : <ToggleLeft size={24} className="text-skin-muted"/>}
+                                {bioEnabled ? <ToggleRight size={24} className="text-emerald-500"/> : <ToggleLeft size={24} className="text-text-muted"/>}
                             </button>
                         )}
                     </div>
                 </SettingsSection>
 
                 {/* 6. DATA GOVERNANCE */}
-                <SettingsSection title={t.data_title || "DATA GOVERNANCE"} icon={<Database size={18} />}>
+                <SettingsSection title={t.data_title || "Data"} icon={<Database size={18} />}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button onClick={handleBackup} className="p-4 bg-skin-card border border-skin-border hover:border-blue-500/50 rounded-2xl flex items-center gap-3 group transition-all active:scale-95">
+                        <button onClick={handleBackup} className="p-4 bg-surface border border-border hover:border-blue-500/50 rounded-2xl flex items-center gap-3 group transition-all active:scale-95">
                             <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors"><Download size={18}/></div>
                             <div className="text-left">
-                                <h4 className="text-[10px] font-black text-skin-text uppercase tracking-widest">{t.backup}</h4>
-                                <p className="text-[9px] text-skin-muted">Export local vault to JSON.</p>
+                                <h4 className="section-title text-text">{t.backup}</h4>
+                                <p className="caption text-text-muted">Export local vault to JSON.</p>
                             </div>
                         </button>
 
-                        <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-skin-card border border-skin-border hover:border-emerald-500/50 rounded-2xl flex items-center gap-3 group transition-all active:scale-95">
+                        <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-surface border border-border hover:border-emerald-500/50 rounded-2xl flex items-center gap-3 group transition-all active:scale-95">
                             <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors"><Upload size={18}/></div>
                             <div className="text-left">
-                                <h4 className="text-[10px] font-black text-skin-text uppercase tracking-widest">{t.restore}</h4>
-                                <p className="text-[9px] text-skin-muted">Import JSON backup.</p>
+                                <h4 className="section-title text-text">{t.restore}</h4>
+                                <p className="caption text-text-muted">Import JSON backup.</p>
                             </div>
                             <input type="file" ref={fileInputRef} className="hidden" accept="application/json" onChange={handleRestore} />
                         </button>
 
-                        <button onClick={onNavigate.bind(null, 'system')} className="w-full p-4 bg-skin-surface hover:bg-skin-surface-hover border border-skin-border rounded-2xl flex items-center gap-3 group transition-all md:col-span-2 active:scale-[0.98]">
-                             <div className="p-2.5 bg-skin-card text-skin-text rounded-lg"><Activity size={18}/></div>
+                        <button onClick={onNavigate.bind(null, 'system')} className="w-full p-4 bg-surface-2 hover:bg-surface border border-border rounded-2xl flex items-center gap-3 group transition-all md:col-span-2 active:scale-[0.98]">
+                             <div className="p-2.5 bg-surface text-text rounded-lg"><Activity size={18}/></div>
                              <div className="text-left">
-                                <h4 className="text-[10px] font-black text-skin-text uppercase tracking-widest">SYSTEM DIAGNOSTICS</h4>
-                                <p className="text-[9px] text-skin-muted">Check Kernel Health & API Status.</p>
+                                <h4 className="section-title text-text">System diagnostics</h4>
+                                <p className="caption text-text-muted">Check health and API status.</p>
                              </div>
                         </button>
                     </div>
@@ -600,3 +608,4 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
 });
 
 export default SettingsView;
+

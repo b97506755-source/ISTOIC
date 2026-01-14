@@ -73,25 +73,25 @@ export const Dialog: React.FC<DialogProps> = ({ open, onClose, title, size = 'md
                 }
             }}
         >
-            <div className={`relative w-full ${getSizeClass(size)} max-h-full overflow-hidden rounded-3xl border border-skin-border bg-skin-card shadow-[var(--shadow-strong)] flex flex-col`}>
-                <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-skin-border bg-skin-surface">
+            <div className={`relative w-full ${getSizeClass(size)} max-h-full overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[var(--shadow-strong)] flex flex-col`}>
+                <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-border bg-surface-2">
                     <div>
-                        <p className="overline text-skin-muted">{title || 'Dialog'}</p>
+                        <p className="overline text-text-muted">{title || 'Dialog'}</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-skin-muted hover:text-skin-text hover:bg-skin-surface-hover transition-all"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-text-muted hover:text-text hover:bg-surface transition-all"
                         aria-label="Close dialog"
                         type="button"
                     >
                         <X size={18} />
                     </button>
                 </div>
-                <div className="flex-1 overflow-auto px-6 py-5 custom-scroll bg-skin-card">
+                <div className="flex-1 overflow-auto px-6 py-5 custom-scroll bg-surface">
                     {children}
                 </div>
                 {footer && (
-                    <div className="border-t border-skin-border bg-skin-surface px-6 py-4 flex items-center justify-end gap-3">
+                    <div className="border-t border-border bg-surface-2 px-6 py-4 flex items-center justify-end gap-3">
                         {footer}
                     </div>
                 )}

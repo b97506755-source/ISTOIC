@@ -10,7 +10,7 @@ import App from './App';
 import { VaultProvider } from './contexts/VaultContext';
 import { FeatureProvider } from './contexts/FeatureContext';
 
-// ✅ Capacitor URL handler (untuk balik dari Google Login ke app)
+// Note: Capacitor URL handler (untuk balik dari Google Login ke app)
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 
@@ -27,7 +27,7 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 
 /**
- * ✅ Tangkap redirect balik dari browser ke app (Capacitor)
+ * Note: Tangkap redirect balik dari browser ke app (Capacitor)
  * Ini penting untuk Firebase Google Login redirect.
  */
 if (Capacitor.isNativePlatform()) {
@@ -47,8 +47,8 @@ if (Capacitor.isNativePlatform()) {
 }
 
 /**
- * ✅ Service Worker untuk PWA
- * ❗ Jangan aktifkan SW di Capacitor (native webview), biar tidak intercept request/login.
+ * Note: Service Worker untuk PWA
+ * Jangan aktifkan SW di Capacitor (native webview), biar tidak intercept request/login.
  */
 if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -73,3 +73,5 @@ root.render(
     </FeatureProvider>
   </React.StrictMode>
 );
+
+

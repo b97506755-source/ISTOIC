@@ -76,11 +76,11 @@ const GenerativePreview: React.FC<{
 
     return (
         <div className="w-full max-w-2xl mx-auto mt-8 animate-slide-up">
-            <div className={`relative w-full rounded-[24px] overflow-hidden border border-skin-border bg-skin-card shadow-2xl transition-all duration-500 ${getAspectClass()}`}>
+            <div className={`relative w-full rounded-[24px] overflow-hidden border border-border bg-surface shadow-2xl transition-all duration-500 ${getAspectClass()}`}>
                 
                 {/* 1. LOADING STATE / DREAMING ANIMATION */}
                 {(isLoading || (!isMediaLoaded && !displayError)) && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-skin-card overflow-hidden">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-surface overflow-hidden">
                         {/* Pulse Orb */}
                         <div className="absolute w-[200%] h-[200%] bg-gradient-to-tr from-accent/10 to-purple-500/10 animate-[spin_8s_linear_infinite] blur-[100px] opacity-30"></div>
                         
@@ -94,12 +94,12 @@ const GenerativePreview: React.FC<{
                                 <div className="absolute inset-0 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
                                 <div className="absolute inset-4 bg-accent/10 rounded-full animate-pulse blur-md"></div>
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <Sparkles size={20} className="text-skin-text animate-pulse" />
+                                    <Sparkles size={20} className="text-text animate-pulse" />
                                 </div>
                             </div>
                             <div className="text-center space-y-1">
-                                <h4 className="text-xs font-black text-skin-text uppercase tracking-[0.2em] animate-pulse">{loadingStage}</h4>
-                                <p className="text-[9px] text-skin-muted font-mono">NEURAL_SYNTHESIS_ENGINE_ACTIVE</p>
+                                <h4 className="text-sm font-semibold text-text animate-pulse">{loadingStage}</h4>
+                                <p className="caption text-text-muted">Generating output</p>
                             </div>
                         </div>
                     </div>
@@ -111,13 +111,13 @@ const GenerativePreview: React.FC<{
                         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4 border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
                             <AlertCircle size={32} className="text-red-500" />
                         </div>
-                        <h3 className="text-sm font-black text-red-500 uppercase tracking-widest mb-2">GENERATION_FAILURE</h3>
-                        <p className="text-[10px] text-red-400 font-mono max-w-md break-words leading-relaxed">{displayError}</p>
+                        <h3 className="section-title text-danger mb-2">Generation failed</h3>
+                        <p className="caption text-danger max-w-md break-words leading-relaxed">{displayError}</p>
                         <button 
                             onClick={onClear}
-                            className="mt-6 px-6 py-3 bg-red-500/20 hover:bg-red-500 hover:text-white text-red-400 border border-red-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                            className="mt-6 px-6 py-3 bg-danger/10 hover:bg-danger hover:text-text-invert text-danger border border-danger/20 rounded-xl text-sm font-semibold transition-all"
                         >
-                            DISMISS
+                            Dismiss
                         </button>
                     </div>
                 )}
@@ -149,9 +149,9 @@ const GenerativePreview: React.FC<{
                         {/* OVERLAY CONTROLS (Fade in on hover) */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-6">
                             <div className="flex justify-between items-start">
-                                <span className="px-3 py-1 bg-black/60 backdrop-blur rounded-lg text-[9px] font-black uppercase tracking-widest text-white border border-white/10 flex items-center gap-2">
+                                <span className="px-3 py-1 bg-black/60 backdrop-blur rounded-lg text-[11px] font-semibold text-white border border-white/10 flex items-center gap-2">
                                     {type === 'IMAGE' ? <ImageIcon size={10}/> : <Video size={10}/>}
-                                    {type === 'IMAGE' ? 'HQ_RENDER' : 'VIDEO_SEQ'}
+                                    {type === 'IMAGE' ? 'Image' : 'Video'}
                                 </span>
                                 <button onClick={onClear} className="p-2 bg-black/60 backdrop-blur rounded-full text-white hover:bg-red-500 transition-colors border border-white/10 hover:border-red-500">
                                     <Trash2 size={16} />
@@ -161,10 +161,10 @@ const GenerativePreview: React.FC<{
                             <div className="flex justify-end gap-3">
                                 <button 
                                     onClick={() => window.open(mediaUrl)}
-                                    className="p-3 bg-white text-black rounded-xl hover:bg-accent transition-all shadow-lg active:scale-95 flex items-center gap-2 font-bold text-[10px] uppercase tracking-wider"
+                                    className="p-3 bg-white text-black rounded-xl hover:bg-accent transition-all shadow-lg active:scale-95 flex items-center gap-2 font-semibold text-[11px]"
                                     title="Download"
                                 >
-                                    <Download size={16} /> SAVE_ASSET
+                                    <Download size={16} /> Download
                                 </button>
                             </div>
                         </div>
@@ -174,23 +174,19 @@ const GenerativePreview: React.FC<{
 
             {/* METADATA FOOTER */}
             {metadata && !isLoading && !displayError && isMediaLoaded && (
-                <div className="mt-4 flex items-center justify-between px-4 py-3 bg-skin-card border border-skin-border rounded-xl opacity-0 animate-slide-up shadow-sm" style={{ animationDelay: '0.2s', opacity: 1 }}>
+                <div className="mt-4 flex items-center justify-between px-4 py-3 bg-surface border border-border rounded-xl opacity-0 animate-slide-up shadow-sm" style={{ animationDelay: '0.2s', opacity: 1 }}>
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                             <Cpu size={14} className="text-accent" />
-                            <span className="text-[9px] font-black uppercase tracking-wider text-skin-text">
-                                {metadata.provider}
-                            </span>
+                            <span className="caption text-text">{metadata.provider}</span>
                         </div>
-                        <div className="w-[1px] h-3 bg-skin-border"></div>
+                        <div className="w-[1px] h-3 bg-border"></div>
                         <div className="flex items-center gap-2">
-                            <Box size={14} className="text-purple-500" />
-                            <span className="text-[9px] font-mono text-skin-muted uppercase">
-                                {metadata.model}
-                            </span>
+                            <Box size={14} className="text-text-muted" />
+                            <span className="caption text-text-muted">{metadata.model}</span>
                         </div>
                     </div>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-skin-muted bg-skin-surface px-2 py-1 rounded">
+                    <span className="caption text-text-muted bg-surface-2 px-2 py-1 rounded">
                         {aspectRatio}
                     </span>
                 </div>
@@ -220,9 +216,9 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
     useEffect(() => {
         if (!isProcessing) return;
         const messages = resultType === 'VIDEO' ? [
-            "INITIALIZING TEMPORAL ENGINE...", "GENERATING FRAMES...", "STABILIZING SEQUENCE...", "ENCODING STREAM..."
+            "Preparing video pipeline...", "Generating frames...", "Stabilizing sequence...", "Finalizing output..."
         ] : [
-            "PARSING SEMANTICS...", "CONNECTING TO NEURAL NET...", "DIFFUSING PIXELS...", "UPSCALING RESOLUTION...", "FINALIZING RENDER..."
+            "Preparing model...", "Generating details...", "Refining output...", "Finalizing image..."
         ];
 
         let msgIdx = 0;
@@ -305,7 +301,7 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
 
     const handleEnhancePrompt = async () => {
         if (!prompt || isProcessing) return;
-        setStatusMsg("ENHANCING PROMPT...");
+        setStatusMsg("Enhancing prompt...");
         setIsProcessing(true);
         try {
             const instruction = `Rewrite this image prompt to be highly detailed, descriptive, and optimized for Stable Diffusion/Flux. Keep it under 50 words. Input: "${prompt}"`;
@@ -352,9 +348,9 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
 
     return (
         <ToolGroup 
-            title="IMAGE GENERATOR" 
+            title="Image generator" 
             icon={icon} 
-            subtitle="HYDRA & IMAGEN ENGINE" 
+            subtitle="Image and video models" 
             isOpen={isOpen} 
             onToggle={handleToggle} 
             isLoading={isProcessing} 
@@ -362,12 +358,12 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
         >
             <div className="space-y-6 animate-fade-in p-4 md:p-6 relative">
                 
-                <button onClick={(e) => { e.stopPropagation(); handleToggle(); }} className="absolute top-2 right-2 md:top-4 md:right-4 p-2 rounded-full hover:bg-skin-surface text-skin-muted hover:text-skin-text transition-colors z-20" title="Minimize Studio">
+                <button onClick={(e) => { e.stopPropagation(); handleToggle(); }} className="absolute top-2 right-2 md:top-4 md:right-4 p-2 rounded-full hover:bg-surface-2 text-text-muted hover:text-text transition-colors z-20" title="Minimize Studio">
                     <X size={20} />
                 </button>
 
                 {/* --- 1. CONFIGURATION DECK --- */}
-                <div className="bg-skin-card rounded-[24px] border border-skin-border p-5 flex flex-col xl:flex-row gap-6 shadow-sm relative z-10">
+                <div className="bg-surface rounded-[24px] border border-border p-5 flex flex-col xl:flex-row gap-6 shadow-sm relative z-10">
                     <div className="flex-1 space-y-3">
                         <VisualModelSelector 
                             label="Rendering Engine"
@@ -380,18 +376,18 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
                     </div>
 
                     <div className="space-y-3 xl:w-72">
-                        <label className="text-[9px] tech-mono font-black uppercase tracking-[0.3em] text-skin-muted pl-1 flex items-center gap-2">
-                            <Monitor size={10} /> Frame Ratio
+                        <label className="caption text-text-muted pl-1 flex items-center gap-2">
+                            <Monitor size={12} /> Aspect ratio
                         </label>
-                        <div className="flex bg-skin-surface p-1 rounded-xl border border-skin-border h-[64px] items-center">
+                        <div className="flex bg-surface-2 p-1 rounded-xl border border-border h-[64px] items-center">
                             {['1:1', '16:9', '9:16'].map(r => (
                                 <button 
                                     key={r} 
                                     onClick={() => setAspectRatio(r as any)} 
                                     disabled={isProcessing}
-                                    className={`flex-1 h-full rounded-lg text-[10px] font-black transition-all flex flex-col items-center justify-center gap-1 ${aspectRatio === r ? 'bg-skin-card text-accent shadow-sm border border-skin-border' : 'text-skin-muted hover:text-skin-text'}`}
+                                    className={`flex-1 h-full rounded-lg text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1 ${aspectRatio === r ? 'bg-surface text-accent shadow-sm border border-border' : 'text-text-muted hover:text-text'}`}
                                 >
-                                    <div className={`border-2 rounded-[2px] ${aspectRatio === r ? 'border-current' : 'border-skin-muted'} ${r === '1:1' ? 'w-3 h-3' : r === '16:9' ? 'w-5 h-2.5' : 'w-2.5 h-5'}`}></div>
+                                    <div className={`border-2 rounded-[2px] ${aspectRatio === r ? 'border-current' : 'border-border'} ${r === '1:1' ? 'w-3 h-3' : r === '16:9' ? 'w-5 h-2.5' : 'w-2.5 h-5'}`}></div>
                                     {r}
                                 </button>
                             ))}
@@ -402,15 +398,17 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
                 {/* --- 2. PROMPT AREA --- */}
                 <div className="relative group">
                     <div className="absolute top-4 left-5 z-10 flex items-center gap-2">
-                        <span className="text-[8px] font-black bg-skin-card/80 backdrop-blur-md px-2 py-1 rounded text-skin-text tracking-widest uppercase flex items-center gap-1.5 border border-skin-border shadow-sm">
-                            <Zap size={8} className="text-accent"/> PROMPT_TERMINAL
+                        <span className="caption bg-surface/90 backdrop-blur-md px-2 py-1 rounded text-text flex items-center gap-1.5 border border-border shadow-sm">
+                            <Zap size={10} className="text-accent"/> Prompt
                         </span>
                     </div>
                     
                     <div className="absolute top-4 right-4 z-10 flex gap-1.5">
-                        <button onClick={handleRandomPrompt} disabled={isProcessing} className="p-2 bg-skin-surface hover:bg-skin-surface-hover text-skin-muted hover:text-skin-text rounded-lg border border-skin-border transition-all shadow-sm active:scale-95 disabled:opacity-0"><Dices size={14} /></button>
-                        <button onClick={handleEnhancePrompt} disabled={isProcessing || !prompt} className="px-3 py-1.5 bg-accent/10 hover:bg-accent text-accent hover:text-black rounded-lg border border-accent/20 transition-all shadow-sm group/wand disabled:opacity-0 flex items-center gap-1.5 text-[8px] font-black uppercase tracking-wider active:scale-95">
-                            <Wand2 size={10} className="group-hover/wand:rotate-12 transition-transform" /> ENHANCE
+                        <button onClick={handleRandomPrompt} disabled={isProcessing} className="p-2 bg-surface-2 hover:bg-surface text-text-muted hover:text-text rounded-lg border border-border transition-all shadow-sm active:scale-95 disabled:opacity-0">
+                            <Dices size={14} />
+                        </button>
+                        <button onClick={handleEnhancePrompt} disabled={isProcessing || !prompt} className="px-3 py-1.5 bg-accent/10 hover:bg-accent text-accent hover:text-text-invert rounded-lg border border-accent/20 transition-all shadow-sm group/wand disabled:opacity-0 flex items-center gap-1.5 text-xs font-semibold active:scale-95">
+                            <Wand2 size={12} className="group-hover/wand:rotate-12 transition-transform" /> Enhance
                         </button>
                     </div>
 
@@ -419,14 +417,14 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
                         onChange={(e) => setPrompt(e.target.value)} 
                         disabled={isProcessing}
                         placeholder="Describe your vision in high fidelity..." 
-                        className="w-full bg-skin-card p-6 pt-16 rounded-[24px] border border-skin-border focus:border-accent/50 focus:shadow-[0_0_30px_-10px_var(--accent-glow)] outline-none text-skin-text font-medium text-base h-40 resize-none transition-all placeholder:text-skin-muted leading-relaxed font-sans" 
+                        className="w-full bg-surface p-6 pt-16 rounded-[var(--radius-lg)] border border-border focus:border-accent/50 focus:shadow-[0_0_30px_-10px_var(--accent-glow)] outline-none text-text font-medium text-base h-40 resize-none transition-all placeholder:text-text-muted leading-relaxed font-sans" 
                     />
                 </div>
 
                 {/* --- 3. STYLE & ACTIONS --- */}
                 <div className="space-y-3">
-                    <label className="text-[9px] tech-mono font-black uppercase tracking-[0.3em] text-skin-muted pl-1 flex items-center gap-2">
-                        <Palette size={10} /> Aesthetic Matrix
+                    <label className="caption text-text-muted pl-1 flex items-center gap-2">
+                        <Palette size={12} /> Style presets
                     </label>
                     <div className="flex flex-wrap gap-2">
                         {STYLE_PRESETS.map(style => (
@@ -435,10 +433,10 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
                                 onClick={() => setStylePreset(style.id)}
                                 disabled={isProcessing}
                                 className={`
-                                    relative px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all overflow-hidden group
+                                    relative px-4 py-2 rounded-lg text-sm font-semibold border transition-all overflow-hidden group
                                     ${stylePreset === style.id 
-                                        ? 'border-accent text-skin-text shadow-sm bg-skin-card' 
-                                        : 'bg-skin-surface border-skin-border text-skin-muted hover:text-skin-text hover:border-skin-highlight'
+                                        ? 'border-accent text-text shadow-sm bg-surface' 
+                                        : 'bg-surface-2 border-border text-text-muted hover:text-text hover:border-accent/40'
                                     }
                                 `}
                             >
@@ -449,24 +447,24 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-skin-border/50">
+                <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border/50">
                     <button 
                         onClick={() => handleGenerate('IMAGE')} 
                         disabled={isProcessing || !prompt.trim()} 
-                        className="flex-1 py-5 bg-skin-text text-skin-card rounded-[20px] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 shadow-lg hover:scale-[1.01] active:scale-95 disabled:opacity-40 disabled:scale-100 transition-all duration-300 group relative overflow-hidden hover:bg-accent hover:text-black"
+                        className="flex-1 py-4 bg-accent text-text-invert rounded-[var(--radius-md)] font-semibold text-sm flex items-center justify-center gap-3 shadow-lg hover:scale-[1.01] active:scale-95 disabled:opacity-40 disabled:scale-100 transition-all duration-300 group relative overflow-hidden"
                     >
                         <ImageIcon size={18} className="group-hover:scale-110 transition-transform" /> 
-                        {isProcessing && resultType === 'IMAGE' ? 'RENDERING...' : 'GENERATE_VISUAL'}
+                        {isProcessing && resultType === 'IMAGE' ? 'Rendering...' : 'Generate image'}
                     </button>
                     
                     {selectedProvider === 'GEMINI' && (
                         <button 
                             onClick={() => handleGenerate('VIDEO')} 
                             disabled={isProcessing || !prompt.trim()} 
-                            className="flex-1 py-5 bg-skin-card text-skin-text rounded-[20px] font-black uppercase text-[10px] tracking-[0.3em] flex items-center justify-center gap-3 border border-skin-border hover:border-accent/50 disabled:opacity-40 transition-all duration-300 shadow-sm hover:shadow-md group"
+                            className="flex-1 py-4 bg-surface text-text rounded-[var(--radius-md)] font-semibold text-sm flex items-center justify-center gap-3 border border-border hover:border-accent/50 disabled:opacity-40 transition-all duration-300 shadow-sm hover:shadow-md group"
                         >
                             <Video size={18} className="group-hover:scale-110 transition-transform" /> 
-                            {isProcessing && resultType === 'VIDEO' ? 'SYNTHESIZING...' : 'GENERATE_VIDEO'}
+                            {isProcessing && resultType === 'VIDEO' ? 'Synthesizing...' : 'Generate video'}
                         </button>
                     )}
                 </div>
@@ -487,26 +485,26 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
 
                 {/* --- 5. HISTORY STRIP --- */}
                 {history.length > 0 && (
-                    <div className="mt-6 border-t border-skin-border pt-6">
-                        <h4 className="text-[9px] tech-mono font-black uppercase tracking-[0.3em] text-skin-muted mb-4 flex items-center gap-2">
-                            <History size={10} /> RECENT_SYNTHESIS
+                    <div className="mt-6 border-t border-border pt-6">
+                        <h4 className="caption text-text-muted mb-4 flex items-center gap-2">
+                            <History size={12} /> Recent generations
                         </h4>
                         <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
                             {history.map(item => (
                                 <button 
                                     key={item.id} 
                                     onClick={() => { setResultUrl(item.url); setResultType(item.type); setPrompt(item.prompt); setErrorMsg(null); setResultMeta(item.metadata || null); }}
-                                    className="relative w-24 h-16 rounded-lg overflow-hidden border border-skin-border hover:border-accent/50 transition-all group shrink-0 active:scale-95 bg-skin-surface"
+                                    className="relative w-24 h-16 rounded-lg overflow-hidden border border-border hover:border-accent/50 transition-all group shrink-0 active:scale-95 bg-surface-2"
                                 >
                                     {item.type === 'IMAGE' ? (
                                         <img src={item.url} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" alt="History" />
                                     ) : (
-                                        <div className="w-full h-full bg-skin-surface flex items-center justify-center opacity-70 group-hover:opacity-100">
-                                            <Video size={14} className="text-skin-text" />
+                                        <div className="w-full h-full bg-surface-2 flex items-center justify-center opacity-70 group-hover:opacity-100">
+                                            <Video size={14} className="text-text" />
                                         </div>
                                     )}
                                     {item.metadata && (
-                                        <div className="absolute top-1 right-1 bg-skin-card/90 px-1 py-0.5 rounded text-[5px] font-black uppercase text-accent border border-skin-border backdrop-blur-sm">
+                                        <div className="absolute top-1 right-1 bg-surface/90 px-1 py-0.5 rounded text-[9px] font-semibold text-accent border border-border backdrop-blur-sm">
                                             {item.metadata.provider.split(' ')[0]}
                                         </div>
                                     )}
@@ -519,3 +517,4 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
         </ToolGroup>
     );
 };
+

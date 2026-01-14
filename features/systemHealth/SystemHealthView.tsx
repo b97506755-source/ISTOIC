@@ -25,10 +25,11 @@ import { executeMechanicTool } from '../mechanic/mechanicTools';
 import { IntegrityMatrix } from './components/IntegrityMatrix';
 import { useFeatures } from '../../contexts/FeatureContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
+import { Input } from '../../components/ui/Input';
 
-const cardClass = 'bg-[var(--surface)] border border-[color:var(--border)] rounded-2xl shadow-sm';
+const cardClass = 'bg-[var(--surface)] border border-[color:var(--border)] rounded-[var(--radius-lg)] shadow-[var(--shadow-soft)]';
 const sectionTitle = 'text-lg font-bold text-[var(--text)]';
-const labelText = 'text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]';
+const labelText = 'caption text-text-muted';
 
 const LiveSparkline: React.FC<{ data: number[]; color?: string }> = ({ data, color = 'var(--accent)' }) => {
   if (data.length < 2) return null;
@@ -278,7 +279,7 @@ export const SystemHealthView: React.FC = () => {
                         <span className={labelText}>Ping</span>
                       </div>
                     </div>
-                    <p className="text-2xl font-bold mt-2">{realPing === null ? '—' : realPing === -1 ? 'Error' : `${realPing} ms`}</p>
+                    <p className="text-2xl font-bold mt-2">{realPing === null ? '--' : realPing === -1 ? 'Error' : `${realPing} ms`}</p>
                     <button
                       onClick={handlePing}
                       className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[color:var(--border)] text-[12px] text-[var(--text)] hover:border-[color:var(--accent)]"
@@ -350,7 +351,7 @@ export const SystemHealthView: React.FC = () => {
                       }`}
                     >
                       {isScanning ? <RefreshCw size={14} className="animate-spin" /> : <Stethoscope size={14} />}
-                      {isScanning ? 'Running…' : 'Run diagnostics'}
+                      {isScanning ? 'Running...' : 'Run diagnostics'}
                     </button>
                   </div>
                 </div>
@@ -378,11 +379,11 @@ export const SystemHealthView: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input
+                  <Input
                     value={logSearch}
                     onChange={(e) => setLogSearch(e.target.value)}
                     placeholder="Search logs"
-                    className="bg-[var(--surface-2)] border border-[color:var(--border)] rounded-lg px-2 py-1 text-[12px] text-[var(--text)] focus:outline-none"
+                    className="w-40 text-sm"
                   />
                   <button
                     onClick={() => setIsStreamFrozen((p) => !p)}
@@ -440,11 +441,11 @@ export const SystemHealthView: React.FC = () => {
                   className="flex items-center gap-2"
                 >
                   <span className="text-[var(--accent)] font-bold">{'>'}</span>
-                  <input
+                  <Input
                     value={cliInput}
                     onChange={(e) => setCliInput(e.target.value)}
                     placeholder="Type a command (clear, refresh, diagnose, reload)"
-                    className="flex-1 bg-[var(--surface-2)] border border-[color:var(--border)] rounded-lg px-3 py-2 text-[12px] text-[var(--text)] focus:outline-none"
+                    className="flex-1 text-sm"
                   />
                   <button type="submit" className="px-3 py-2 rounded-lg bg-[var(--accent)] text-[var(--on-accent-color)] text-[12px] font-semibold hover:opacity-90">
                     <ArrowRight size={12} />

@@ -50,10 +50,19 @@ export const THEME_COLORS: Record<string, string> = {
   gold: '#FFD700'
 };
 
+const FEATURE_HASH_MAP: Record<string, FeatureID> = {
+  dashboard: 'dashboard',
+  notes: 'notes',
+  chat: 'chat',
+  tools: 'tools',
+  system: 'system',
+  settings: 'settings'
+};
+
 const ViewLoader = () => (
     <div className="h-full w-full flex flex-col items-center justify-center text-text-muted gap-3 animate-pulse">
         <Loader2 size={32} className="animate-spin text-accent" />
-        <span className="text-[12px] font-semibold tracking-wide">Loading experience…</span>
+        <span className="text-[12px] font-semibold tracking-wide">Loading workspace...</span>
     </div>
 );
 
@@ -145,6 +154,37 @@ const AppContent: React.FC<AppContentProps> = ({ notes, setNotes, isDebugOpen, s
   }, [theme, colorScheme]);
 
   useEffect(() => {
+    const resolveFeatureFromLocation = () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('connect')) return;
+      const rawHash = window.location.hash.replace('#', '').trim();
+      const cleaned = rawHash.replace(/^\/+/, '');
+      const searchParams = cleaned.includes('=') ? new URLSearchParams(cleaned) : null;
+      const candidate = searchParams?.get('feature') || searchParams?.get('view') || cleaned;
+      if (!candidate) return;
+      const normalized = candidate.toLowerCase();
+      const mapped = FEATURE_HASH_MAP[normalized];
+      if (mapped) {
+        setActiveFeature((prev) => (prev === mapped ? prev : mapped));
+      }
+    };
+
+    resolveFeatureFromLocation();
+    window.addEventListener('hashchange', resolveFeatureFromLocation);
+    return () => window.removeEventListener('hashchange', resolveFeatureFromLocation);
+  }, [setActiveFeature]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connect')) return;
+    const hash = `#${activeFeature}`;
+    if (window.location.hash !== hash) {
+      const nextUrl = `${window.location.pathname}${window.location.search}${hash}`;
+      window.history.replaceState(null, '', nextUrl);
+    }
+  }, [activeFeature]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === '`') {
         e.preventDefault();
@@ -169,7 +209,14 @@ const AppContent: React.FC<AppContentProps> = ({ notes, setNotes, isDebugOpen, s
     });
   };
 
-  if (!registryValid) return <div className="h-screen w-screen bg-black flex items-center justify-center text-red-600 flex-col gap-4"><ShieldAlert size={64} /><h1 className="text-4xl font-black uppercase tracking-widest">SYSTEM HALT</h1></div>;
+  if (!registryValid) {
+    return (
+      <div className="h-screen w-screen bg-bg flex items-center justify-center text-danger flex-col gap-4">
+        <ShieldAlert size={64} />
+        <h1 className="page-title text-text">System unavailable</h1>
+      </div>
+    );
+  }
 
   const renderContent = () => {
     return (
@@ -374,7 +421,13 @@ const App: React.FC = () => {
         }
         if (sessionMode === 'ISTOK') {
             return (
-                <Suspense fallback={<div className="h-screen w-screen bg-black flex items-center justify-center text-red-500 font-mono">INITIALIZING_SECURE_LAYER...</div>}>
+                <Suspense
+                    fallback={
+                        <div className="h-screen w-screen bg-bg flex items-center justify-center text-text-muted">
+                            Preparing secure session...
+                        </div>
+                    }
+                >
                     <ErrorBoundary viewName="ISTOK_SECURE_CHANNEL">
                         <IStokView onLogout={() => setSessionMode('AUTH')} globalPeer={peer} initialAcceptedConnection={acceptedConnection} />
                     </ErrorBoundary>
@@ -383,7 +436,13 @@ const App: React.FC = () => {
         }
         if (sessionMode === 'TELEPONAN') {
             return (
-                <Suspense fallback={<div className="h-screen w-screen bg-black flex items-center justify-center text-green-500 font-mono">INITIALIZING_SECURE_VOICE...</div>}>
+                <Suspense
+                    fallback={
+                        <div className="h-screen w-screen bg-bg flex items-center justify-center text-text-muted">
+                            Preparing voice session...
+                        </div>
+                    }
+                >
                     <ErrorBoundary viewName="TELEPONAN_SECURE_CALL">
                         <TeleponanView onClose={() => setSessionMode('ISTOIC')} />
                     </ErrorBoundary>
@@ -423,3 +482,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

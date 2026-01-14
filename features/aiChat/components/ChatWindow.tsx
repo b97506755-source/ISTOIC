@@ -57,7 +57,7 @@ const ImageGenerationCard = ({ prompt }: { prompt: string }) => {
           disabled={status === 'loading'}
           className="text-[12px] px-3 py-1 rounded-lg border border-[color:var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors disabled:opacity-50"
         >
-          {status === 'loading' ? 'Working…' : status === 'done' ? 'Regenerate' : 'Start'}
+          {status === 'loading' ? 'Working...' : status === 'done' ? 'Regenerate' : 'Start'}
         </button>
       </div>
       <p className="text-[13px] text-[var(--text)] opacity-80 mb-2">"{prompt}"</p>

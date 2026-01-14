@@ -94,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
           raw: 'raw'
       };
       const transKey = keyMap[id];
-      if (id === 'raw') return "RAW_MODE";
+      if (id === 'raw') return "Raw mode";
       return transKey ? getText('sidebar', transKey) : id.toUpperCase();
   }, []);
 
@@ -180,11 +180,11 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
               </div>
 
               <div className={`mt-5 overflow-hidden whitespace-nowrap transition-all duration-500 ease-out flex flex-col ${isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'}`}>
-                  <h1 className="text-lg font-black tracking-tighter text-skin-text leading-none uppercase flex items-center gap-2">
-                    ISTOIC <span className="text-accent">TITANIUM</span> 
+                  <h1 className="text-lg font-semibold text-text leading-none flex items-center gap-2">
+                    ISTOIC
                   </h1>
-                  <p className="text-[9px] font-mono text-skin-muted mt-1.5 flex items-center gap-1.5 opacity-70">
-                    <Command size={10} /> + B TO TOGGLE
+                  <p className="caption text-text-muted mt-1.5 flex items-center gap-1.5">
+                    <Command size={12} /> Press Ctrl+B to toggle
                   </p>
               </div>
           </div>
@@ -235,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
                     flex-1 flex justify-between items-center
                     ${isExpanded ? 'opacity-100 max-w-full pl-1 translate-x-0' : 'opacity-0 max-w-0 -translate-x-2'}
                   `}>
-                    <span className={`text-[11px] font-bold tracking-[0.15em] uppercase ${isDisabled ? 'text-red-500 line-through' : ''}`}>
+                    <span className={`text-sm font-medium ${isDisabled ? 'text-red-500 line-through' : ''}`}>
                         {label}
                     </span>
                     {isActive && <ChevronRight size={14} className="text-accent opacity-80 animate-pulse" strokeWidth={3} />}
@@ -262,12 +262,12 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
              >
                 {isExpanded ? (
                     <>
-                        <div className="flex justify-between items-center text-[9px] font-black text-skin-muted uppercase tracking-widest mb-2 group-hover:text-skin-text transition-colors relative z-10">
+                        <div className="flex justify-between items-center caption text-text-muted mb-2 group-hover:text-text transition-colors relative z-10">
                             <span className="flex items-center gap-2">
-                                {features.AUTO_DIAGNOSTICS ? <Activity size={12} className={healthScore < 80 ? 'animate-pulse text-amber-500' : 'text-emerald-500'}/> : <AlertTriangle size={12} />} 
-                                SYSTEM_HEALTH
+                                {features.AUTO_DIAGNOSTICS ? <Activity size={12} className={healthScore < 80 ? 'animate-pulse text-warning' : 'text-success'}/> : <AlertTriangle size={12} />} 
+                                System health
                             </span>
-                            <span className={`font-mono ${healthScore < 80 ? 'text-red-500' : 'text-emerald-500'}`}>{healthScore}%</span>
+                            <span className={`text-sm font-semibold ${healthScore < 80 ? 'text-danger' : 'text-success'}`}>{healthScore}%</span>
                         </div>
                         <div className="w-full h-1.5 bg-skin-main rounded-full overflow-hidden relative z-10">
                             <div 
@@ -295,7 +295,7 @@ export const Sidebar: React.FC<SidebarProps> = memo(({ activeFeature, setActiveF
              >
                 <Settings size={22} className={`${activeFeature === 'settings' ? 'animate-spin-slow text-accent' : 'group-hover:rotate-45 transition-transform'} shrink-0`} strokeWidth={1.5} />
                 <div className={`overflow-hidden whitespace-nowrap transition-all duration-500 ease-out ${isExpanded ? 'opacity-100 max-w-full' : 'opacity-0 max-w-0'}`}>
-                    <span className="text-[10px] font-bold tracking-[0.2em] uppercase">CONFIG</span>
+                    <span className="text-sm font-medium">Settings</span>
                 </div>
              </button>
           </div>

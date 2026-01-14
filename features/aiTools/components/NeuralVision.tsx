@@ -102,8 +102,8 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
     useEffect(() => {
         if (!loading) { setLocalStatus(null); return; }
         const msgs = loading === 'ANALYZE' 
-            ? ["DECODING PIXELS...", "MAPPING VECTORS...", "SEMANTIC MATCHING...", "SYNTHESIZING OUTPUT..."]
-            : ["UPLOADING ASSET...", "APPLYING TRANSFORM...", "RENDERING PIXELS...", "FINALIZING..."];
+            ? ["Analyzing image...", "Identifying details...", "Preparing response...", "Finalizing..."]
+            : ["Uploading asset...", "Applying edits...", "Rendering preview...", "Finalizing..."];
         
         let i = 0;
         setLocalStatus(msgs[0]);
@@ -274,21 +274,21 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
     // --- UI RENDER ---
     return (
         <ToolGroup 
-            title="NEURAL VISION" 
+            title="Vision analysis" 
             icon={icon} 
-            subtitle="MULTIMODAL ANALYSIS ENGINE" 
+            subtitle="Analyze and edit images" 
             isOpen={isOpen} 
             onToggle={handleToggle} 
             isLoading={!!loading} 
             loadingText={localStatus || ''}
         >
-            <div className="flex flex-col h-full bg-skin-card text-skin-text font-sans relative overflow-hidden">
+            <div className="flex flex-col h-full bg-surface text-text font-sans relative overflow-hidden">
                 
                 {/* 1. TOP BAR: SETTINGS & STATUS */}
-                <div className="p-4 md:p-6 border-b border-skin-border bg-skin-surface/50 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center relative z-20">
+                <div className="p-4 md:p-6 border-b border-border bg-surface-2/50 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center relative z-20">
                     <div className="flex-1 w-full md:w-auto">
                         <VisualModelSelector 
-                            label="OPTICAL ENGINE"
+                            label="Model"
                             selectedProviderId={selectedProvider}
                             selectedModelId={selectedModel}
                             providers={PROVIDERS}
@@ -298,13 +298,13 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                     </div>
                     
                     <div className="flex items-center gap-3">
-                         <div className={`px-3 py-1 rounded-lg border text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${isHealthy ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
-                             <div className={`w-1.5 h-1.5 rounded-full ${isHealthy ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`}></div>
-                             {providerStatus}
-                         </div>
-                         <button onClick={(e) => { e.stopPropagation(); handleToggle(); }} className="p-2 hover:bg-skin-surface-hover rounded-full transition-colors text-skin-muted hover:text-skin-text">
-                             <X size={18} />
-                         </button>
+                         <div className={`px-3 py-1 rounded-lg border caption font-semibold flex items-center gap-2 ${isHealthy ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                              <div className={`w-1.5 h-1.5 rounded-full ${isHealthy ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                              {providerStatus}
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); handleToggle(); }} className="p-2 hover:bg-surface rounded-full transition-colors text-text-muted hover:text-text">
+                              <X size={18} />
+                          </button>
                     </div>
                 </div>
 
@@ -312,7 +312,7 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                 <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
                     
                     {/* LEFT: VISUAL INPUT (CAMERA / IMAGE) */}
-                    <div className="lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-skin-border relative bg-skin-surface/30">
+                    <div className="lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-border relative bg-surface-2/30">
                         
                         <div 
                             className={`flex-1 relative flex items-center justify-center overflow-hidden transition-all p-4 md:p-8 
@@ -326,13 +326,13 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                         >
                             {/* A. CAMERA MODE */}
                             {isCameraActive ? (
-                                <div className="relative w-full h-full max-h-[600px] bg-black rounded-[24px] overflow-hidden border border-skin-border shadow-2xl group">
+                                <div className="relative w-full h-full max-h-[600px] bg-black rounded-[24px] overflow-hidden border border-border shadow-2xl group">
                                     <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                                     
                                     {/* HUD Overlay */}
                                     <div className="absolute inset-0 pointer-events-none">
                                         <div className="absolute top-4 left-4 flex gap-2">
-                                            <span className="px-2 py-0.5 bg-red-500/20 text-red-500 text-[9px] font-black uppercase tracking-widest border border-red-500/30 animate-pulse">REC</span>
+                                            <span className="px-2 py-0.5 bg-red-500/20 text-red-500 text-[11px] font-semibold border border-red-500/30">Live</span>
                                             <span className="px-2 py-0.5 bg-black/50 text-white text-[9px] font-mono border border-white/10">1080p_HQ</span>
                                         </div>
                                         <div className="absolute inset-x-0 top-1/2 h-[1px] bg-white/20"></div>
@@ -353,7 +353,7 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                             ) : inputBase64 ? (
                                 /* B. IMAGE PREVIEW MODE */
                                 <div className="relative w-full h-full flex flex-col items-center justify-center animate-fade-in group">
-                                    <div className="relative max-w-full max-h-full rounded-[24px] overflow-hidden border border-skin-border shadow-2xl">
+                                    <div className="relative max-w-full max-h-full rounded-[24px] overflow-hidden border border-border shadow-2xl">
                                         <img 
                                             src={`data:${inputType};base64,${inputBase64}`} 
                                             alt="Analysis Target" 
@@ -366,8 +366,8 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-lg border border-white/10 text-[9px] font-mono text-white/70">
-                                        SOURCE_LOCKED
+                                    <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-lg border border-white/10 text-[11px] font-semibold text-white/70">
+                                        Source locked
                                     </div>
                                 </div>
                             ) : (
@@ -375,23 +375,22 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                                 <div className="text-center space-y-6 max-w-sm">
                                     <div 
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="w-24 h-24 mx-auto rounded-[32px] bg-skin-card border border-skin-border flex items-center justify-center text-skin-muted hover:text-accent hover:border-accent/30 hover:bg-accent/5 cursor-pointer transition-all duration-500 group shadow-inner"
+                                        className="w-24 h-24 mx-auto rounded-[32px] bg-surface border border-border flex items-center justify-center text-text-muted hover:text-accent hover:border-accent/30 hover:bg-accent/5 cursor-pointer transition-all duration-500 group shadow-inner"
                                     >
                                         <Upload size={32} className="group-hover:scale-110 transition-transform" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-black text-skin-text uppercase tracking-tight mb-2">INPUT VISUAL DATA</h3>
-                                        <p className="text-xs text-skin-muted font-medium leading-relaxed">
-                                            Upload image for deep analysis or modification. 
-                                            <br/> Supports JPG, PNG, WEBP.
+                                        <h3 className="section-title text-text mb-2">Add an image</h3>
+                                        <p className="body-sm text-text-muted">
+                                            Upload an image for analysis or editing. Supports JPG, PNG, and WEBP.
                                         </p>
                                     </div>
                                     <div className="flex gap-3 justify-center">
-                                        <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-skin-text text-skin-card hover:bg-accent rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg">
-                                            UPLOAD FILE
+                                        <button onClick={() => fileInputRef.current?.click()} className="px-5 py-2.5 bg-accent text-text-invert hover:opacity-90 rounded-xl text-sm font-semibold transition-all hover:scale-105 active:scale-95 shadow-lg">
+                                            Upload file
                                         </button>
-                                        <button onClick={startCamera} className="px-5 py-2.5 bg-skin-surface text-skin-text hover:bg-skin-surface-hover rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border border-skin-border">
-                                            <Camera size={14} /> CAMERA
+                                        <button onClick={startCamera} className="px-5 py-2.5 bg-surface-2 text-text hover:bg-surface rounded-xl text-sm font-semibold transition-all flex items-center gap-2 border border-border">
+                                            <Camera size={14} /> Camera
                                         </button>
                                     </div>
                                     <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
@@ -401,19 +400,19 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                     </div>
 
                     {/* RIGHT: CONTROL & OUTPUT */}
-                    <div className="lg:w-1/2 flex flex-col bg-skin-card">
+                    <div className="lg:w-1/2 flex flex-col bg-surface">
                         
                         {/* 1. CONTROLS */}
-                        <div className="p-6 border-b border-skin-border space-y-4 shrink-0">
+                        <div className="p-6 border-b border-border space-y-4 shrink-0">
                             <div className="relative">
-                                <div className="absolute top-0 left-0 px-2 py-1 bg-skin-surface rounded-br-lg border-r border-b border-skin-border text-[8px] font-black text-skin-muted uppercase tracking-widest">
-                                    PROMPT_INSTRUCTION
+                                <div className="absolute top-0 left-0 px-2 py-1 bg-surface-2 rounded-br-lg border-r border-b border-border caption text-text-muted">
+                                    Prompt
                                 </div>
                                 <textarea 
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
                                     placeholder="Describe what you want to know or change..."
-                                    className="w-full h-24 bg-skin-surface/50 border border-skin-border rounded-2xl p-4 pt-8 text-sm text-skin-text focus:border-accent/50 focus:outline-none resize-none placeholder:text-skin-muted transition-all font-medium"
+                                    className="w-full h-24 bg-surface-2/50 border border-border rounded-2xl p-4 pt-8 text-sm text-text focus:border-accent/50 focus:outline-none resize-none placeholder:text-text-muted transition-all font-medium"
                                 />
                             </div>
 
@@ -422,28 +421,28 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                                     onClick={executeAnalysis}
                                     disabled={!inputBase64 || !!loading}
                                     className={`
-                                        flex-1 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all
+                                        flex-1 py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all
                                         ${!inputBase64 || loading 
-                                            ? 'bg-skin-surface text-skin-muted cursor-not-allowed border border-skin-border' 
-                                            : 'bg-skin-text text-skin-card hover:bg-accent shadow-sm hover:scale-[1.01] active:scale-95'
+                                            ? 'bg-surface-2 text-text-muted cursor-not-allowed border border-border' 
+                                            : 'bg-accent text-text-invert shadow-sm hover:scale-[1.01] active:scale-95'
                                         }
                                     `}
                                 >
-                                    <ScanEye size={16} /> ANALYZE
+                                    <ScanEye size={16} /> Analyze
                                 </button>
                                 <button 
                                     onClick={executeEdit}
                                     disabled={!inputBase64 || !prompt || !!loading || selectedProvider !== 'GEMINI'}
                                     className={`
-                                        flex-1 py-3.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all border
+                                        flex-1 py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border
                                         ${!inputBase64 || !prompt || loading || selectedProvider !== 'GEMINI'
-                                            ? 'bg-transparent border-skin-border text-skin-muted cursor-not-allowed' 
-                                            : 'bg-skin-surface border-skin-border text-skin-text hover:bg-skin-surface-hover hover:border-accent/50 hover:text-accent'
+                                            ? 'bg-transparent border-border text-text-muted cursor-not-allowed' 
+                                            : 'bg-surface-2 border-border text-text hover:bg-surface hover:border-accent/50 hover:text-accent'
                                         }
                                     `}
                                     title={selectedProvider !== 'GEMINI' ? "Switch to Gemini for Editing" : "Modify Image"}
                                 >
-                                    <Wand2 size={16} /> EDIT
+                                    <Wand2 size={16} /> Edit
                                 </button>
                             </div>
                         </div>
@@ -452,9 +451,9 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                         <div className="flex-1 overflow-y-auto custom-scroll p-6 relative">
                             {/* Placeholder */}
                             {!analysisResult && !editResult && !loading && (
-                                <div className="h-full flex flex-col items-center justify-center text-skin-muted opacity-40 gap-3">
+                                <div className="h-full flex flex-col items-center justify-center text-text-muted opacity-40 gap-3">
                                     <Monitor size={32} strokeWidth={1} />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">WAITING_FOR_DATA_STREAM</p>
+                                    <p className="caption">Waiting for input</p>
                                 </div>
                             )}
 
@@ -462,15 +461,15 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                             {analysisResult && (
                                 <div className="space-y-4 animate-slide-up">
                                     <div className="flex items-center justify-between">
-                                        <h4 className="text-[10px] font-black text-accent uppercase tracking-widest flex items-center gap-2">
-                                            <Aperture size={12}/> ANALYSIS_REPORT
+                                        <h4 className="caption font-semibold text-accent flex items-center gap-2">
+                                            <Aperture size={12}/> Analysis report
                                         </h4>
                                         <div className="flex gap-2">
-                                            <button onClick={handleSpeak} className="p-1.5 hover:bg-skin-surface rounded-lg text-skin-muted hover:text-skin-text transition-colors"><Volume2 size={14}/></button>
-                                            <button onClick={handleCopy} className="p-1.5 hover:bg-skin-surface rounded-lg text-skin-muted hover:text-skin-text transition-colors"><Copy size={14}/></button>
+                                            <button onClick={handleSpeak} className="p-1.5 hover:bg-surface-2 rounded-lg text-text-muted hover:text-text transition-colors"><Volume2 size={14}/></button>
+                                            <button onClick={handleCopy} className="p-1.5 hover:bg-surface-2 rounded-lg text-text-muted hover:text-text transition-colors"><Copy size={14}/></button>
                                         </div>
                                     </div>
-                                    <div className="prose dark:prose-invert prose-sm max-w-none text-skin-text font-medium text-xs leading-loose p-4 bg-skin-surface rounded-2xl border border-skin-border">
+                                    <div className="prose dark:prose-invert prose-sm max-w-none text-text font-medium text-xs leading-loose p-4 bg-surface-2 rounded-2xl border border-border">
                                         <Markdown>{analysisResult}</Markdown>
                                     </div>
                                 </div>
@@ -479,25 +478,25 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                             {/* Edit Result */}
                             {editResult && (
                                 <div className="space-y-4 animate-slide-up">
-                                    <h4 className="text-[10px] font-black text-pink-500 uppercase tracking-widest flex items-center gap-2">
-                                        <Layers size={12}/> GENERATED_ASSET
+                                    <h4 className="caption font-semibold text-accent flex items-center gap-2">
+                                        <Layers size={12}/> Edited image
                                     </h4>
-                                    <div className="rounded-2xl overflow-hidden border border-skin-border shadow-xl bg-black">
+                                    <div className="rounded-2xl overflow-hidden border border-border shadow-xl bg-black">
                                         <img src={editResult} alt="Edit Result" className="w-full h-auto" />
                                     </div>
-                                    <a href={editResult} download="edited_image.png" className="block w-full py-3 text-center bg-skin-surface hover:bg-skin-surface-hover rounded-xl text-[10px] font-black uppercase tracking-widest text-skin-text transition-all">
-                                        DOWNLOAD ASSET
+                                    <a href={editResult} download="edited_image.png" className="block w-full py-3 text-center bg-surface-2 hover:bg-surface rounded-xl text-sm font-semibold text-text transition-all">
+                                        Download image
                                     </a>
                                 </div>
                             )}
 
                             {/* Loading Overlay */}
                             {loading && (
-                                <div className="absolute inset-0 bg-skin-card/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-6 animate-fade-in">
+                                <div className="absolute inset-0 bg-surface/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-6 animate-fade-in">
                                     <div className="w-16 h-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
                                     <div className="text-center">
-                                        <p className="text-[10px] font-black text-accent uppercase tracking-[0.2em] animate-pulse">{localStatus}</p>
-                                        <p className="text-[9px] text-skin-muted font-mono mt-1">PROCESSING_NEURAL_LAYERS</p>
+                                        <p className="caption font-semibold text-accent animate-pulse">{localStatus}</p>
+                                        <p className="caption text-text-muted mt-1">Processing request</p>
                                     </div>
                                 </div>
                             )}
@@ -518,3 +517,4 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
         </ToolGroup>
     );
 };
+

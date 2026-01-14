@@ -11,7 +11,7 @@ const cardVariants = cva(
         muted: 'bg-surface-2'
       },
       interactive: {
-        true: 'transition-all hover:border-accent/30 hover:shadow-[var(--shadow-strong)] active:translate-y-px'
+        true: 'transition-all hover:border-accent/30 hover:shadow-[var(--shadow-strong)] active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]'
       },
       padding: {
         none: 'p-0',

@@ -7,6 +7,7 @@ import { speakWithHanisah } from '../../../services/elevenLabsService';
 import type { Note } from '../../../types';
 
 type StreamErrorType = 'abort' | 'network' | 'rate_limit' | 'unknown';
+type AbortReason = 'user' | 'replace' | 'cleanup';
 
 interface StreamRequest {
   prompt: string;
@@ -39,6 +40,7 @@ export const useAIStream = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const abortReasonRef = useRef<AbortReason | null>(null);
   const flushTimeoutRef = useRef<number | null>(null);
   const pendingUpdateRef = useRef<{
     threadId: string;
@@ -75,17 +77,21 @@ export const useAIStream = ({
     [flushPending]
   );
 
-  const stopGeneration = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    flushPending();
-    setIsLoading(false);
-  }, [flushPending]);
+  const stopGeneration = useCallback(
+    (reason: AbortReason = 'user') => {
+      if (abortControllerRef.current) {
+        abortReasonRef.current = reason;
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      flushPending();
+      setIsLoading(false);
+    },
+    [flushPending]
+  );
 
   useEffect(() => {
-    return () => stopGeneration();
+    return () => stopGeneration('cleanup');
   }, [stopGeneration]);
 
   const resolveErrorType = (err: unknown): StreamErrorType => {
@@ -118,7 +124,7 @@ export const useAIStream = ({
 
   const streamMessage = useCallback(
     async ({ prompt, activeModel, threadId, persona, attachment, retryMessageId }: StreamRequest): Promise<StreamResult> => {
-      stopGeneration();
+      stopGeneration('replace');
       const modelMessageId = retryMessageId || uuidv4();
       const baseMetadata = {
         status: 'loading',
@@ -139,6 +145,7 @@ export const useAIStream = ({
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
+      abortReasonRef.current = null;
       const signal = controller.signal;
       setIsLoading(true);
 
@@ -220,7 +227,12 @@ export const useAIStream = ({
           threadId
         };
 
-        scheduleUpdate(threadId, modelMessageId, `${accumulatedText}${accumulatedText ? '\n\n' : ''}${friendlyMessage}`, {
+        const showAbortMessage = isAbort && abortReasonRef.current === 'user';
+        const finalText = showAbortMessage
+          ? `${accumulatedText}${accumulatedText ? '\n\n' : ''}${friendlyMessage}`
+          : accumulatedText;
+
+        scheduleUpdate(threadId, modelMessageId, finalText, {
           status: isAbort ? 'success' : 'error',
           errorType,
           retryContext,
@@ -232,6 +244,7 @@ export const useAIStream = ({
       } finally {
         setIsLoading(false);
         abortControllerRef.current = null;
+        abortReasonRef.current = null;
         flushPending();
       }
     },

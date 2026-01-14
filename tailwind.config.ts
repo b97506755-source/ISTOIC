@@ -22,6 +22,21 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+        mono: [
+          '"JetBrains Mono"',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          '"Liberation Mono"',
+          '"Courier New"',
+          'monospace'
+        ],
+        serif: ['"Playfair Display"', 'ui-serif', 'Georgia', '"Times New Roman"', 'serif']
+      },
       colors: {
         bg: withOpacity('--bg-rgb'),
         'bg-elevated': withOpacity('--bg-elevated-rgb'),
