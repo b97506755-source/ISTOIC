@@ -12,6 +12,7 @@ import { ChatInput } from './components/ChatInput';
 import { ChatWindow } from './components/ChatWindow'; 
 import { VaultPinModal } from '../../components/VaultPinModal';
 import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 import { cn } from '../../utils/cn';
 import { useLiveSession } from '../../contexts/LiveSessionContext';
 import { useNavigationIntelligence } from '../../hooks/useNavigationIntelligence';
@@ -35,7 +36,7 @@ const PersonaToggle: React.FC<{ mode: 'hanisah' | 'stoic'; onToggle: () => void;
             )}
         >
             <div className={cn('w-2 h-2 rounded-full transition-all duration-300', mode === 'hanisah' ? 'bg-[var(--accent)]' : 'bg-[var(--accent-2)]')} />
-            <span className="caption font-bold leading-none text-[13px]">{mode === 'hanisah' ? '✨ Hanisah' : '🧠 Stoic'}</span>
+            <span className="caption font-bold leading-none text-[13px]">{mode === 'hanisah' ? 'Hanisah' : 'Stoic'}</span>
             <div className="w-[1px] h-4 bg-current opacity-30 mx-0.5"></div>
             {mode === 'hanisah' ? <Flame size={14} strokeWidth={2.5} /> : <Brain size={14} strokeWidth={2.5} />}
         </button>
@@ -82,7 +83,6 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const isAutoScrolling = useRef(true);
     const isStoic = personaMode === 'stoic';
-    const bgGradient = 'bg-gradient-to-b from-[color:var(--accent)]/6 to-transparent';
 
     const { isLive, isMinimized, status: liveStatus, transcript: transcriptHistory, interimTranscript, startSession, stopSession, toggleMinimize, analyser, activeTool } = useLiveSession();
 
@@ -121,37 +121,63 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
     const isHydraActive = activeModel?.id === 'auto-best';
 
     return (
-        <div className={`h-full w-full relative bg-noise flex flex-col ${bgGradient} overflow-hidden`} style={{ overscrollBehavior: 'contain' }}>
+        <div className="h-full w-full relative bg-noise flex flex-col overflow-hidden px-3 md:px-4" style={{ overscrollBehavior: 'contain' }}>
             <VaultPinModal isOpen={showPinModal} onClose={() => setShowPinModal(false)} onSuccess={() => setIsVaultSynced(true)} />
             
-            {/* --- 1. HEADER (FIXED TOP) --- */}
-            <header className="shrink-0 z-50 flex justify-center pt-[env(safe-area-inset-top)] px-3 md:px-4 w-full">
-                <div className={`mt-3 backdrop-blur-xl border rounded-2xl p-2 flex items-center justify-between gap-2 shadow-lg transition-all duration-500 bg-gradient-to-r from-[var(--surface)]/98 to-[var(--surface-2)]/95 border-[color:var(--border)]/70 ring-1 ring-[color:var(--border)]/40`}>
-                    <button className="flex items-center gap-2 group py-2 px-4 rounded-xl transition-all duration-200 cursor-pointer hover:bg-[var(--surface-2)]/60 active:scale-95" onClick={() => { debugService.logAction(UI_REGISTRY.CHAT_BTN_MODEL_PICKER, FN_REGISTRY.CHAT_SELECT_MODEL, 'OPEN'); setShowModelPicker(true); }}>
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300 ${isHydraActive ? 'text-[var(--success)] bg-[var(--success)]/15 border border-[color:var(--success)]/40' : 'text-[var(--text-muted)] group-hover:text-[var(--accent)] bg-[var(--surface-2)]/60 border border-[color:var(--border)]/40'}`}>
-                            {isHydraActive ? <Infinity size={16} className="animate-pulse" strokeWidth={2.5} /> : <Zap size={16} strokeWidth={2.5} />}
+            <header className="shrink-0 z-50 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
+                <Card tone="translucent" padding="sm" className="border-border/60 shadow-[0_24px_90px_-60px_rgba(var(--accent-rgb),0.9)]">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-11 px-4 rounded-[var(--radius-md)]"
+                                onClick={() => { debugService.logAction(UI_REGISTRY.CHAT_BTN_MODEL_PICKER, FN_REGISTRY.CHAT_SELECT_MODEL, 'OPEN'); setShowModelPicker(true); }}
+                            >
+                                <span className="flex items-center gap-2">
+                                    <span className={`w-7 h-7 rounded-xl flex items-center justify-center ${isHydraActive ? 'bg-[color:var(--success)]/15 text-[color:var(--success)]' : 'bg-[color:var(--surface-2)] text-[color:var(--text)]'}`}>
+                                        {isHydraActive ? <Infinity size={16} className="animate-pulse" strokeWidth={2.5} /> : <Zap size={16} strokeWidth={2.5} />}
+                                    </span>
+                                    <span className="caption font-semibold text-text">{isHydraActive ? 'Hydra' : (activeModel?.name?.split(' ')[0] || 'Model')}</span>
+                                </span>
+                            </Button>
+                            <PersonaToggle mode={personaMode} onToggle={changePersona} />
+                            <div className="flex items-center gap-2">
+                                <span className="px-3 py-1 rounded-full bg-[color:var(--surface-2)] text-xs font-semibold text-text-muted">{isVaultSynced ? 'Vault sinkron' : 'Vault off'}</span>
+                                <span className="px-3 py-1 rounded-full bg-[color:var(--surface-2)] text-xs font-semibold text-text-muted">{threads.length} sesi</span>
+                            </div>
                         </div>
-                        <span className={`caption font-bold leading-none ${isHydraActive ? 'text-success' : 'text-text-muted group-hover:text-accent'} transition-colors`}>{isHydraActive ? '🔮 Hydra' : (activeModel?.name?.split(' ')[0] || 'Model')}</span>
-                    </button>
-                    <div className="h-5 w-[1px] bg-[color:var(--border)]/40 mx-2"></div>
-                    <PersonaToggle mode={personaMode} onToggle={changePersona} />
-                    <div className="h-5 w-[1px] bg-[color:var(--border)]/40 mx-2"></div>
-                    <div className="flex items-center gap-1.5">
-                        <button onClick={() => !isStoic && setShowImagePicker(true)} disabled={isStoic} className={`w-10 h-10 rounded-xl transition-all duration-200 flex items-center justify-center active:scale-90 group font-semibold ${isStoic ? 'opacity-40 cursor-not-allowed bg-[var(--surface-2)]/40 text-[var(--text-muted)]' : 'text-[var(--accent)] hover:bg-[var(--accent)]/15 border border-transparent hover:border-[color:var(--accent)]/40'}`}>
-                            {isStoic ? <Lock size={18} strokeWidth={2.5} /> : <ImageIcon size={18} strokeWidth={2.5} />}
-                        </button>
-                        <button onClick={() => { debugService.logAction(UI_REGISTRY.CHAT_BTN_HISTORY, FN_REGISTRY.CHAT_LOAD_HISTORY, 'OPEN'); setShowHistoryDrawer(true); }} className="w-10 h-10 rounded-xl hover:bg-[var(--surface-2)]/60 text-[var(--text-muted)] hover:text-[var(--accent)] transition-all duration-200 flex items-center justify-center active:scale-90 group border border-transparent hover:border-[color:var(--accent)]/40">
-                            <History size={18} strokeWidth={2.5} />
-                        </button>
-                        <button onClick={() => { if (isLiveLinkEnabled) { isLive ? stopSession() : startSession(personaMode); } }} className={`w-10 h-10 rounded-xl transition-all duration-200 flex items-center justify-center active:scale-90 border font-semibold ${!isLiveLinkEnabled ? 'opacity-30 cursor-not-allowed' : isLive ? 'bg-[var(--danger)] text-white border-transparent shadow-lg animate-pulse' : 'text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/15 border-transparent hover:border-[color:var(--danger)]/40'}`} disabled={!isLiveLinkEnabled}>
-                            <Radio size={18} strokeWidth={2.5} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-10 w-10 p-0 rounded-[var(--radius-md)]"
+                                disabled={isStoic}
+                                onClick={() => !isStoic && setShowImagePicker(true)}
+                            >
+                                {isStoic ? <Lock size={18} strokeWidth={2.5} /> : <ImageIcon size={18} strokeWidth={2.5} />}
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-10 w-10 p-0 rounded-[var(--radius-md)]"
+                                onClick={() => { debugService.logAction(UI_REGISTRY.CHAT_BTN_HISTORY, FN_REGISTRY.CHAT_LOAD_HISTORY, 'OPEN'); setShowHistoryDrawer(true); }}
+                            >
+                                <History size={18} strokeWidth={2.5} />
+                            </Button>
+                            <Button
+                                variant={isLive ? 'destructive' : 'ghost'}
+                                size="sm"
+                                className="h-10 w-10 p-0 rounded-[var(--radius-md)]"
+                                disabled={!isLiveLinkEnabled}
+                                onClick={() => { if (isLiveLinkEnabled) { isLive ? stopSession() : startSession(personaMode); } }}
+                            >
+                                <Radio size={18} strokeWidth={2.5} />
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                </Card>
             </header>
-
-            {/* --- 2. CHAT CONTENT (FLEXIBLE) --- */}
-            {/* Main content expands to fill available space, Virtuoso handles internal scroll */}
             <div className="flex-1 min-h-0 relative w-full max-w-[900px] mx-auto pt-4">
                 {showEmptyState ? (
                     <div className="flex flex-col h-full justify-center items-center w-full pb-20 animate-fade-in overflow-y-auto custom-scroll px-4">
@@ -160,13 +186,11 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
                                 {personaMode === 'hanisah' ? <Flame size={40} strokeWidth={1.5} /> : <Brain size={40} strokeWidth={1.5} />}
                             </div>
                             <div>
-                                <h2 className="page-title text-2xl md:text-3xl font-bold text-[var(--text)]">{personaMode === 'hanisah' ? '✨ Hanisah' : '🧠 Stoic'}</h2>
+                                <h2 className="page-title text-2xl md:text-3xl font-bold text-[var(--text)]">{personaMode === 'hanisah' ? 'Hanisah' : 'Stoic'}</h2>
                                 <p className="body-sm text-[var(--text-muted)] mt-2 text-[15px] font-medium">{personaMode === 'hanisah' ? 'Percakapan natural, empatik & kreatif' : 'Analisis runtut, logis & objektif'}</p>
                             </div>
                             </div>
-                        
-                        {/* INPUT IN EMPTY STATE */}
-                         <div className="w-full max-w-2xl mx-auto animate-slide-up relative z-20" style={{ animationDelay: '100ms' }}>
+                        <div className="w-full max-w-2xl mx-auto animate-slide-up relative z-20" style={{ animationDelay: '100ms' }}>
                             <ChatInput input={input} setInput={setInput} isLoading={isLoading} onSubmit={sendMessage} onStop={stopGeneration} onNewChat={() => handleNewChat(personaMode)} onFocusChange={() => {}} aiName={personaMode.toUpperCase()} isVaultSynced={isVaultSynced} onToggleVaultSync={handleVaultToggle} personaMode={personaMode} isVaultEnabled={isVaultConfigEnabled} onTogglePersona={changePersona} variant="hero" onPollinations={generateWithPollinations} disableVisuals={isStoic} />
                         </div>
 
@@ -186,8 +210,6 @@ const AIChatView: React.FC<AIChatViewProps> = ({ chatLogic }) => {
                     />
                 )}
             </div>
-
-            {/* --- 3. INPUT (FIXED BOTTOM) --- */}
             {!showEmptyState && (
                 <div className={`shrink-0 z-50 w-full flex justify-center pb-[calc(env(safe-area-inset-bottom)+1rem)] px-3 md:px-4 transition-all duration-300 ${isMobileNavVisible ? 'mb-16' : ''}`}>
                     <div className="w-full max-w-[900px] pointer-events-auto relative">

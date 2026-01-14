@@ -157,7 +157,7 @@ export const IstokIdentityService = {
       return { status: "ERROR", message: "Firebase belum dikonfigurasi. Hubungi administrator." };
     }
 
-    await ensureAuthPersistence();
+    await ensureAuthPersistence("local");
 
     try {
       if (isNative() || isIosPwa()) {
@@ -193,7 +193,7 @@ export const IstokIdentityService = {
   finalizeRedirectIfAny: async (): Promise<IStokUserIdentity | null> => {
     if (!auth || !db) return null;
 
-    await ensureAuthPersistence();
+    await ensureAuthPersistence("local");
 
     try {
       const result = await withTimeout(getRedirectResult(auth));

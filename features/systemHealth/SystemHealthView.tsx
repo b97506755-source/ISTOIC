@@ -26,8 +26,9 @@ import { IntegrityMatrix } from './components/IntegrityMatrix';
 import { useFeatures } from '../../contexts/FeatureContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { Input } from '../../components/ui/Input';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 
-const cardClass = 'bg-surface border border-border rounded-[var(--radius-lg)] shadow-[var(--shadow-soft)]';
 const labelText = 'caption text-text-muted';
 
 const LiveSparkline: React.FC<{ data: number[]; color?: string }> = ({ data, color = 'var(--accent)' }) => {
@@ -53,22 +54,22 @@ const LiveSparkline: React.FC<{ data: number[]; color?: string }> = ({ data, col
 const ProviderCard: React.FC<{ provider: ProviderStatus }> = ({ provider }) => {
   const healthy = provider.status === 'HEALTHY';
   const cooldown = provider.status === 'COOLDOWN';
-  const tone = healthy ? 'text-success' : cooldown ? 'text-warning' : 'text-danger';
+  const tone = healthy ? 'text-[color:var(--success)]' : cooldown ? 'text-[color:var(--warning)]' : 'text-[color:var(--danger)]';
 
   return (
-    <div className={`${cardClass} p-4`}>
+    <Card padding="sm" className="border-border/70 shadow-[var(--shadow-soft)]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Server size={14} className={tone} />
-          <span className="body-sm font-semibold text-text">{provider.id}</span>
+          <span className="body-sm font-semibold text-[color:var(--text)]">{provider.id}</span>
         </div>
-        <div className={`w-2 h-2 rounded-full ${healthy ? 'bg-success' : cooldown ? 'bg-warning' : 'bg-danger'}`} />
+        <div className={`w-2 h-2 rounded-full ${healthy ? 'bg-[color:var(--success)]' : cooldown ? 'bg-[color:var(--warning)]' : 'bg-[color:var(--danger)]'}`} />
       </div>
-      <p className="caption text-text-muted mt-2">Keys available: {provider.keyCount}</p>
+      <p className="caption text-[color:var(--text-muted)] mt-2">Keys available: {provider.keyCount}</p>
       <p className={`caption font-semibold mt-1 ${tone}`}>
         {healthy ? 'Online' : cooldown ? `Cooling (${provider.cooldownRemaining}m)` : 'Unavailable'}
       </p>
-    </div>
+    </Card>
   );
 };
 
@@ -79,7 +80,7 @@ const ActionButton: React.FC<{ label: string; desc: string; onClick: () => Promi
   tone = 'neutral'
 }) => {
   const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle');
-  const colors = tone === 'accent' ? 'bg-accent text-text-invert' : 'bg-surface-2 text-text';
+  const colors = tone === 'accent' ? 'bg-[color:var(--accent)] text-[color:var(--text-invert)]' : 'bg-[color:var(--surface-2)] text-[color:var(--text)]';
 
   const handle = async () => {
     if (state !== 'idle') return;
@@ -92,7 +93,7 @@ const ActionButton: React.FC<{ label: string; desc: string; onClick: () => Promi
   return (
     <button
       onClick={handle}
-      className={`${cardClass} p-4 flex flex-col gap-1 items-start hover:scale-[1.01] transition-transform ${colors}`}
+      className={`rounded-[var(--radius-lg)] border border-border/70 shadow-[var(--shadow-soft)] p-4 flex flex-col gap-1 items-start hover:-translate-y-0.5 transition-all ${colors}`}
     >
       <span className="body-sm font-semibold">{label}</span>
       <span className="caption text-text-muted">{state === 'done' ? 'Completed' : desc}</span>
@@ -219,30 +220,45 @@ export const SystemHealthView: React.FC = () => {
   return (
     <div className="h-full flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] md:px-8 lg:px-12 bg-bg text-text">
       <div className="max-w-[1400px] mx-auto w-full h-full flex flex-col gap-6">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-[color:var(--border)] pb-4">
-          <div className="space-y-2">
-            <p className={labelText}>System Status</p>
-            <h1 className="page-title text-text">Health & Diagnostics</h1>
-            <p className="body-sm text-text-muted">Monitor providers, latency, and recent activity.</p>
-          </div>
-          <div className="flex bg-[var(--surface)] border border-[color:var(--border)] rounded-xl p-1">
-            {[
-              { key: 'OVERVIEW', icon: <Activity size={14} />, label: 'Overview' },
-              { key: 'LOGS', icon: <Terminal size={14} />, label: 'Logs' },
-              { key: 'INTEGRITY', icon: <Layers size={14} />, label: 'Integrity' }
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
-                className={`px-4 py-2 rounded-lg caption font-semibold flex items-center gap-2 transition-all ${
-                  activeTab === tab.key ? 'bg-accent text-text-invert' : 'text-text-muted'
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        <header className="flex flex-col gap-4">
+          <Card tone="translucent" className="p-6 border-border/60 shadow-[0_30px_100px_-60px_rgba(var(--accent-rgb),0.8)]">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+              <div className="space-y-2">
+                <p className={labelText}>Live system stack</p>
+                <h1 className="text-2xl md:text-3xl font-black tracking-tight text-text">Health & Diagnostics</h1>
+                <p className="body-sm text-text-muted">Unified view for providers, latency, integrity, and recent events.</p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="px-3 py-1 rounded-full bg-[color:var(--surface-2)] text-xs font-semibold text-text flex items-center gap-2">
+                    <ShieldCheck size={14} /> {providers.length} providers
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-[color:var(--surface-2)] text-xs font-semibold text-text flex items-center gap-2">
+                    <Wifi size={14} /> {realPing !== null ? (realPing === -1 ? 'Error' : `${realPing} ms`) : 'Ping idle'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-[color:var(--surface-2)] text-xs font-semibold text-text flex items-center gap-2">
+                    <Activity size={14} /> {logs.length} log entries
+                  </span>
+                </div>
+              </div>
+              <div className="flex bg-[color:var(--surface)] border border-[color:var(--border)] rounded-[var(--radius-md)] p-1 shadow-[var(--shadow-soft)]">
+                {[
+                  { key: 'OVERVIEW', icon: <Activity size={14} />, label: 'Overview' },
+                  { key: 'LOGS', icon: <Terminal size={14} />, label: 'Logs' },
+                  { key: 'INTEGRITY', icon: <Layers size={14} />, label: 'Integrity' }
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key as any)}
+                    className={`px-4 py-2 rounded-[var(--radius-sm)] caption font-semibold flex items-center gap-2 transition-all ${
+                      activeTab === tab.key ? 'bg-[color:var(--accent)] text-[color:var(--text-invert)] shadow-[0_12px_30px_-14px_rgba(var(--accent-rgb),0.9)]' : 'text-text-muted'
+                    }`}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
         </header>
 
         <div className="flex-1 min-h-0">
@@ -250,7 +266,7 @@ export const SystemHealthView: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto pb-6 custom-scroll">
               <div className="lg:col-span-8 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className={`${cardClass} p-4`}>
+                  <Card padding="sm" className="h-full border-border/70">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Network size={14} className="text-text-muted" />
@@ -260,8 +276,8 @@ export const SystemHealthView: React.FC = () => {
                     </div>
                     <p className="page-title text-text mt-2">{health.avgLatency} ms</p>
                     <LiveSparkline data={latencyHistory} />
-                  </div>
-                  <div className={`${cardClass} p-4`}>
+                  </Card>
+                  <Card padding="sm" className="h-full border-border/70">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <HardDrive size={14} className="text-text-muted" />
@@ -270,8 +286,8 @@ export const SystemHealthView: React.FC = () => {
                     </div>
                     <p className="page-title text-text mt-2">{health.memoryMb ? `${health.memoryMb} MB` : 'N/A'}</p>
                     <LiveSparkline data={memoryHistory} color="var(--accent-2)" />
-                  </div>
-                  <div className={`${cardClass} p-4`}>
+                  </Card>
+                  <Card padding="sm" className="h-full border-border/70">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Wifi size={14} className="text-text-muted" />
@@ -279,34 +295,28 @@ export const SystemHealthView: React.FC = () => {
                       </div>
                     </div>
                     <p className="page-title text-text mt-2">{realPing === null ? '--' : realPing === -1 ? 'Error' : `${realPing} ms`}</p>
-                    <button
-                      onClick={handlePing}
-                      className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border caption text-text hover:border-accent"
-                    >
+                    <Button variant="secondary" size="sm" className="mt-3" onClick={handlePing}>
                       Check connection
-                    </button>
-                  </div>
+                    </Button>
+                  </Card>
                 </div>
 
-                <div className={`${cardClass} p-4`}>
+                <Card padding="sm" className="border-border/70">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className={labelText}>Providers</p>
                       <p className="body-sm text-text font-semibold">API Availability</p>
                     </div>
-                    <button
-                      onClick={() => executeRepair('REFRESH_KEYS')}
-                      className="px-3 py-2 rounded-lg border border-border caption font-semibold flex items-center gap-2 hover:border-accent"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => executeRepair('REFRESH_KEYS')} className="border border-border/60">
                       <RefreshCw size={14} /> Refresh
-                    </button>
+                    </Button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {providers.map((p) => (
                       <ProviderCard key={p.id} provider={p} />
                     ))}
                   </div>
-                </div>
+                </Card>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <ActionButton label="Optimize storage" desc="Clean cached data" onClick={() => executeRepair('OPTIMIZE_MEMORY')} />
@@ -316,7 +326,7 @@ export const SystemHealthView: React.FC = () => {
               </div>
 
               <div className="lg:col-span-4 space-y-4">
-                <div className={`${cardClass} p-4 flex flex-col h-full`}>
+                <Card padding="sm" className="flex flex-col h-full border-border/70">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className={labelText}>Diagnostics</p>
@@ -340,27 +350,19 @@ export const SystemHealthView: React.FC = () => {
                     )}
                   </div>
                   <div className="pt-3">
-                    <button
-                      onClick={runDiagnostics}
-                      disabled={isScanning}
-                      className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg body-sm font-semibold ${
-                        isScanning
-                          ? 'bg-surface-2 text-text-muted'
-                          : 'bg-accent text-text-invert hover:opacity-90'
-                      }`}
-                    >
+                    <Button onClick={runDiagnostics} disabled={isScanning} className="w-full" variant={isScanning ? 'subtle' : 'primary'}>
                       {isScanning ? <RefreshCw size={14} className="animate-spin" /> : <Stethoscope size={14} />}
                       {isScanning ? 'Running...' : 'Run diagnostics'}
-                    </button>
+                    </Button>
                   </div>
-                </div>
+                </Card>
               </div>
             </div>
           )}
 
           {activeTab === 'LOGS' && (
-            <div className={`${cardClass} h-full flex flex-col`}>
-              <div className="p-3 border-b border-[color:var(--border)] flex items-center justify-between">
+            <Card className="h-full flex flex-col border-border/70">
+              <div className="p-4 border-b border-[color:var(--border)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={labelText}>Activity log</span>
                   <div className="flex gap-2">
@@ -384,15 +386,12 @@ export const SystemHealthView: React.FC = () => {
                     placeholder="Search logs"
                     className="w-40 text-sm"
                   />
-                  <button
-                    onClick={() => setIsStreamFrozen((p) => !p)}
-                    className="px-2 py-1 rounded-lg border border-border caption"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setIsStreamFrozen((p) => !p)} className="border border-border/60">
                     {isStreamFrozen ? <Play size={12} /> : <Pause size={12} />}
-                  </button>
-                  <button onClick={() => executeRepair('CLEAR_LOGS')} className="px-2 py-1 rounded-lg border border-border caption">
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => executeRepair('CLEAR_LOGS')} className="border border-border/60">
                     Clear
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -413,7 +412,7 @@ export const SystemHealthView: React.FC = () => {
                 <div ref={logEndRef} />
               </div>
 
-              <div className="p-3 border-t border-[color:var(--border)]">
+              <div className="p-4 border-t border-[color:var(--border)]">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -446,19 +445,19 @@ export const SystemHealthView: React.FC = () => {
                     placeholder="Type a command (clear, refresh, diagnose, reload)"
                     className="flex-1 text-sm"
                   />
-                  <button type="submit" className="px-3 py-2 rounded-lg bg-accent text-text-invert caption font-semibold hover:opacity-90">
+                  <Button type="submit" size="sm" className="min-h-[40px]">
                     <ArrowRight size={12} />
-                  </button>
+                  </Button>
                 </form>
               </div>
-            </div>
+            </Card>
           )}
 
           {activeTab === 'INTEGRITY' && (
             <div className="h-full overflow-y-auto custom-scroll pb-6">
-              <div className={cardClass}>
+              <Card className="border-border/70">
                 <IntegrityMatrix />
-              </div>
+              </Card>
             </div>
           )}
         </div>

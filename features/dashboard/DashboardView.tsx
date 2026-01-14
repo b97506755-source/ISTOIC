@@ -34,7 +34,7 @@ const StatCard: React.FC<{
             interactive={isInteractive}
             padding="md"
             onClick={onClick}
-            className={cn('text-left w-full', isInteractive ? 'cursor-pointer' : '')}
+            className={cn('text-left w-full border-border/60 shadow-[var(--shadow-soft)] hover:-translate-y-0.5 transition-transform duration-200', isInteractive ? 'cursor-pointer' : '')}
             aria-label={isInteractive ? `${label}: ${value}` : undefined}
         >
             <div className="flex items-start justify-between gap-4">
@@ -69,7 +69,7 @@ const FeatureCard: React.FC<{
         aria-label={`Open ${title}`}
         style={{ animationDelay: `${delay || 0}ms` }}
         className={cn(
-            'text-left w-full bg-gradient-to-br from-surface to-surface-2 animate-slide-up',
+            'text-left w-full bg-gradient-to-br from-[color:var(--surface)] to-[color:var(--surface-2)] border border-[color:var(--border)]/60 shadow-[var(--shadow-soft)] hover:-translate-y-1 active:translate-y-0 animate-slide-up transition-transform duration-300',
             className
         )}
     >
@@ -228,77 +228,88 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName =
             />
 
             <div className="max-w-6xl mx-auto w-full space-y-8 md:space-y-10">
-                <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-slide-up">
-                    <div className="space-y-2">
-                        <p className="caption text-text-muted">{t.welcome}</p>
-                        <h1 className="page-title text-text">Dashboard</h1>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3" aria-live="polite">
-                        <Badge variant={isOnline ? 'success' : 'warning'}>
-                            <span className="w-2 h-2 rounded-full bg-current" />
-                            {isOnline ? t.uptime : t.offline}
-                        </Badge>
-                        <Button variant="secondary" size="sm" onClick={handleNavSystem} aria-label={t.systemStatus}>
-                            {t.systemStatus}
-                        </Button>
-
-                        <div className="relative" ref={accountMenuRef}>
-                            <Button
-                                onClick={() => setIsAccountOpen((v) => !v)}
-                                variant="secondary"
-                                size="sm"
-                                className="min-w-[180px] justify-between"
-                                aria-haspopup="menu"
-                                aria-expanded={isAccountOpen}
-                            >
-                                <span className="truncate">{userName || 'Account'}</span>
-                                <ChevronDown size={16} className={cn('transition-transform', isAccountOpen ? 'rotate-180' : '')} />
-                            </Button>
-                            {isAccountOpen && (
-                                <Card
-                                    padding="sm"
-                                    className="absolute right-0 mt-2 w-52 z-[1200] shadow-[var(--shadow-strong)]"
-                                    role="menu"
-                                >
-                                    <div className="flex flex-col gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="w-full justify-start"
-                                            onClick={() => { setIsAccountOpen(false); onNavigate('settings'); }}
-                                            role="menuitem"
-                                        >
-                                            {t.settings}
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="w-full justify-start"
-                                            onClick={() => { setIsAccountOpen(false); onNavigate('dashboard'); }}
-                                            role="menuitem"
-                                        >
-                                            {t.profile}
-                                        </Button>
-                                        {onLogout && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="w-full justify-start text-danger hover:bg-danger/10"
-                                                onClick={() => { setIsAccountOpen(false); onLogout(); }}
-                                                role="menuitem"
-                                            >
-                                                {t.logout}
-                                            </Button>
-                                        )}
+                <header className="animate-fade-in">
+                    <Card tone="translucent" padding="lg" className="border-border/60 shadow-[0_30px_120px_-70px_rgba(var(--accent-rgb),0.9)]">
+                        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                            <div className="space-y-3">
+                                <p className="caption text-text-muted">{t.welcome}</p>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-[color:var(--accent)]/15 text-[color:var(--accent)] flex items-center justify-center">
+                                        <Brain size={24} />
                                     </div>
-                                </Card>
-                            )}
+                                    <div>
+                                        <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text">Dashboard</h1>
+                                        <p className="body-sm text-text-muted">Polos, bersih, fokus pada tindakan cepat.</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <Badge variant={isOnline ? 'success' : 'warning'}>{isOnline ? t.uptime : t.offline}</Badge>
+                                    <Badge variant="neutral">{syncLevel}% sync</Badge>
+                                    <Badge variant="neutral">{notes.length} catatan</Badge>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3" aria-live="polite">
+                                <Button variant="secondary" size="sm" onClick={handleNavSystem} aria-label={t.systemStatus}>
+                                    {t.systemStatus}
+                                </Button>
+                                <div className="relative" ref={accountMenuRef}>
+                                    <Button
+                                        onClick={() => setIsAccountOpen((v) => !v)}
+                                        variant="secondary"
+                                        size="sm"
+                                        className="min-w-[180px] justify-between"
+                                        aria-haspopup="menu"
+                                        aria-expanded={isAccountOpen}
+                                    >
+                                        <span className="truncate">{userName || 'Account'}</span>
+                                        <ChevronDown size={16} className={cn('transition-transform', isAccountOpen ? 'rotate-180' : '')} />
+                                    </Button>
+                                    {isAccountOpen && (
+                                        <Card
+                                            padding="sm"
+                                            className="absolute right-0 mt-2 w-52 z-[1200] shadow-[var(--shadow-strong)]"
+                                            role="menu"
+                                        >
+                                            <div className="flex flex-col gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="w-full justify-start"
+                                                    onClick={() => { setIsAccountOpen(false); onNavigate('settings'); }}
+                                                    role="menuitem"
+                                                >
+                                                    {t.settings}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="w-full justify-start"
+                                                    onClick={() => { setIsAccountOpen(false); onNavigate('dashboard'); }}
+                                                    role="menuitem"
+                                                >
+                                                    {t.profile}
+                                                </Button>
+                                                {onLogout && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="w-full justify-start text-danger hover:bg-danger/10"
+                                                        onClick={() => { setIsAccountOpen(false); onLogout(); }}
+                                                        role="menuitem"
+                                                    >
+                                                        {t.logout}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </Card>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </Card>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <StatCard 
                         label={t.nodes} 
                         value={notes.length.toString().padStart(2, '0')} 
@@ -311,6 +322,13 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName =
                         helper={isReady ? t.ready : t.syncing}
                         icon={<Activity />}
                         onClick={handleNavSystem} 
+                    />
+                    <StatCard 
+                        label={t.vault} 
+                        value={isVaultUnlocked ? t.vaultUnlocked : t.vaultLocked} 
+                        helper={vaultEnabled ? t.control : t.vaultDisabled}
+                        icon={isVaultUnlocked ? <Unlock /> : <Lock />}
+                        onClick={vaultEnabled ? handleToggleVault : undefined}
                     />
                 </div>
 

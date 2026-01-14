@@ -22,6 +22,7 @@ import { type FeatureID } from '../../constants';
 import { Button } from '../../components/ui/Button';
 import { Input, Textarea } from '../../components/ui/Input';
 import { Dialog } from '../../components/ui/Dialog';
+import { Card } from '../../components/ui/Card';
 
 interface SettingsViewProps {
     onNavigate: (feature: FeatureID) => void;
@@ -44,24 +45,24 @@ const THEME_COLORS: Record<string, string> = {
 // --- OPTIMIZED SUB-COMPONENTS (Memoized) ---
 
 const SettingsSection: React.FC<{ title: string, icon: React.ReactNode, children: React.ReactNode, className?: string }> = memo(({ title, icon, children, className }) => (
-    <div className={`space-y-4 mb-8 ${className} content-visibility-auto`}>
-        <div className="flex items-center gap-2 text-text-muted px-2">
+    <Card padding="lg" className={`space-y-4 border-border/60 shadow-[var(--shadow-soft)] ${className || ''}`}>
+        <div className="flex items-center gap-2 text-text-muted">
             {React.cloneElement(icon as React.ReactElement<any>, { size: 16 })}
             <h3 className="overline text-text-muted">{title}</h3>
         </div>
         <div className="space-y-3">
             {children}
         </div>
-    </div>
+    </Card>
 ));
 
 const ToolRow: React.FC<{ label: string, desc: string, icon: React.ReactNode, isActive: boolean, onToggle: () => void }> = memo(({ label, desc, icon, isActive, onToggle }) => (
     <button 
         onClick={onToggle}
-        className={`w-full flex items-center justify-between p-4 rounded-[var(--radius-md)] border transition-all active:scale-[0.98] ${isActive ? 'bg-surface border-accent/30' : 'bg-surface-2 border-border'}`}
+        className={`w-full flex items-center justify-between p-4 rounded-[var(--radius-md)] border border-border/70 shadow-[var(--shadow-soft)] transition-all active:scale-[0.98] hover:-translate-y-0.5 ${isActive ? 'bg-surface ring-1 ring-accent/20' : 'bg-surface-2'}`}
     >
         <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isActive ? 'bg-accent/10 text-accent' : 'bg-surface text-text-muted'}`}>
+            <div className={`p-2 rounded-lg border ${isActive ? 'bg-accent/10 text-accent border-accent/40' : 'bg-surface text-text-muted border-border/60'}`}>
                 {icon}
             </div>
             <div className="text-left">
@@ -299,29 +300,43 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                 onReset={() => handleResetPrompt(editPersona)}
             />
 
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-border pb-4 shrink-0 gap-4">
-                <div className="w-full space-y-2">
-                    <p className="caption text-text-muted">Settings</p>
-                    <h1 className="page-title text-text">{t.title}</h1>
-                    <p className="body-sm text-text-muted">Manage appearance, identity, and security preferences.</p>
+            <Card tone="translucent" padding="lg" className="mb-6 border-border/60 shadow-[0_30px_120px_-70px_rgba(var(--accent-rgb),0.9)]">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="w-full space-y-3">
+                        <p className="caption text-text-muted uppercase tracking-[0.2em]">Control Center</p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-[color:var(--accent)]/12 text-[color:var(--accent)] flex items-center justify-center">
+                                <User size={20} />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-black tracking-tight text-text">{t.title}</h1>
+                                <p className="body-sm text-text-muted">Manage appearance, identity, and security preferences.</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <Badge variant="neutral">{language.toUpperCase()}</Badge>
+                            <Badge variant="neutral">{themeMode}</Badge>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            onClick={handleSavePersona}
+                            disabled={isSaving}
+                            variant="primary"
+                            size="md"
+                            className="gap-2"
+                        >
+                            {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} {isSaving ? t.saved : t.save}
+                        </Button>
+                    </div>
                 </div>
-                <Button 
-                    onClick={handleSavePersona}
-                    disabled={isSaving}
-                    variant="primary"
-                    size="md"
-                    className="gap-2"
-                >
-                    {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} {isSaving ? t.saved : t.save}
-                </Button>
-            </div>
+            </Card>
 
             <div className="flex-1 overflow-y-auto custom-scroll pr-2 space-y-2 pb-[calc(env(safe-area-inset-bottom)+4rem)]">
                 
                 {/* 1. VISUAL & LANGUAGE */}
                 <SettingsSection title={t.theme_label || "Appearance & language"} icon={<Palette size={18} />}>
-                    <div className="p-6 bg-surface rounded-[24px] border border-border grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-6 bg-surface rounded-[24px] border border-border/70 grid grid-cols-1 md:grid-cols-2 gap-6 shadow-[var(--shadow-soft)]">
                         
                         {/* Theme Toggle */}
                         <div className="space-y-3">
@@ -383,10 +398,10 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
 
                 {/* 2. IDENTITY MATRIX */}
                 <SettingsSection title={t.identity_title || "Profile"} icon={<UserCheck size={18} />}>
-                    <div className="p-6 bg-surface rounded-[24px] border border-border space-y-6">
+                    <div className="p-6 bg-surface rounded-[24px] border border-border/70 space-y-6 shadow-[var(--shadow-soft)]">
                         
                         {/* ID EDITOR */}
-                        <div className="space-y-3 pb-6 border-b border-border">
+                        <div className="space-y-3 pb-6 border-b border-border/70">
                             <label className="caption text-text-muted pl-1">Account ID</label>
                             {!isEditingId ? (
                                 <div className="flex justify-between items-center bg-surface-2 p-4 rounded-2xl border border-border">
@@ -466,8 +481,8 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
 
                 {/* 3. ASSISTANT PERSONALITY */}
                 <SettingsSection title="Assistant profile" icon={<Brain size={18} />}>
-                    <div className="p-6 bg-surface rounded-[24px] border border-border">
-                        <div className="flex bg-surface-2 p-1 rounded-xl border border-border mb-6">
+                    <div className="p-6 bg-surface rounded-[24px] border border-border/70 shadow-[var(--shadow-soft)]">
+                        <div className="flex bg-surface-2 p-1 rounded-xl border border-border/70 mb-6">
                              <button onClick={() => setActiveConfigTab('HANISAH')} className={`flex-1 py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-95 ${activeConfigTab === 'HANISAH' ? 'bg-surface text-orange-500 shadow-sm' : 'text-text-muted hover:text-text'}`}>
                                 <Zap size={12}/> Hanisah (Creative)
                              </button>
@@ -525,7 +540,7 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
 
                 {/* 4. NEURAL UPLINKS */}
                 <SettingsSection title="AI providers" icon={<Server size={18} />}>
-                    <div className="p-6 bg-surface rounded-[24px] border border-border grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-6 bg-surface rounded-[24px] border border-border/70 shadow-[var(--shadow-soft)] grid grid-cols-1 md:grid-cols-2 gap-3">
                         {['GEMINI', 'GROQ', 'OPENAI', 'DEEPSEEK', 'MISTRAL', 'HUGGINGFACE', 'ELEVENLABS'].map(p => (
                             <ProviderToggleRow 
                                 key={p} 
@@ -540,8 +555,8 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
 
                 {/* 5. SECURITY PROTOCOLS */}
                 <SettingsSection title="Security" icon={<Lock size={18} />}>
-                    <div className="p-6 bg-surface rounded-[24px] border border-border space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-surface-2 rounded-xl border border-border">
+                    <div className="p-6 bg-surface rounded-[24px] border border-border/70 shadow-[var(--shadow-soft)] space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-surface-2 rounded-xl border border-border/70">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-surface rounded-lg text-text"><Key size={16}/></div>
                                 <div>
@@ -575,7 +590,7 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                 {/* 6. DATA GOVERNANCE */}
                 <SettingsSection title={t.data_title || "Data"} icon={<Database size={18} />}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button onClick={handleBackup} className="p-4 bg-surface border border-border hover:border-blue-500/50 rounded-2xl flex items-center gap-3 group transition-all active:scale-95">
+                        <button onClick={handleBackup} className="p-4 bg-surface border border-border/70 hover:border-blue-500/50 rounded-2xl flex items-center gap-3 group transition-all active:scale-95 shadow-[var(--shadow-soft)]">
                             <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors"><Download size={18}/></div>
                             <div className="text-left">
                                 <h4 className="section-title text-text">{t.backup}</h4>
@@ -583,7 +598,7 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                             </div>
                         </button>
 
-                        <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-surface border border-border hover:border-emerald-500/50 rounded-2xl flex items-center gap-3 group transition-all active:scale-95">
+                        <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-surface border border-border/70 hover:border-emerald-500/50 rounded-2xl flex items-center gap-3 group transition-all active:scale-95 shadow-[var(--shadow-soft)]">
                             <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors"><Upload size={18}/></div>
                             <div className="text-left">
                                 <h4 className="section-title text-text">{t.restore}</h4>
@@ -592,7 +607,7 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                             <input type="file" ref={fileInputRef} className="hidden" accept="application/json" onChange={handleRestore} />
                         </button>
 
-                        <button onClick={onNavigate.bind(null, 'system')} className="w-full p-4 bg-surface-2 hover:bg-surface border border-border rounded-2xl flex items-center gap-3 group transition-all md:col-span-2 active:scale-[0.98]">
+                        <button onClick={onNavigate.bind(null, 'system')} className="w-full p-4 bg-surface-2 hover:bg-surface border border-border/70 rounded-2xl flex items-center gap-3 group transition-all md:col-span-2 active:scale-[0.98] shadow-[var(--shadow-soft)]">
                              <div className="p-2.5 bg-surface text-text rounded-lg"><Activity size={18}/></div>
                              <div className="text-left">
                                 <h4 className="section-title text-text">System diagnostics</h4>
@@ -608,4 +623,3 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
 });
 
 export default SettingsView;
-

@@ -285,7 +285,7 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
             <div className="flex flex-col h-full bg-surface text-text font-sans relative overflow-hidden">
                 
                 {/* 1. TOP BAR: SETTINGS & STATUS */}
-                <div className="p-4 md:p-6 border-b border-border bg-surface-2/50 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center relative z-20">
+                <div className="p-4 md:p-6 border-b border-border/70 bg-surface-2/50 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center relative z-20 shadow-[var(--shadow-soft)]">
                     <div className="flex-1 w-full md:w-auto">
                         <VisualModelSelector 
                             label="Model"
@@ -312,7 +312,7 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                 <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
                     
                     {/* LEFT: VISUAL INPUT (CAMERA / IMAGE) */}
-                    <div className="lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-border relative bg-surface-2/30">
+                    <div className="lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-border/70 relative bg-surface-2/30">
                         
                         <div 
                             className={`flex-1 relative flex items-center justify-center overflow-hidden transition-all p-4 md:p-8 
@@ -400,10 +400,10 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
                     </div>
 
                     {/* RIGHT: CONTROL & OUTPUT */}
-                    <div className="lg:w-1/2 flex flex-col bg-surface">
+                    <div className="lg:w-1/2 flex flex-col bg-surface border-l border-border/70">
                         
                         {/* 1. CONTROLS */}
-                        <div className="p-6 border-b border-border space-y-4 shrink-0">
+                        <div className="p-6 border-b border-border/70 space-y-4 shrink-0 bg-surface-2/40 shadow-[var(--shadow-soft)]">
                             <div className="relative">
                                 <div className="absolute top-0 left-0 px-2 py-1 bg-surface-2 rounded-br-lg border-r border-b border-border caption text-text-muted">
                                     Prompt
@@ -517,4 +517,3 @@ export const NeuralVision: React.FC<NeuralVisionProps> = ({ isOpen, onToggle, ic
         </ToolGroup>
     );
 };
-

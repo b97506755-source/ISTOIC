@@ -294,74 +294,90 @@ export const SmartNotesView: React.FC<SmartNotesViewProps> = ({ notes, setNotes 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden animate-fade-in">
       <header className="px-4 md:px-8 lg:px-10 pt-safe pb-4 shrink-0">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-1">
-                  <p className="caption text-text-muted">Smart Notes</p>
-                  <h1 className="page-title text-text">Notes</h1>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                  <div className={cn('relative flex-1 min-w-[220px] md:min-w-[260px]', isSearchFocused ? 'md:w-[360px]' : 'md:w-[280px]')}>
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-                      <Input
-                         type="text"
-                         value={searchQuery}
-                         onChange={e => setSearchQuery(e.target.value)}
-                         onFocus={handleSearchFocus}
-                         onBlur={() => setIsSearchFocused(false)}
-                         placeholder={isSemanticMode ? 'Semantic search' : 'Search notes'}
-                         className={cn('pl-10 pr-10', isSemanticMode ? 'border-accent/40 text-text' : '')}
-                      />
-                      <Button
-                        onClick={() => { setIsSemanticMode(!isSemanticMode); setSearchQuery(''); }}
-                        variant={isSemanticMode ? 'primary' : 'ghost'}
-                        size="sm"
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                        aria-label="Toggle semantic search"
-                      >
-                          {isSearchingVector ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
-                      </Button>
+          <Card tone="translucent" padding="lg" className="border-border/60 shadow-[0_30px_120px_-70px_rgba(var(--accent-rgb),0.9)]">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-3">
+                      <p className="caption text-text-muted">Smart Notes</p>
+                      <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-[color:var(--accent)]/12 text-[color:var(--accent)] flex items-center justify-center">
+                              <FileText size={22} />
+                          </div>
+                          <div>
+                              <h1 className="text-3xl font-black tracking-tight text-text">Notes</h1>
+                              <p className="body-sm text-text-muted">Polos, cepat, siap untuk ide penting.</p>
+                          </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                          <Badge variant="neutral">{notes.length} total</Badge>
+                          <Badge variant="neutral">{filteredNotes.length} visible</Badge>
+                          <Badge variant={isFiltering ? 'accent' : 'neutral'}>{isFiltering ? 'Archive' : 'Active'}</Badge>
+                      </div>
                   </div>
 
-                  <Button
-                    onClick={() => setShowAgentConsole(true)}
-                    variant="secondary"
-                    size="sm"
-                    className="w-10 h-10 p-0"
-                    aria-label="Open note agents"
-                  >
-                      <BrainCircuit size={18} />
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                      <div className={cn('relative flex-1 min-w-[240px] md:min-w-[320px]', isSearchFocused ? 'md:w-[380px]' : 'md:w-[340px]')}>
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                          <Input
+                             type="text"
+                             value={searchQuery}
+                             onChange={e => setSearchQuery(e.target.value)}
+                             onFocus={handleSearchFocus}
+                             onBlur={() => setIsSearchFocused(false)}
+                             placeholder={isSemanticMode ? 'Semantic search' : 'Search notes'}
+                             className={cn('pl-10 pr-12', isSemanticMode ? 'border-accent/40 text-text' : '')}
+                          />
+                          <Button
+                            onClick={() => { setIsSemanticMode(!isSemanticMode); setSearchQuery(''); }}
+                            variant={isSemanticMode ? 'primary' : 'ghost'}
+                            size="sm"
+                            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                            aria-label="Toggle semantic search"
+                          >
+                              {isSearchingVector ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
+                          </Button>
+                      </div>
 
-                  <Button
-                    onClick={handleToggleBatchMode}
-                    variant={isSelectionMode ? 'primary' : 'secondary'}
-                    size="sm"
-                    className="w-10 h-10 p-0"
-                    aria-label="Toggle selection mode"
-                  >
-                      <CheckSquare size={18} />
-                  </Button>
+                      <Button
+                        onClick={() => setShowAgentConsole(true)}
+                        variant="secondary"
+                        size="sm"
+                        className="h-11 px-3"
+                        aria-label="Open note agents"
+                      >
+                          <BrainCircuit size={18} />
+                      </Button>
 
-                  <Button
-                    onClick={handleToggleFilter}
-                    variant={isFiltering ? 'primary' : 'secondary'}
-                    size="sm"
-                    className="w-10 h-10 p-0"
-                    aria-label={isFiltering ? 'Show active notes' : 'Show archived notes'}
-                  >
-                      <Archive size={18} />
-                  </Button>
+                      <Button
+                        onClick={handleToggleBatchMode}
+                        variant={isSelectionMode ? 'primary' : 'secondary'}
+                        size="sm"
+                        className="h-11 px-3"
+                        aria-label="Toggle selection mode"
+                      >
+                          <CheckSquare size={18} />
+                      </Button>
 
-                  <Button
-                    onClick={handleCreateNote}
-                    variant="primary"
-                    size="md"
-                  >
-                     <Plus size={16} strokeWidth={2.5} /> New note
-                  </Button>
+                      <Button
+                        onClick={handleToggleFilter}
+                        variant={isFiltering ? 'primary' : 'secondary'}
+                        size="sm"
+                        className="h-11 px-3"
+                        aria-label={isFiltering ? 'Show active notes' : 'Show archived notes'}
+                      >
+                          <Archive size={18} />
+                      </Button>
+
+                      <Button
+                        onClick={handleCreateNote}
+                        variant="primary"
+                        size="md"
+                        className="h-11 px-4"
+                      >
+                         <Plus size={16} strokeWidth={2.5} /> New
+                      </Button>
+                  </div>
               </div>
-          </div>
+          </Card>
       </header>
 
       {(isFiltering || isSearching) && (
@@ -559,4 +575,3 @@ export const SmartNotesView: React.FC<SmartNotesViewProps> = ({ notes, setNotes 
     </div>
   );
 };
-

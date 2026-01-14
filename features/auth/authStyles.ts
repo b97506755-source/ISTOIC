@@ -4,7 +4,7 @@
  */
 export const authStyles = {
   // Card & Container Styles
-  card: "backdrop-blur-2xl border border-[color:var(--border)]/50 bg-gradient-to-br from-[var(--surface)] to-[var(--surface-2)] rounded-[32px] p-8 shadow-2xl relative overflow-hidden",
+  card: "backdrop-blur-2xl border border-[color:var(--border)]/60 bg-[color:var(--surface)]/95 rounded-[28px] p-8 shadow-[0_40px_140px_-80px_rgba(var(--accent-rgb),0.8)] relative overflow-hidden",
   
   // Typography Styles
   title: "text-xl font-black text-[var(--text)] uppercase tracking-tight",
@@ -20,9 +20,9 @@ export const authStyles = {
   
   // Button Styles
   buttonPrimary:
-    "w-full py-4 bg-gradient-to-r from-[var(--accent)] to-[color:var(--accent-2)] hover:shadow-[0_10px_30px_-8px_var(--accent-rgb)]/40 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-70",
+    "w-full py-4 bg-gradient-to-r from-[color:var(--accent)] to-[color:var(--accent-2)] text-[color:var(--text-invert)] rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-[0_18px_40px_-18px_rgba(var(--accent-rgb),0.9)] hover:shadow-[0_22px_55px_-16px_rgba(var(--accent-rgb),0.9)] active:scale-95 disabled:opacity-70",
   buttonSecondary:
-    "w-full py-4 bg-[var(--success)] hover:bg-[var(--success)]/90 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-70",
+    "w-full py-4 bg-[color:var(--surface-2)] text-[color:var(--text)] rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-[var(--shadow-soft)] border border-[color:var(--border)]/70 hover:border-[color:var(--accent)]/40 active:scale-95 disabled:opacity-70",
   buttonGhost:
     "w-full py-3 text-[10px] font-bold text-[var(--text-muted)] hover:text-[var(--accent)] uppercase tracking-widest flex items-center justify-center gap-2 transition-colors",
   linkMuted: "text-[9px] font-bold text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors",

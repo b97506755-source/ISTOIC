@@ -49,7 +49,7 @@ type AuthStage =
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 5 * 60 * 1000;
 
-const DEV_BYPASS_ENABLED = (import.meta as any).env.VITE_ENABLE_DEV_BYPASS === 'true';
+const DEV_BYPASS_ENABLED = import.meta.env.VITE_ENABLE_DEV_BYPASS === "true";
 const FIRESTORE_TIMEOUT_MS = 15000;
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = FIRESTORE_TIMEOUT_MS): Promise<T> =>
@@ -179,27 +179,32 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
         return;
       }
 
-      const redirectIdentity = await IstokIdentityService.finalizeRedirectIfAny();
-      if (redirectIdentity) {
-        if (redirectIdentity.istokId) {
-          setIdentity(redirectIdentity);
+      // Handle redirect flow (PWA iOS)
+      if (sessionStorage.getItem("istok_login_redirect") === "pending") {
+        const redirectIdentity = await IstokIdentityService.finalizeRedirectIfAny();
+        sessionStorage.removeItem("istok_login_redirect");
 
-          if (isSystemPinConfigured()) {
-            if (bioEnabled && !isHardLocked) {
-              setStage("BIOMETRIC_SCAN");
-              handleBiometricScan();
+        if (redirectIdentity) {
+          if (redirectIdentity.istokId) {
+            setIdentity(redirectIdentity);
+
+            if (isSystemPinConfigured()) {
+              if (bioEnabled && !isHardLocked) {
+                setStage("BIOMETRIC_SCAN");
+                handleBiometricScan();
+              } else {
+                setStage("LOCKED");
+              }
             } else {
-              setStage("LOCKED");
+              setStage("SETUP_PIN");
             }
-          } else {
-            setStage("SETUP_PIN");
+            return;
           }
+
+          setPendingGoogleUser(redirectIdentity);
+          setStage("CREATE_ID");
           return;
         }
-
-        setPendingGoogleUser(redirectIdentity);
-        setStage("CREATE_ID");
-        return;
       }
 
       if (auth && db) {
@@ -255,6 +260,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   }, [identity?.istokId, bioEnabled, isHardLocked]);
 
   const handleGoogleLogin = async () => {
+    sessionStorage.setItem("istok_login_redirect", "pending");
     setLoading(true);
     setError(null);
 
@@ -302,6 +308,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
       setNiceError("Login Failed");
     } catch (err: any) {
       setNiceError(err?.message || "Login Failed");
+      sessionStorage.removeItem("istok_login_redirect");
     } finally {
       setLoading(false);
     }
@@ -453,11 +460,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[var(--bg)] flex items-center justify-center p-6 overflow-hidden font-sans select-none sheen">
-      <div className="absolute inset-0 bg-[linear-gradient(var(--accent-rgb)/0.02_1px,transparent_1px),linear-gradient(90deg,var(--accent-rgb)/0.02_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] bg-[var(--accent)]/5 blur-[120px] rounded-full pointer-events-none"></div>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 overflow-hidden font-sans select-none bg-[radial-gradient(120%_120%_at_20%_20%,rgba(var(--accent-rgb),0.12),transparent_45%),radial-gradient(90%_90%_at_80%_0%,rgba(var(--accent-2-rgb),0.12),transparent_40%),var(--bg)]">
+      <div className="absolute inset-0 bg-[linear-gradient(var(--accent-rgb)/0.03_1px,transparent_1px),linear-gradient(90deg,var(--accent-rgb)/0.03_1px,transparent_1px)] bg-[size:36px_36px] opacity-60 pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vh] bg-[var(--accent)]/6 blur-[140px] rounded-full pointer-events-none"></div>
 
-      <div className={`relative w-full max-w-sm ${shake ? "animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]" : ""}`}>
+      <div className={`relative w-full max-w-md ${shake ? "animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]" : ""}`}>
         <div className={authStyles.card}>
           {stage === "WELCOME" && (
             <div className="text-center space-y-8 animate-slide-up">
@@ -472,7 +479,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 <button
                   onClick={handleGoogleLogin}
                   disabled={loading}
-                  className="w-full py-4 bg-white text-black hover:bg-neutral-200 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.1)] group"
+                  className={authStyles.buttonPrimary}
                 >
                   {loading ? <Loader2 size={18} className="animate-spin" /> : <Chrome size={18} className="text-blue-500" />}
                   LANJUTKAN DENGAN GOOGLE
@@ -487,7 +494,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 <button
                   onClick={() => setStage("LOGIN_MANUAL")}
                   disabled={loading}
-                  className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95"
+                  className={authStyles.buttonSecondary}
                 >
                   <Mail size={18} className="text-emerald-500" />
                   LOGIN DENGAN EMAIL
@@ -496,7 +503,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 <button
                   onClick={() => setStage("REGISTER_MANUAL")}
                   disabled={loading}
-                  className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95"
+                  className="w-full py-3 bg-[color:var(--accent-2)]/10 hover:bg-[color:var(--accent-2)]/20 border border-[color:var(--accent-2)]/30 text-[color:var(--accent-2)] rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95"
                 >
                   BUAT AKUN BARU
                 </button>
@@ -513,7 +520,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 {isSystemPinConfigured() && (
                   <button
                     onClick={() => setStage("LOCKED")}
-                    className="text-[10px] font-bold text-neutral-400 hover:text-emerald-500 transition-colors flex items-center justify-center gap-2 mx-auto"
+                    className="text-[10px] font-bold text-neutral-400 hover:text-[color:var(--accent)] transition-colors flex items-center justify-center gap-2 mx-auto"
                   >
                     <KeyRound size={12} /> AKSES PERANGKAT
                   </button>
@@ -535,12 +542,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 <p className="text-xs text-neutral-500 mt-2">Buat Callsign unik untuk jaringan IStok.</p>
               </div>
 
-              <div className="bg-[#121214] border border-white/10 rounded-2xl px-4 py-4 focus-within:border-emerald-500 transition-all flex items-center">
-                <span className="text-emerald-500 font-black text-sm mr-1 select-none">ISTOIC-</span>
+              <div className="bg-[color:var(--surface-2)] border border-[color:var(--border)]/70 rounded-2xl px-4 py-4 focus-within:border-[color:var(--accent)] transition-all flex items-center shadow-[var(--shadow-soft)]">
+                <span className="text-[color:var(--accent-2)] font-black text-sm mr-1 select-none">ISTOIC-</span>
                 <input
                   value={codename}
                   onChange={(e) => setCodename(e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase())}
-                  className="bg-transparent border-none outline-none text-white font-bold text-lg w-full uppercase"
+                  className="bg-transparent border-none outline-none text-[color:var(--text)] font-bold text-lg w-full uppercase"
                   placeholder="BARISTA"
                   maxLength={12}
                 />
@@ -573,7 +580,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                 inputMode="numeric"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value.slice(0, 6))}
-                className="w-full bg-[#121214] border border-white/10 rounded-2xl py-5 text-center text-3xl font-black text-white tracking-[0.5em] focus:border-amber-500 outline-none"
+                className="w-full bg-[color:var(--surface-2)] border border-[color:var(--border)]/70 rounded-2xl py-5 text-center text-3xl font-black text-[color:var(--text)] tracking-[0.5em] focus:border-amber-500 outline-none shadow-[var(--shadow-soft)]"
                 placeholder="****"
               />
 
@@ -629,8 +636,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onAuthSuccess }) => {
                       setPinInput(e.target.value.slice(0, 6));
                       setError(null);
                     }}
-                    className={`w-full bg-[#121214] border rounded-2xl py-5 text-center text-3xl font-black text-white tracking-[0.5em] focus:outline-none transition-all placeholder:text-neutral-800 ${
-                      error ? "border-red-500/50" : "border-white/10 focus:border-emerald-500"
+                    className={`w-full bg-[color:var(--surface-2)] border rounded-2xl py-5 text-center text-3xl font-black text-[color:var(--text)] tracking-[0.5em] focus:outline-none transition-all placeholder:text-neutral-800 shadow-[var(--shadow-soft)] ${
+                      error ? "border-red-500/50" : "border-[color:var(--border)]/70 focus:border-[color:var(--accent)]"
                     }`}
                     placeholder="******"
                     disabled={loading}

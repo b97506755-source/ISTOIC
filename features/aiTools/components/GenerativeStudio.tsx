@@ -363,7 +363,7 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
                 </button>
 
                 {/* --- 1. CONFIGURATION DECK --- */}
-                <div className="bg-surface rounded-[24px] border border-border p-5 flex flex-col xl:flex-row gap-6 shadow-sm relative z-10">
+                <div className="bg-surface rounded-[24px] border border-border/70 p-5 flex flex-col xl:flex-row gap-6 shadow-[var(--shadow-soft)] relative z-10">
                     <div className="flex-1 space-y-3">
                         <VisualModelSelector 
                             label="Rendering Engine"
@@ -379,7 +379,7 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
                         <label className="caption text-text-muted pl-1 flex items-center gap-2">
                             <Monitor size={12} /> Aspect ratio
                         </label>
-                        <div className="flex bg-surface-2 p-1 rounded-xl border border-border h-[64px] items-center">
+                <div className="flex bg-surface-2 p-1 rounded-xl border border-border/70 h-[64px] items-center shadow-[var(--shadow-soft)]">
                             {['1:1', '16:9', '9:16'].map(r => (
                                 <button 
                                     key={r} 
@@ -404,7 +404,7 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
                     </div>
                     
                     <div className="absolute top-4 right-4 z-10 flex gap-1.5">
-                        <button onClick={handleRandomPrompt} disabled={isProcessing} className="p-2 bg-surface-2 hover:bg-surface text-text-muted hover:text-text rounded-lg border border-border transition-all shadow-sm active:scale-95 disabled:opacity-0">
+                        <button onClick={handleRandomPrompt} disabled={isProcessing} className="p-2 bg-surface-2 hover:bg-surface text-text-muted hover:text-text rounded-lg border border-border/70 transition-all shadow-sm active:scale-95 disabled:opacity-0">
                             <Dices size={14} />
                         </button>
                         <button onClick={handleEnhancePrompt} disabled={isProcessing || !prompt} className="px-3 py-1.5 bg-accent/10 hover:bg-accent text-accent hover:text-text-invert rounded-lg border border-accent/20 transition-all shadow-sm group/wand disabled:opacity-0 flex items-center gap-1.5 text-xs font-semibold active:scale-95">
@@ -517,4 +517,3 @@ export const GenerativeStudio: React.FC<GenerativeStudioProps> = ({ isOpen, onTo
         </ToolGroup>
     );
 };
-
