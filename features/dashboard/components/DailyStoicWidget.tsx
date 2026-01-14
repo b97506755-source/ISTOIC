@@ -1,19 +1,22 @@
-
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Quote, Sun, Moon, Calendar, Zap } from 'lucide-react';
 import { HANISAH_KERNEL } from '../../../services/melsaKernel';
 import useLocalStorage from '../../../hooks/useLocalStorage';
+import { Card } from '../../../components/ui/Card';
+import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
 
 export const DailyStoicWidget: React.FC = () => {
     const [briefing, setBriefing] = useLocalStorage<any>('stoic_daily_briefing', null);
+    const [language] = useLocalStorage<string>('app_language', 'id');
     const [isLoading, setIsLoading] = useState(false);
-    const [timeOfDay, setTimeOfDay] = useState('');
+    const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'evening'>('morning');
 
     useEffect(() => {
         const hour = new Date().getHours();
-        if (hour < 12) setTimeOfDay('MORNING');
-        else if (hour < 18) setTimeOfDay('AFTERNOON');
-        else setTimeOfDay('EVENING');
+        if (hour < 12) setTimeOfDay('morning');
+        else if (hour < 18) setTimeOfDay('afternoon');
+        else setTimeOfDay('evening');
 
         // Check if briefing is stale (older than today)
         const today = new Date().toDateString();
@@ -71,76 +74,77 @@ export const DailyStoicWidget: React.FC = () => {
 
     if (!briefing && !isLoading) return null;
 
-    return (
-        <div className="relative overflow-hidden rounded-[32px] bg-white dark:bg-[#0f0f11] border border-black/5 dark:border-white/5 shadow-lg group md:col-span-6 lg:col-span-8 animate-slide-up ring-1 ring-black/5 dark:ring-white/5">
-            {/* Ambient Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 opacity-50"></div>
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
+    const locale = language === 'en' ? 'en-US' : 'id-ID';
+    const dayLabel = new Date().toLocaleDateString(locale, { weekday: 'long' });
+    const timeLabel =
+        language === 'en'
+            ? timeOfDay === 'morning' ? 'Morning brief' : timeOfDay === 'afternoon' ? 'Afternoon brief' : 'Evening brief'
+            : timeOfDay === 'morning' ? 'Brief pagi' : timeOfDay === 'afternoon' ? 'Brief siang' : 'Brief malam';
+    const timeIcon = isLoading ? <RefreshCw className="animate-spin" size={24} /> : timeOfDay === 'evening' ? <Moon size={24} /> : <Sun size={24} />;
+    const focusLabel = language === 'en' ? 'Focus' : 'Fokus';
+    const refreshLabel = language === 'en' ? 'Refresh' : 'Muat ulang';
+    const offlineLabel = language === 'en' ? 'Offline. Unable to generate a briefing right now.' : 'Offline. Tidak bisa membuat briefing saat ini.';
 
-            <div className="relative z-10 p-8 md:p-10 flex flex-col md:flex-row gap-8 items-start md:items-center h-full">
-                
-                {/* Left: Icon & Time */}
-                <div className="flex flex-col gap-4 min-w-[140px]">
-                    <div className="w-16 h-16 rounded-2xl bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/5 dark:border-white/5 shadow-inner">
-                        {isLoading ? (
-                            <RefreshCw className="animate-spin text-neutral-400" size={32} />
-                        ) : timeOfDay === 'EVENING' ? (
-                            <Moon className="text-indigo-400" size={32} />
-                        ) : (
-                            <Sun className="text-amber-500" size={32} />
-                        )}
+    return (
+        <Card className="relative overflow-hidden animate-slide-up" padding="lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-surface-2/70" />
+
+            <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-start">
+                <div className="flex items-start gap-4 min-w-[220px]">
+                    <div className="w-12 h-12 rounded-[var(--radius-md)] bg-surface-2 border border-border flex items-center justify-center text-text-muted">
+                        {timeIcon}
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                            <Calendar size={12} /> {new Date().toLocaleDateString('id-ID', { weekday: 'long' })}
+                    <div className="space-y-1">
+                        <div className="caption text-text-muted flex items-center gap-2">
+                            <Calendar size={14} /> {dayLabel}
                         </div>
-                        <h3 className="text-2xl font-black italic uppercase tracking-tighter text-black dark:text-white mt-1">
-                            {timeOfDay}_BRIEF
-                        </h3>
+                        <div className="section-title text-text">{timeLabel}</div>
                     </div>
                 </div>
 
-                {/* Right: Content */}
                 <div className="flex-1 space-y-4">
                     {isLoading ? (
                         <div className="space-y-3 animate-pulse">
-                            <div className="h-4 bg-black/5 dark:bg-white/5 rounded w-3/4"></div>
-                            <div className="h-4 bg-black/5 dark:bg-white/5 rounded w-1/2"></div>
+                            <div className="h-4 bg-surface-2 rounded w-3/4"></div>
+                            <div className="h-4 bg-surface-2 rounded w-1/2"></div>
                         </div>
                     ) : briefing ? (
                         <>
                             <div className="relative">
-                                <Quote size={24} className="absolute -top-3 -left-4 text-neutral-200 dark:text-neutral-800 transform -scale-x-100" />
-                                <p className="text-lg md:text-xl font-serif italic text-black dark:text-neutral-200 leading-relaxed">
+                                <Quote size={20} className="absolute -top-2 -left-2 text-text-muted/40 -scale-x-100" />
+                                <p className="body text-text italic leading-relaxed">
                                     "{briefing.quote}"
                                 </p>
                             </div>
-                            
-                            <div className="h-[1px] bg-black/5 dark:bg-white/5 w-full"></div>
-                            
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                                <span className="px-3 py-1 rounded-lg bg-black/5 dark:bg-white/10 text-[9px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
-                                    <Zap size={10} className="text-accent" /> FOCUS: {briefing.focus}
-                                </span>
-                                <p className="text-xs font-medium text-neutral-500 leading-relaxed max-w-lg">
+
+                            <div className="h-[1px] bg-border w-full"></div>
+
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <Badge variant="accent" className="w-fit">
+                                    <Zap size={12} />
+                                    {focusLabel}: {briefing.focus}
+                                </Badge>
+                                <p className="caption text-text-muted max-w-xl">
                                     {briefing.advice}
                                 </p>
                             </div>
                         </>
                     ) : (
-                        <div className="text-neutral-500 text-sm">Offline. Cannot generate briefing.</div>
+                        <p className="body text-text-muted">{offlineLabel}</p>
                     )}
                 </div>
 
-                {/* Regenerate Action */}
-                <button 
+                <Button
                     onClick={() => generateBriefing(new Date().toDateString(), new Date().getHours())}
-                    className="absolute top-6 right-6 p-2 text-neutral-300 hover:text-black dark:hover:text-white transition-colors opacity-0 group-hover:opacity-100 bg-white/5 rounded-full"
-                    title="Regenerate"
+                    variant="ghost"
+                    size="sm"
+                    className="md:ml-auto"
+                    aria-label="Refresh briefing"
                 >
                     <RefreshCw size={16} />
-                </button>
+                    {refreshLabel}
+                </Button>
             </div>
-        </div>
+        </Card>
     );
 };

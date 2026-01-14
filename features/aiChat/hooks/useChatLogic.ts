@@ -80,7 +80,8 @@ export const useChatLogic = (notes: Note[], setNotes: (notes: Note[]) => void) =
   const { isLoading, stopGeneration, streamMessage } = useAIStream({
     notes,
     setNotes,
-    storage,
+    addMessage,
+    updateMessage,
     isAutoSpeak,
     imageModelId
   });
@@ -128,7 +129,8 @@ export const useChatLogic = (notes: Note[], setNotes: (notes: Note[]) => void) =
     async (e?: React.FormEvent, options?: SendOptions) => {
       if (e) e.preventDefault();
 
-      const { attachment, promptOverride, retryMessageId, persona: personaOverride } = options || {};
+      const { attachment, promptOverride, retryMessageId, persona: personaOverride } = options ?? {};
+
       const promptText = (promptOverride ?? input).trim();
       const hasContent = promptText || attachment;
       if (!hasContent || isLoading) return;
@@ -199,12 +201,11 @@ export const useChatLogic = (notes: Note[], setNotes: (notes: Note[]) => void) =
         const errorMsg: ChatMessage = {
           id: uuidv4(),
           role: 'model',
-          text: 'Terjadi kesalahan saat memproses pesan. Coba lagi sebentar lagi.',
-          metadata: { status: 'error', errorType: 'unknown' }
+          text: 'Terjadi kesalahan saat memproses pesan. Silakan coba lagi.',
+          metadata: { status: 'error' }
         };
         addMessage(targetThreadId, errorMsg);
       }
-    },
     [
       input,
       isLoading,

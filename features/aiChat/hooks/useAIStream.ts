@@ -25,13 +25,15 @@ interface StreamResult {
 export const useAIStream = ({
   notes,
   setNotes,
-  storage,
+  addMessage,
+  updateMessage,
   isAutoSpeak,
   imageModelId
 }: {
   notes: Note[];
   setNotes: (notes: Note[]) => void;
-  storage: any;
+  addMessage: (threadId: string, message: any) => void;
+  updateMessage: (threadId: string, messageId: string, updates: any) => void;
   isAutoSpeak: boolean;
   imageModelId: string;
 }) => {
@@ -48,7 +50,7 @@ export const useAIStream = ({
   const flushPending = useCallback(() => {
     if (pendingUpdateRef.current) {
       const pending = pendingUpdateRef.current;
-      storage.updateMessage(pending.threadId, pending.messageId, {
+      updateMessage(pending.threadId, pending.messageId, {
         text: pending.text,
         metadata: pending.metadata
       });
@@ -58,7 +60,7 @@ export const useAIStream = ({
       clearTimeout(flushTimeoutRef.current);
       flushTimeoutRef.current = null;
     }
-  }, [storage]);
+  }, [updateMessage]);
 
   const scheduleUpdate = useCallback(
     (threadId: string, messageId: string, text: string, metadata?: Record<string, unknown>) => {
@@ -125,9 +127,9 @@ export const useAIStream = ({
       };
 
       if (retryMessageId) {
-        storage.updateMessage(threadId, retryMessageId, { text: '', metadata: baseMetadata });
+        updateMessage(threadId, retryMessageId, { text: '', metadata: baseMetadata });
       } else {
-        storage.addMessage(threadId, {
+        addMessage(threadId, {
           id: modelMessageId,
           role: 'model',
           text: '',
@@ -233,7 +235,7 @@ export const useAIStream = ({
         flushPending();
       }
     },
-    [appendToolResult, flushPending, isAutoSpeak, notes, scheduleUpdate, setNotes, stopGeneration]
+    [addMessage, appendToolResult, flushPending, isAutoSpeak, notes, scheduleUpdate, setNotes, stopGeneration]
   );
 
   return {

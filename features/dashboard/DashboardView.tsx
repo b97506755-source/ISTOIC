@@ -1,14 +1,17 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { type Note } from '../../types';
 import { type FeatureID } from '../../constants';
-import { ArrowUpRight, ChevronRight, Target, Brain, Zap, FileText, ShieldCheck, DatabaseZap, Lock, Unlock, Activity, Clock, Cpu, Database, Fingerprint, Layers } from 'lucide-react';
+import { Activity, Brain, ChevronDown, ChevronRight, Database, DatabaseZap, FileText, Lock, Unlock, Zap } from 'lucide-react';
 import { VaultPinModal } from '../../components/VaultPinModal';
 import { useVault } from '../../contexts/VaultContext';
 import { UI_REGISTRY, FN_REGISTRY } from '../../constants/registry';
 import { debugService } from '../../services/debugService';
 import { DailyStoicWidget } from './components/DailyStoicWidget';
+import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { cn } from '../../utils/cn';
 
 interface DashboardProps {
     onNavigate: (feature: FeatureID) => void;
@@ -17,83 +20,73 @@ interface DashboardProps {
     onLogout?: () => void;
 }
 
-const StatBox: React.FC<{ label: string; value: string; isPulse?: boolean; color?: string; icon?: React.ReactNode; onClick?: () => void }> = ({ label, value, isPulse, color, icon, onClick }) => (
-    <button 
-        onClick={onClick}
-        aria-label={`${label}: ${value}`}
-        className={`relative overflow-hidden bg-skin-card/70 backdrop-blur-xl p-6 md:p-7 flex flex-col justify-between rounded-[32px] border border-skin-border hover:border-accent/30 shadow-sm hover:shadow-[0_20px_40px_-10px_var(--accent-glow)] transition-all duration-500 group h-full w-full text-left ring-1 ring-skin-border sheen ${onClick ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'}`}
-    >
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-skin-surface rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-accent/10 transition-colors"></div>
-
-        <div className="flex justify-between items-start relative z-10 w-full mb-6">
-             <div className={`p-3 rounded-[18px] bg-skin-card border border-skin-border text-skin-muted group-hover:text-accent transition-colors shadow-sm`}>
-                {icon ? React.cloneElement(icon as any, { size: 20, strokeWidth: 1.5 }) : <Activity size={20} />}
-             </div>
-             {isPulse && <div className={`w-2 h-2 rounded-full ${color?.replace('text-', 'bg-') || 'bg-accent'} animate-pulse shadow-[0_0_15px_currentColor]`} />}
-        </div>
-        
-        <div className="relative z-10">
-            <p className={`text-3xl lg:text-4xl font-bold tracking-tight leading-tight group-hover:translate-x-1 transition-transform duration-500 ${color || 'text-skin-text'}`}>{value}</p>
-            <div className="flex items-center gap-2 mt-2">
-                <div className="h-[1px] w-4 bg-skin-border group-hover:w-8 group-hover:bg-accent/50 transition-all duration-500"></div>
-                <p className="caption text-skin-muted">{label}</p>
+const StatCard: React.FC<{
+    label: string;
+    value: string;
+    icon: React.ReactNode;
+    helper?: string;
+    onClick?: () => void;
+}> = ({ label, value, icon, helper, onClick }) => {
+    const isInteractive = typeof onClick === 'function';
+    return (
+        <Card
+            as={isInteractive ? 'button' : 'div'}
+            interactive={isInteractive}
+            padding="md"
+            onClick={onClick}
+            className={cn('text-left w-full', isInteractive ? 'cursor-pointer' : '')}
+            aria-label={isInteractive ? `${label}: ${value}` : undefined}
+        >
+            <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                    <p className="caption text-text-muted">{label}</p>
+                    <p className="section-title text-text">{value}</p>
+                    {helper && <p className="caption text-text-muted">{helper}</p>}
+                </div>
+                <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-surface-2 border border-border flex items-center justify-center text-text-muted">
+                    {React.isValidElement(icon)
+                        ? React.cloneElement(icon as React.ReactElement, { size: 18, strokeWidth: 1.8 })
+                        : icon}
+                </div>
             </div>
-        </div>
-    </button>
-);
+        </Card>
+    );
+};
 
-const BentoCard: React.FC<{ 
-    title: string; 
-    desc: string; 
-    icon: React.ReactNode; 
+const FeatureCard: React.FC<{
+    title: string;
+    desc: string;
+    icon: React.ReactNode;
     onClick: () => void;
     className?: string;
     delay?: number;
-    accentColor?: string;
-    bgImage?: string;
-}> = ({ title, desc, icon, onClick, className, delay, accentColor = "group-hover:text-accent" }) => {
-    return (
-        <button 
-            onClick={onClick}
-            aria-label={`Open ${title}`}
-            style={{ animationDelay: `${delay}ms` }}
-            className={`
-                relative overflow-hidden cursor-pointer rounded-[40px] 
-                bg-skin-card border border-skin-border sheen
-                hover:border-accent/30 transition-all duration-500 animate-slide-up 
-                shadow-sm hover:shadow-[0_30px_60px_-15px_var(--accent-glow)] 
-                hover:-translate-y-1 active:scale-[0.99] group flex flex-col justify-between p-8 md:p-10 text-left
-                ring-1 ring-skin-border
-                ${className}
-            `}
-        >
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
-            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-skin-surface opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-            
-            <div className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-4 group-hover:translate-x-0">
-                <div className="p-2 rounded-full bg-skin-surface text-accent">
-                    <ArrowUpRight size={20} />
-                </div>
+}> = ({ title, desc, icon, onClick, className, delay }) => (
+    <Card
+        as="button"
+        interactive
+        padding="lg"
+        onClick={onClick}
+        aria-label={`Open ${title}`}
+        style={{ animationDelay: `${delay || 0}ms` }}
+        className={cn(
+            'text-left w-full bg-gradient-to-br from-surface to-surface-2 animate-slide-up',
+            className
+        )}
+    >
+        <div className="flex items-start justify-between gap-4">
+            <div className="w-12 h-12 rounded-[var(--radius-md)] bg-surface border border-border flex items-center justify-center text-text-muted">
+                {React.isValidElement(icon)
+                    ? React.cloneElement(icon as React.ReactElement, { size: 22, strokeWidth: 1.7 })
+                    : icon}
             </div>
-
-            <div className="relative z-10 w-full h-full flex flex-col">
-                <div className={`w-16 h-16 rounded-[24px] bg-skin-surface border border-skin-border flex items-center justify-center text-skin-muted ${accentColor} transition-all duration-500 mb-auto group-hover:scale-110 shadow-sm`}>
-                    {React.cloneElement(icon as React.ReactElement<any>, { size: 32, strokeWidth: 1.5 })}
-                </div>
-                
-                <div className="mt-8">
-                    <h3 className="text-3xl md:text-4xl font-black text-skin-text uppercase italic tracking-tighter leading-[0.9] mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-skin-text group-hover:to-skin-muted transition-all">
-                        {title}
-                    </h3>
-                    <p className="text-xs font-medium text-skin-muted leading-relaxed uppercase tracking-wide max-w-[90%] border-l border-skin-border pl-3 group-hover:border-accent/50 transition-colors">
-                        {desc}
-                    </p>
-                </div>
-            </div>
-        </button>
-    );
-};
+            <ChevronRight size={18} className="text-text-muted" />
+        </div>
+        <div className="mt-6 space-y-2">
+            <h3 className="section-title text-text">{title}</h3>
+            <p className="caption text-text-muted">{desc}</p>
+        </div>
+    </Card>
+);
 
 const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName = 'Account', onLogout }) => {
     const { isVaultUnlocked, unlockVault, lockVault, isVaultConfigEnabled } = useVault();
@@ -163,193 +156,264 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName =
     };
 
     const t = {
-        uptime: language === 'en' ? "Online" : "Terhubung",
-        nodes: language === 'en' ? "Notes" : "Catatan",
-        focus: language === 'en' ? "Sync" : "Sinkron",
-        archiveTitle: language === 'en' ? "Archive" : "Arsip",
-        archiveDesc: language === 'en' ? "Long-term storage." : "Penyimpanan data.",
-        chatTitle: "AI Assistant",
-        chatDesc: language === 'en' ? "Virtual partner." : "Partner virtual.",
-        toolsTitle: "AI Tools",
-        toolsDesc: language === 'en' ? "Generative tools." : "Alat generatif.",
-        recent: language === 'en' ? "Recent activity" : "Aktivitas terbaru",
-        control: language === 'en' ? "Security" : "Keamanan",
+        welcome: language === 'en' ? 'Welcome back' : 'Selamat datang kembali',
+        uptime: language === 'en' ? 'Online' : 'Terhubung',
+        offline: language === 'en' ? 'Offline' : 'Offline',
+        nodes: language === 'en' ? 'Notes' : 'Catatan',
+        focus: language === 'en' ? 'Sync' : 'Sinkronisasi',
+        ready: language === 'en' ? 'Ready' : 'Siap',
+        syncing: language === 'en' ? 'Syncing' : 'Sinkron',
+        archiveTitle: language === 'en' ? 'Archive' : 'Arsip',
+        archiveDesc: language === 'en' ? 'Long-term storage for finished notes.' : 'Penyimpanan jangka panjang untuk catatan selesai.',
+        chatTitle: language === 'en' ? 'AI Assistant' : 'Asisten AI',
+        chatDesc: language === 'en' ? 'Draft, summarize, and plan faster.' : 'Tulis, ringkas, dan rencanakan lebih cepat.',
+        toolsTitle: language === 'en' ? 'AI Tools' : 'Alat AI',
+        toolsDesc: language === 'en' ? 'Visual and utility tools in one place.' : 'Alat visual dan utilitas di satu tempat.',
+        recent: language === 'en' ? 'Recent activity' : 'Aktivitas terbaru',
+        recentEmpty: language === 'en' ? 'No recent notes yet.' : 'Belum ada catatan terbaru.',
+        viewAll: language === 'en' ? 'View all' : 'Lihat semua',
+        control: language === 'en' ? 'Vault' : 'Vault',
+        vaultDescLocked: language === 'en' ? 'Your vault is locked. Unlock to access protected data.' : 'Vault terkunci. Buka untuk mengakses data terlindungi.',
+        vaultDescUnlocked: language === 'en' ? 'Vault is unlocked. Remember to lock when finished.' : 'Vault terbuka. Kunci kembali setelah selesai.',
+        vaultLocked: language === 'en' ? 'Locked' : 'Terkunci',
+        vaultUnlocked: language === 'en' ? 'Unlocked' : 'Terbuka',
+        vaultDisabled: language === 'en' ? 'Unavailable' : 'Tidak tersedia',
+        vaultUnlock: language === 'en' ? 'Unlock vault' : 'Buka vault',
+        vaultLock: language === 'en' ? 'Lock vault' : 'Kunci vault',
+        systemStatus: language === 'en' ? 'Status' : 'Status',
+        profile: language === 'en' ? 'Profile' : 'Profil',
+        settings: language === 'en' ? 'Settings' : 'Pengaturan',
+        logout: language === 'en' ? 'Logout' : 'Keluar',
+        untitled: language === 'en' ? 'Untitled note' : 'Catatan tanpa judul',
+        unknownDate: language === 'en' ? 'Unknown date' : 'Tanggal tidak diketahui'
     };
 
     const recentNotes = Array.isArray(notes) ? notes.slice(0, 3) : [];
     const formatDate = (iso?: string) => {
-        if (!iso) return 'UNKNOWN';
+        if (!iso) return t.unknownDate;
         const date = new Date(iso);
-        return isNaN(date.getTime()) ? 'UNKNOWN' : date.toLocaleDateString();
+        return isNaN(date.getTime()) ? t.unknownDate : date.toLocaleDateString();
     };
 
     const [isAccountOpen, setIsAccountOpen] = useState(false);
+    const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (!isAccountOpen) return;
+        const handleClick = (event: MouseEvent) => {
+            if (!accountMenuRef.current) return;
+            if (!accountMenuRef.current.contains(event.target as Node)) {
+                setIsAccountOpen(false);
+            }
+        };
+        const handleKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setIsAccountOpen(false);
+        };
+        document.addEventListener('mousedown', handleClick);
+        document.addEventListener('keydown', handleKey);
+        return () => {
+            document.removeEventListener('mousedown', handleClick);
+            document.removeEventListener('keydown', handleKey);
+        };
+    }, [isAccountOpen]);
+
+    const isReady = syncLevel >= 90;
 
     return (
-        <div className="h-full w-full overflow-y-auto custom-scroll flex flex-col px-4 pb-32 pt-[calc(env(safe-area-inset-top)+1.5rem)] md:px-8 md:pt-12 md:pb-40 lg:px-12 animate-fade-in bg-noise relative z-10">
+        <div className="h-full w-full overflow-y-auto flex flex-col px-4 pt-safe pb-safe md:px-8 lg:px-10 animate-fade-in relative z-10">
             <VaultPinModal 
                 isOpen={showPinModal} 
                 onClose={() => setShowPinModal(false)} 
                 onSuccess={() => unlockVault()} 
             />
 
-            <div className="max-w-[1400px] mx-auto w-full space-y-10 md:space-y-12">
-                
-                <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-8 animate-slide-up pb-4">
-                    <div className="space-y-4 md:space-y-6 flex-1 w-full">
-                        <div className="flex items-center justify-between w-full gap-4" aria-live="polite">
-                            <div className="flex items-center gap-3">
-                                <button 
-                                    onClick={handleNavSystem}
-                                    className="px-3 py-1.5 rounded-full bg-surface text-accent border border-border flex items-center gap-2 text-[11px] font-semibold tracking-[0.08em] shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:border-accent/60 transition-all"
-                                    aria-label="System status"
-                                >
-                                    <span className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_10px_var(--accent)]"></span>
-                                    {t.uptime}
-                                </button>
-                            </div>
-                            <div className="relative">
-                                <button
-                                    onClick={() => setIsAccountOpen((v) => !v)}
-                                    className="flex items-center gap-3 rounded-full bg-surface-2 border border-border px-3 py-1.5 text-sm font-semibold text-text hover:border-accent transition-all min-w-[160px] justify-between"
-                                    aria-haspopup="menu"
-                                    aria-expanded={isAccountOpen}
-                                >
-                                    <span className="truncate">{userName || 'Account'}</span>
-                                    <ChevronRight size={16} className={`transition-transform ${isAccountOpen ? 'rotate-90' : ''}`} />
-                                </button>
-                                {isAccountOpen && (
-                                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-surface border border-border shadow-[0_20px_60px_rgba(0,0,0,0.25)] z-[1200] overflow-hidden">
-                                        <button onClick={() => { setIsAccountOpen(false); onNavigate('settings'); }} className="w-full text-left px-4 py-3 text-sm text-text hover:bg-surface-2 transition-colors">Settings</button>
-                                        <button onClick={() => { setIsAccountOpen(false); onNavigate('dashboard'); }} className="w-full text-left px-4 py-3 text-sm text-text hover:bg-surface-2 transition-colors">Profile</button>
-                                        {onLogout && <button onClick={() => { setIsAccountOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 text-sm text-danger font-semibold hover:bg-surface-2 transition-colors">Logout</button>}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <p className="overline text-text-muted">Welcome back</p>
-                            <h1 className="page-title text-text">Dashboard</h1>
-                        </div>
+            <div className="max-w-6xl mx-auto w-full space-y-8 md:space-y-10">
+                <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between animate-slide-up">
+                    <div className="space-y-2">
+                        <p className="caption text-text-muted">{t.welcome}</p>
+                        <h1 className="page-title text-text">Dashboard</h1>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-5 w-full xl:w-auto min-w-[280px] md:min-w-[360px] lg:h-40">
-                        <StatBox 
-                            label={t.nodes} 
-                            value={notes.length.toString().padStart(2, '0')} 
-                            icon={<FileText />}
-                            onClick={handleNavNotes}
-                        />
-                        <StatBox 
-                            label={t.focus} 
-                            value={`${syncLevel}%`} 
-                            isPulse={true} 
-                            color={syncLevel > 90 ? 'text-accent' : 'text-skin-muted'}
-                            icon={<Activity />}
-                            onClick={handleNavSystem} 
-                        />
+
+                    <div className="flex flex-wrap items-center gap-3" aria-live="polite">
+                        <Badge variant={isOnline ? 'success' : 'warning'}>
+                            <span className="w-2 h-2 rounded-full bg-current" />
+                            {isOnline ? t.uptime : t.offline}
+                        </Badge>
+                        <Button variant="secondary" size="sm" onClick={handleNavSystem} aria-label={t.systemStatus}>
+                            {t.systemStatus}
+                        </Button>
+
+                        <div className="relative" ref={accountMenuRef}>
+                            <Button
+                                onClick={() => setIsAccountOpen((v) => !v)}
+                                variant="secondary"
+                                size="sm"
+                                className="min-w-[180px] justify-between"
+                                aria-haspopup="menu"
+                                aria-expanded={isAccountOpen}
+                            >
+                                <span className="truncate">{userName || 'Account'}</span>
+                                <ChevronDown size={16} className={cn('transition-transform', isAccountOpen ? 'rotate-180' : '')} />
+                            </Button>
+                            {isAccountOpen && (
+                                <Card
+                                    padding="sm"
+                                    className="absolute right-0 mt-2 w-52 z-[1200] shadow-[var(--shadow-strong)]"
+                                    role="menu"
+                                >
+                                    <div className="flex flex-col gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full justify-start"
+                                            onClick={() => { setIsAccountOpen(false); onNavigate('settings'); }}
+                                            role="menuitem"
+                                        >
+                                            {t.settings}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full justify-start"
+                                            onClick={() => { setIsAccountOpen(false); onNavigate('dashboard'); }}
+                                            role="menuitem"
+                                        >
+                                            {t.profile}
+                                        </Button>
+                                        {onLogout && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="w-full justify-start text-danger hover:bg-danger/10"
+                                                onClick={() => { setIsAccountOpen(false); onLogout(); }}
+                                                role="menuitem"
+                                            >
+                                                {t.logout}
+                                            </Button>
+                                        )}
+                                    </div>
+                                </Card>
+                            )}
+                        </div>
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6 md:gap-8">
-                    
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <StatCard 
+                        label={t.nodes} 
+                        value={notes.length.toString().padStart(2, '0')} 
+                        icon={<FileText />}
+                        onClick={handleNavNotes}
+                    />
+                    <StatCard 
+                        label={t.focus} 
+                        value={`${syncLevel}%`} 
+                        helper={isReady ? t.ready : t.syncing}
+                        icon={<Activity />}
+                        onClick={handleNavSystem} 
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6">
                     <div className="md:col-span-6 lg:col-span-8">
                         <DailyStoicWidget />
                     </div>
 
-                    <BentoCard 
+                    <FeatureCard 
                         title={t.chatTitle} 
                         desc={t.chatDesc} 
                         icon={<Brain />} 
                         onClick={handleNavChat} 
-                        className="md:col-span-3 lg:col-span-4 min-h-[280px] lg:h-full"
+                        className="md:col-span-3 lg:col-span-4 min-h-[220px]"
                         delay={100}
-                        accentColor={personaMode === 'hanisah' ? "group-hover:text-orange-500" : "group-hover:text-cyan-500"}
                     />
                     
-                    <BentoCard 
+                    <FeatureCard 
                         title={t.archiveTitle} 
                         desc={t.archiveDesc} 
                         icon={<Database />} 
                         onClick={handleNavArchive} 
-                        className="md:col-span-3 lg:col-span-4 min-h-[280px] lg:aspect-square"
+                        className="md:col-span-3 lg:col-span-4 min-h-[220px]"
                         delay={200}
                     />
                     
-                    <BentoCard 
+                    <FeatureCard 
                         title={t.toolsTitle} 
                         desc={t.toolsDesc} 
                         icon={<Zap />} 
                         onClick={handleNavTools} 
-                        className="md:col-span-6 lg:col-span-8 min-h-[280px]"
+                        className="md:col-span-6 lg:col-span-8 min-h-[220px]"
                         delay={300}
                     />
 
-                    <div className="md:col-span-6 lg:col-span-8 bg-skin-card rounded-[40px] border border-skin-border p-8 md:p-10 flex flex-col justify-between animate-slide-up shadow-sm ring-1 ring-skin-border" style={{ animationDelay: '400ms' }}>
-                        <div className="flex items-center justify-between mb-8 border-b border-skin-border pb-6">
-                            <h3 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-skin-text flex items-center gap-4">
-                                <Clock size={28} className="text-accent" /> {t.recent}
-                            </h3>
-                            <button onClick={handleNavNotes} aria-label="Go to Archive" className="w-12 h-12 rounded-xl bg-skin-surface hover:bg-accent hover:text-black flex items-center justify-center transition-all">
-                                <ChevronRight size={20} />
-                            </button>
+                    <Card
+                        padding="lg"
+                        className="md:col-span-6 lg:col-span-8 animate-slide-up"
+                        style={{ animationDelay: '400ms' }}
+                    >
+                        <div className="flex items-center justify-between border-b border-border pb-4">
+                            <h3 className="section-title text-text">{t.recent}</h3>
+                            <Button variant="secondary" size="sm" onClick={handleNavNotes}>
+                                {t.viewAll}
+                            </Button>
                         </div>
                         
-                        <div className="space-y-3">
+                        <div className="mt-4 space-y-3">
                             {recentNotes.map((note) => (
-                                <div 
+                                <button 
                                     key={note.id} 
                                     onClick={handleRecentLogClick} 
                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRecentLogClick(); } }}
-                                    role="button" 
-                                    tabIndex={0} 
-                                    className="group flex items-center gap-6 p-4 rounded-[24px] bg-skin-surface border border-transparent hover:border-accent/20 hover:bg-skin-card transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                                    className="w-full text-left flex items-center gap-3 p-3 rounded-[var(--radius-md)] border border-transparent hover:border-accent/20 hover:bg-surface-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40"
                                 >
-                                    <div className="w-12 h-12 rounded-xl bg-skin-surface-hover flex items-center justify-center text-skin-muted group-hover:text-accent group-hover:scale-110 transition-transform shrink-0">
-                                        <FileText size={20} strokeWidth={2} />
+                                    <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-surface-2 border border-border flex items-center justify-center text-text-muted">
+                                        <FileText size={18} strokeWidth={1.8} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="text-sm font-bold text-skin-text uppercase tracking-tight truncate">{note.title || "UNTITLED_ENTRY"}</h4>
-                                        <p className="text-[10px] tech-mono text-skin-muted truncate mt-0.5">ID: {note.id.slice(0,8)} // {formatDate(note.updated)}</p>
+                                        <p className="body text-text truncate">{note.title || t.untitled}</p>
+                                        <p className="caption text-text-muted truncate">{formatDate(note.updated)}</p>
                                     </div>
-                                    <div className="px-3 py-1 rounded-lg bg-skin-surface-hover text-[9px] font-black text-skin-muted uppercase tracking-widest group-hover:bg-accent/10 group-hover:text-accent transition-colors">OPEN</div>
-                                </div>
+                                    <ChevronRight size={16} className="text-text-muted" />
+                                </button>
                             ))}
                             {recentNotes.length === 0 && (
-                                <div className="text-center py-12 opacity-60 text-[10px] font-black uppercase tracking-widest text-skin-muted">NO_DATA_LOGGED</div>
+                                <p className="caption text-text-muted text-center py-6">{t.recentEmpty}</p>
                             )}
                         </div>
-                    </div>
+                    </Card>
 
-                    <div className={`md:col-span-6 lg:col-span-4 p-8 md:p-10 rounded-[40px] border transition-all duration-500 flex flex-col justify-between group shadow-lg animate-slide-up h-full ${isVaultUnlocked ? 'bg-gradient-to-br from-skin-card to-skin-surface border-accent/30 shadow-[0_0_40px_-10px_var(--accent-glow)]' : 'bg-skin-surface border-transparent opacity-80'}`} style={{ animationDelay: '500ms' }}>
-                        <div>
-                            <div className="flex justify-between items-start mb-8">
-                                <div className={`p-4 rounded-[20px] ${isVaultUnlocked ? 'bg-accent text-black shadow-lg shadow-accent/20' : 'bg-skin-surface-hover text-skin-muted'}`}>
-                                    <DatabaseZap size={32} strokeWidth={1.5} />
-                                </div>
-                                <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${isVaultUnlocked ? 'border-accent text-accent bg-accent/5' : 'border-skin-border text-skin-muted'}`}>
-                                    {isVaultUnlocked ? 'UNLOCKED' : 'SECURE'}
-                                </div>
+                    <Card
+                        padding="lg"
+                        className="md:col-span-6 lg:col-span-4 animate-slide-up"
+                        style={{ animationDelay: '500ms' }}
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="w-12 h-12 rounded-[var(--radius-md)] bg-surface-2 border border-border flex items-center justify-center text-text-muted">
+                                <DatabaseZap size={22} strokeWidth={1.7} />
                             </div>
-                            <h3 className="text-3xl md:text-4xl font-black uppercase italic tracking-tighter leading-none text-skin-text">{t.control}</h3>
-                            <p className="text-xs font-medium text-skin-muted mt-4 leading-relaxed">
-                                {isVaultUnlocked ? "Akses data terbuka. Vault tidak terkunci." : "Autentikasi diperlukan untuk akses data terenkripsi."}
+                            <Badge variant={isVaultUnlocked ? 'success' : 'neutral'}>
+                                {isVaultUnlocked ? t.vaultUnlocked : t.vaultLocked}
+                            </Badge>
+                        </div>
+
+                        <div className="mt-5 space-y-2">
+                            <h3 className="section-title text-text">{t.control}</h3>
+                            <p className="caption text-text-muted">
+                                {isVaultUnlocked ? t.vaultDescUnlocked : t.vaultDescLocked}
                             </p>
                         </div>
                         
-                        <button 
+                        <Button 
                             onClick={vaultEnabled ? handleToggleVault : handleNavTools}
-                            aria-label={!vaultEnabled ? 'Vault Disabled' : isVaultUnlocked ? 'Lock Vault' : 'Unlock Vault'}
-                            className={`w-full py-5 rounded-[20px] font-black uppercase text-[11px] tracking-[0.25em] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-md mt-8 ${
-                                !vaultEnabled ? 'bg-black/10 text-neutral-500 cursor-not-allowed' :
-                                isVaultUnlocked ? 'bg-red-500 text-white hover:bg-red-600 shadow-red-500/20' : 
-                                'bg-skin-text text-skin-card hover:bg-accent hover:text-black hover:shadow-[0_0_30px_var(--accent-glow)]'
-                            }`}
+                            variant={!vaultEnabled ? 'secondary' : isVaultUnlocked ? 'destructive' : 'primary'}
+                            size="lg"
+                            className={cn('mt-6 w-full', !vaultEnabled ? 'opacity-70' : '')}
+                            aria-label={!vaultEnabled ? t.vaultDisabled : isVaultUnlocked ? t.vaultLock : t.vaultUnlock}
                         >
                             {isVaultUnlocked ? <Lock size={16}/> : <Unlock size={16}/>}
-                            {!vaultEnabled ? 'DISABLED' : isVaultUnlocked ? 'KUNCI SEKARANG' : 'BUKA KUNCI'}
-                        </button>
-                    </div>
+                            {!vaultEnabled ? t.vaultDisabled : isVaultUnlocked ? t.vaultLock : t.vaultUnlock}
+                        </Button>
+                    </Card>
 
                 </div>
             </div>

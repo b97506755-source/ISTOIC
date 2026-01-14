@@ -1,13 +1,10 @@
-
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { 
   Bold, Italic, Underline, Maximize2, Minimize2, 
-  Mic, MicOff, Sparkles, X, RefreshCw, Flame, CheckCircle,
-  List, ListOrdered, Code, Wand2, Clock, Heading1, Heading2,
-  Type, CheckSquare, Trash2, Plus, ArrowLeft, Check, Strikethrough, 
-  AlignLeft, AlignCenter, AlignRight, Undo, Redo, Quote,
-  ChevronDown, Type as FontIcon, AlignJustify, MoreHorizontal,
-  Pilcrow
+  Mic, MicOff, Sparkles, RefreshCw, Flame, CheckCircle,
+  Code, Wand2, Clock,
+  Type, CheckSquare, Trash2, Plus, ArrowLeft, Check,
+  Undo, Redo
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { HANISAH_KERNEL } from '../../services/melsaKernel';
@@ -15,6 +12,11 @@ import { type TaskItem } from '../../types';
 import { TRANSLATIONS, getLang } from '../../services/i18n';
 import { sanitizeInput } from '../../utils/securityHelper';
 import { Dialog } from '../../components/ui/Dialog';
+import { Button } from '../../components/ui/Button';
+import { Input, Textarea } from '../../components/ui/Input';
+import { Badge } from '../../components/ui/Badge';
+import { Card } from '../../components/ui/Card';
+import { cn } from '../../utils/cn';
 
 interface AdvancedEditorProps {
   initialContent: string;
@@ -36,32 +38,29 @@ const FONTS = [
 ];
 
 const ToolbarButton: React.FC<{ onClick: (e: React.MouseEvent) => void; icon: React.ReactNode; isActive?: boolean; ariaLabel: string; className?: string; label?: string }> = ({ onClick, icon, isActive, ariaLabel, className, label }) => (
-    <button 
+    <Button 
         onMouseDown={(e) => { e.preventDefault(); onClick(e); }} 
-        className={`
-            relative flex items-center justify-center gap-1.5 rounded-lg transition-all duration-200 shrink-0
-            ${label ? 'px-3 w-auto' : 'w-8'} h-8
-            ${isActive 
-                ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' 
-                : 'text-neutral-500 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-            } ${className}
-        `}
+        variant="ghost"
+        size="sm"
+        className={cn(
+            label ? 'h-8 px-2' : 'h-8 w-8 p-0',
+            isActive ? 'bg-accent/10 text-accent' : '',
+            className
+        )}
         aria-label={ariaLabel}
         type="button"
         title={ariaLabel}
     >
         {icon}
-        {label && <span className="text-[9px] font-black uppercase tracking-wider">{label}</span>}
-    </button>
+        {label && <span className="caption uppercase">{label}</span>}
+    </Button>
 );
 
-const ToolbarDivider = () => <div className="w-[1px] h-4 bg-skin-border mx-1 shrink-0 self-center"></div>;
-
 const WRITER_PRESETS = [
-    { id: 'GRAMMAR', label: 'FIX_GRAMMAR', icon: <CheckCircle size={12}/>, prompt: "Correct grammar and spelling errors. Keep the tone natural." },
-    { id: 'FORMAL', label: 'PROFESSIONAL', icon: <Type size={12}/>, prompt: "Rewrite to be more professional, concise, and executive-ready." },
-    { id: 'EXPAND', label: 'EXPAND', icon: <Wand2 size={12}/>, prompt: "Elaborate on this point. Add detail and context." },
-    { id: 'SUMMARIZE', label: 'SUMMARIZE', icon: <Minimize2 size={12}/>, prompt: "Summarize the key points into a concise list or paragraph." },
+    { id: 'GRAMMAR', label: 'Fix grammar', icon: <CheckCircle size={12}/>, prompt: 'Correct grammar and spelling errors. Keep the tone natural.' },
+    { id: 'FORMAL', label: 'Professional tone', icon: <Type size={12}/>, prompt: 'Rewrite to be more professional, concise, and executive-ready.' },
+    { id: 'EXPAND', label: 'Expand', icon: <Wand2 size={12}/>, prompt: 'Elaborate on this point. Add detail and context.' },
+    { id: 'SUMMARIZE', label: 'Summarize', icon: <Minimize2 size={12}/>, prompt: 'Summarize the key points into a concise list or paragraph.' },
 ];
 
 export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({ 
@@ -123,20 +122,17 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
   const recognitionRef = useRef<any>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync tasks logic
   const completedTasksCount = tasks.filter(t => t.isCompleted).length;
   const taskProgress = tasks.length > 0 ? (completedTasksCount / tasks.length) * 100 : 0;
 
   const updateStatsAndFormats = useCallback(() => {
     if (!editorRef.current) return;
     
-    // Stats
-    const text = editorRef.current.innerText || "";
-    const words = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+    const text = editorRef.current.innerText || '';
+    const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
     setWordCount(words);
     setReadTime(Math.ceil(words / 200)); 
 
-    // Formats (Only if editable)
     if (!isReadonly) {
         const formatBlock = document.queryCommandValue('formatBlock');
         setFormats({
@@ -155,19 +151,15 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
             quote: formatBlock === 'blockquote'
         });
         
-        // Detect Font
         const fontName = document.queryCommandValue('fontName');
-        if(fontName) {
-            // Browser returns font name with quotes sometimes
-            const cleanFont = fontName.replace(/['"]+/g, '');
-            // Try to match with our presets
+        if (fontName) {
+            const cleanFont = fontName.replace(/[\'"]+/g, '');
             const matched = FONTS.find(f => f.value.includes(cleanFont));
-            if(matched) setCurrentFont(matched.value);
+            if (matched) setCurrentFont(matched.value);
         }
     }
   }, [isReadonly]);
 
-  // Init
   useEffect(() => {
     if (editorRef.current) {
         if (editorRef.current.innerHTML !== initialContent) {
@@ -185,7 +177,6 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     setSyncStatus('SAVED');
   }, [onSave]);
 
-  // Trigger auto save with current state
   const triggerAutoSave = useCallback(() => {
       setSyncStatus('SYNCING');
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -197,14 +188,12 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
       }, 800);
   }, [title, tasks, tags, performSave]);
 
-  // Ensure tasks change triggers save
   useEffect(() => {
       if (tasks !== initialTasks) {
           triggerAutoSave();
       }
   }, [tasks, triggerAutoSave, initialTasks]);
 
-  // Task Handlers
   const addTask = (text: string) => {
       if (!text.trim()) return;
       const newTasks = [...tasks, { id: uuidv4(), text, isCompleted: false }];
@@ -226,11 +215,10 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
       setSyncStatus('SYNCING');
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
-          if(editorRef.current) performSave(e.target.value, editorRef.current.innerHTML, tasks, tags);
+          if (editorRef.current) performSave(e.target.value, editorRef.current.innerHTML, tasks, tags);
       }, 800);
   };
 
-  // Observer for Content Changes & Selection
   useEffect(() => {
     const handleMutation = () => {
       if (!editorRef.current) return;
@@ -280,7 +268,6 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     updateStatsAndFormats(); 
   };
 
-  // NEW: FORMAT AS CODE BLOCK (JS SYNTAX WRAPPER)
   const formatCodeBlock = () => {
     if (isReadonly || !editorRef.current) return;
     
@@ -290,21 +277,15 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     const range = selection.getRangeAt(0);
     const selectedText = range.toString();
 
-    // If text is selected, wrap it. If not, insert placeholder.
-    const textToWrap = selectedText || " // Your code here ";
-    
-    // Create pre/code structure
-    // Note: To support basic JS highlighting "visuals", we rely on CSS classes. 
-    // Real syntax highlighting requires a tokenizer which is too heavy for contentEditable here.
-    // However, this structure allows downstream markdown parsers to pick it up.
-    const html = `<pre style="background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 8px; font-family: monospace; overflow-x: auto; white-space: pre-wrap;"><code class="language-javascript">${textToWrap}</code></pre><p><br></p>`;
+    const textToWrap = selectedText || ' // Your code here ';
+    const html = `<pre style="background: var(--surface-2); color: var(--text); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; overflow-x: auto; white-space: pre-wrap;"><code class="language-javascript">${textToWrap}</code></pre><p><br></p>`;
     
     document.execCommand('insertHTML', false, html);
     updateStatsAndFormats();
   };
 
   const changeFont = (fontValue: string) => {
-      if(isReadonly) return;
+      if (isReadonly) return;
       setCurrentFont(fontValue);
       document.execCommand('fontName', false, fontValue);
       if (editorRef.current) editorRef.current.style.fontFamily = fontValue;
@@ -321,13 +302,12 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
             case 'u': e.preventDefault(); executeCommand('underline'); break;
             case 'z': e.preventDefault(); executeCommand('undo'); break;
             case 'y': e.preventDefault(); executeCommand('redo'); break;
-            case 'j': e.preventDefault(); formatCodeBlock(); break; // Ctrl+J for JS Code
+            case 'j': e.preventDefault(); formatCodeBlock(); break;
             default: break;
         }
     }
   };
 
-  // ... (Hanisah AI Logic preserved) ...
   const openHanisahWriter = () => {
       if (isReadonly) return;
       const selection = window.getSelection();
@@ -351,13 +331,13 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     setIsHanisahProcessing(true);
     setHanisahResult(null);
     try {
-      const contextText = selectedText || editorRef.current?.innerText || "";
-      const contextLabel = selectedText ? "SELECTED_TEXT" : "FULL_DOCUMENT";
+      const contextText = selectedText || editorRef.current?.innerText || '';
+      const contextLabel = selectedText ? 'SELECTED_TEXT' : 'FULL_DOCUMENT';
       const prompt = `[ROLE: HANISAH_WRITER_MODULE] TASK: ${finalInstruction} CONTEXT (${contextLabel}): """${contextText}""" OUTPUT_DIRECTIVE: Return ONLY the revised/generated text. LANGUAGE_TARGET: ${TRANSLATIONS[currentLang].meta.label}`;
       const response = await HANISAH_KERNEL.execute(prompt, 'gemini-3-flash-preview', []);
-      setHanisahResult(response.text || "Output generation failed.");
+      setHanisahResult(response.text || 'Output generation failed.');
     } catch (error) {
-      setHanisahResult("Neural processing error.");
+      setHanisahResult('Processing error.');
     } finally {
       setIsHanisahProcessing(false);
     }
@@ -372,7 +352,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
         selection?.removeAllRanges();
         selection?.addRange(selectionRange);
         if (mode === 'REPLACE') document.execCommand('insertHTML', false, safeResult.replace(/\n/g, '<br>'));
-        else { selectionRange.collapse(false); document.execCommand('insertHTML', false, " " + safeResult.replace(/\n/g, '<br>')); }
+        else { selectionRange.collapse(false); document.execCommand('insertHTML', false, ' ' + safeResult.replace(/\n/g, '<br>')); }
     } else {
         if (mode === 'REPLACE') { const formatted = safeResult.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join(''); editorRef.current.innerHTML = formatted; }
         else document.execCommand('insertHTML', false, `<br>${safeResult.replace(/\n/g, '<br>')}`);
@@ -396,7 +376,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) { 
-        alert("Browser ini tidak mendukung dikte suara."); 
+        alert('Browser ini tidak mendukung dikte suara.'); 
         return; 
     }
 
@@ -408,7 +388,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
     r.onstart = () => setIsDictating(true);
     r.onend = () => setIsDictating(false);
     r.onerror = (e: any) => {
-        console.error("Dictation Error:", e);
+        console.error('Dictation Error:', e);
         setIsDictating(false);
     };
 
@@ -428,159 +408,143 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
   };
 
   return (
-    <div className={`flex flex-col h-full bg-skin-card ${isFocusMode ? 'fixed inset-0 z-[1500] p-0' : 'relative rounded-[32px] overflow-hidden'}`}>
-      
-      {/* 1. HEADER (Navigation) */}
-      <div className="sticky top-0 z-[100] px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] bg-skin-card/80 backdrop-blur-xl border-b border-skin-border flex items-center justify-between shrink-0">
+    <div className={cn('flex flex-col h-full bg-surface', isFocusMode ? 'fixed inset-0 z-[1500] p-0' : 'relative rounded-[var(--radius-lg)] overflow-hidden')}>
+      <div className="sticky top-0 z-[100] px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] bg-surface/90 backdrop-blur-xl border-b border-border flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-              <button 
+              <Button
                   onClick={onBack}
-                  className="w-10 h-10 rounded-full bg-skin-surface hover:bg-skin-surface-hover flex items-center justify-center text-skin-muted transition-all active:scale-95 shrink-0"
-                  aria-label="Back to Notes"
+                  variant="ghost"
+                  size="sm"
+                  className="w-9 h-9 p-0"
+                  aria-label="Back to notes"
               >
-                  <ArrowLeft size={18} strokeWidth={2.5} />
-              </button>
-              
-              {/* Status Indicator */}
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${syncStatus === 'SYNCING' ? 'border-accent/30 text-accent bg-accent/5' : 'border-skin-border text-skin-muted bg-skin-surface'}`}>
-                  {syncStatus === 'SYNCING' ? <RefreshCw size={10} className="animate-spin"/> : <Check size={10}/>}
+                  <ArrowLeft size={18} strokeWidth={2.2} />
+              </Button>
+
+              <Badge variant={syncStatus === 'SYNCING' ? 'accent' : 'neutral'}>
+                  {syncStatus === 'SYNCING' ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
                   {syncStatus === 'SAVED' ? t.saved : t.save}
-              </div>
+              </Badge>
           </div>
 
           <div className="flex items-center gap-2">
-             <button 
+              <Button
                 onClick={onDelete}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all active:scale-95 border border-red-500/20"
-                title="Delete Note"
-             >
+                variant="ghost"
+                size="sm"
+                className="w-9 h-9 p-0 text-danger hover:bg-danger/10"
+                title="Delete note"
+              >
                  <Trash2 size={16} />
-             </button>
+              </Button>
 
-              <button 
+              <Button 
                 onClick={() => setIsTaskPanelOpen(!isTaskPanelOpen)}
-                className={`relative px-4 py-2 rounded-full flex items-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest border ${isTaskPanelOpen ? 'bg-accent text-black border-accent shadow-lg' : 'bg-transparent border-skin-border text-skin-muted hover:text-skin-text'}`}
-                title="Tasks"
+                variant={isTaskPanelOpen ? 'primary' : 'secondary'}
+                size="sm"
               >
                  <CheckSquare size={14} />
                  {t.tasks.split(' ')[0]}
                  {tasks.length > 0 && (
-                     <div className="flex items-center gap-1 ml-1 bg-skin-surface-hover px-1.5 rounded-md">
-                        <span className="text-[9px]">{tasks.filter(t => !t.isCompleted).length}</span>
-                     </div>
+                     <span className="caption text-text-muted">{tasks.filter(t => !t.isCompleted).length}</span>
                  )}
-             </button>
+              </Button>
 
-             <button onClick={() => setIsFocusMode(!isFocusMode)} className="w-10 h-10 rounded-full flex items-center justify-center text-skin-muted hover:bg-skin-surface transition-all" title="Toggle Focus">
+              <Button
+                onClick={() => setIsFocusMode(!isFocusMode)}
+                variant="ghost"
+                size="sm"
+                className="w-9 h-9 p-0"
+                title="Toggle focus"
+              >
                  {isFocusMode ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}
-             </button>
+              </Button>
           </div>
       </div>
 
-      {/* 2. MAIN SCROLLABLE CONTENT */}
       <div className="flex-1 overflow-y-auto custom-scroll px-6 md:px-12 lg:px-24 pt-8 pb-32">
           <div className="max-w-3xl mx-auto relative flex flex-col h-full">
-              
-              {/* TITLE & METADATA */}
               <div className="mb-6 group shrink-0">
-                  <input 
+                  <Input 
                     type="text" 
                     value={title}
                     onChange={handleTitleChange}
                     readOnly={isReadonly}
-                    placeholder="Untitled Note"
-                    className="w-full bg-transparent text-4xl md:text-5xl font-black tracking-tight text-skin-text placeholder:text-skin-muted outline-none border-none p-0 leading-tight"
+                    placeholder="Untitled note"
+                    className="w-full bg-transparent border-transparent px-0 page-title focus-visible:ring-0"
                   />
-                  <div className="flex items-center gap-4 mt-4 text-[9px] tech-mono font-bold text-skin-muted uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">
-                        <span className="flex items-center gap-1"><Clock size={10}/> {readTime} MIN</span>
-                        <span className="w-1 h-1 rounded-full bg-skin-border"></span>
-                        <span>{wordCount} WORDS</span>
-                        <span className="w-1 h-1 rounded-full bg-skin-border"></span>
+                  <div className="flex flex-wrap items-center gap-3 mt-4 caption text-text-muted">
+                        <span className="flex items-center gap-1"><Clock size={12}/> {readTime} min read</span>
+                        <span className="w-1 h-1 rounded-full bg-border"></span>
+                        <span>{wordCount} words</span>
+                        <span className="w-1 h-1 rounded-full bg-border"></span>
                         <span>{new Date().toLocaleDateString()}</span>
                   </div>
               </div>
 
-              {/* TOOLBAR */}
-              <div className="sticky top-0 z-40 py-3 mb-6 bg-skin-card/95 backdrop-blur-md -mx-4 px-4 transition-all border-b border-skin-border shadow-sm">
+              <div className="sticky top-0 z-40 py-3 mb-6 bg-surface/95 backdrop-blur-md -mx-4 px-4 transition-all border-b border-border">
                   <div className="flex items-center gap-1 overflow-x-auto no-scrollbar relative">
-                        {/* History */}
-                        <div className="flex items-center gap-0.5 px-1 border-r border-skin-border pr-2 mr-1 shrink-0">
+                        <div className="flex items-center gap-1 pr-2 mr-2 border-r border-border shrink-0">
                             <ToolbarButton onClick={() => executeCommand('undo')} icon={<Undo size={16} />} ariaLabel="Undo" className="w-9 h-9 rounded-xl" />
                             <ToolbarButton onClick={() => executeCommand('redo')} icon={<Redo size={16} />} ariaLabel="Redo" className="w-9 h-9 rounded-xl" />
                         </div>
 
-                        {/* Formatting Groups */}
-                        <div className="flex items-center gap-0.5 px-1 border-r border-skin-border pr-2 mr-1 shrink-0">
+                        <div className="flex items-center gap-1 pr-2 mr-2 border-r border-border shrink-0">
                             <ToolbarButton onClick={() => executeCommand('bold')} icon={<Bold size={16} />} isActive={formats.bold} ariaLabel="Bold" className="w-9 h-9 rounded-xl" />
                             <ToolbarButton onClick={() => executeCommand('italic')} icon={<Italic size={16} />} isActive={formats.italic} ariaLabel="Italic" className="w-9 h-9 rounded-xl" />
                             <ToolbarButton onClick={() => executeCommand('underline')} icon={<Underline size={16} />} isActive={formats.underline} ariaLabel="Underline" className="w-9 h-9 rounded-xl" />
-                            <ToolbarButton onClick={formatCodeBlock} icon={<Code size={16} />} isActive={formats.code} ariaLabel="Code Block" className="w-9 h-9 rounded-xl" />
+                            <ToolbarButton onClick={formatCodeBlock} icon={<Code size={16} />} isActive={formats.code} ariaLabel="Code block" className="w-9 h-9 rounded-xl" />
                         </div>
 
                         <div className="flex items-center gap-2 pl-1 ml-auto shrink-0">
-                            <button 
+                            <Button 
                                 onClick={toggleDictation}
-                                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${
-                                    isDictating 
-                                    ? 'bg-red-500 text-white shadow-lg animate-pulse' 
-                                    : 'bg-skin-surface text-skin-muted hover:text-skin-text hover:bg-skin-surface-hover'
-                                }`}
+                                variant="secondary"
+                                size="sm"
+                                className={cn('w-9 h-9 p-0', isDictating ? 'bg-danger text-text-invert' : '')}
                                 title={t.dictate}
                             >
                                 {isDictating ? <MicOff size={16} /> : <Mic size={16} />}
-                            </button>
+                            </Button>
 
-                            <button 
+                            <Button 
                                 onClick={openHanisahWriter} 
                                 disabled={isReadonly}
-                                className="flex items-center justify-center gap-2 px-4 h-9 bg-skin-text text-skin-card rounded-xl transition-all active:scale-95 hover:shadow-lg hover:scale-105 group"
-                                title={t.magic}
+                                variant="primary"
+                                size="sm"
                             >
-                                <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
-                                <span className="text-[9px] font-black uppercase tracking-wider hidden sm:inline">MAGIC</span>
-                            </button>
+                                <Sparkles size={16} /> Assistant
+                            </Button>
                         </div>
                   </div>
               </div>
 
-              {/* EDITOR */}
               <div 
                 ref={editorRef}
                 contentEditable={!isReadonly}
                 suppressContentEditableWarning
                 onKeyDown={handleKeyDown}
-                className={`
-                    min-h-[50vh] flex-1 w-full outline-none text-skin-text selection:bg-accent/20 
-                    max-w-none prose dark:prose-invert prose-lg
-                    prose-p:leading-loose prose-p:my-4 
-                    prose-headings:font-black prose-headings:tracking-tight prose-headings:mb-4 prose-headings:mt-8
-                    prose-ul:list-disc prose-ol:list-decimal prose-li:ml-4 prose-li:my-1
-                    prose-pre:bg-skin-surface prose-pre:text-sm prose-pre:p-6 prose-pre:rounded-2xl prose-pre:font-mono prose-pre:border prose-pre:border-skin-border
-                    prose-blockquote:border-l-4 prose-blockquote:border-accent prose-blockquote:pl-4 prose-blockquote:italic
-                    ${isReadonly ? 'cursor-default' : 'cursor-text'}
-                    break-words overflow-x-hidden
-                `}
+                className={cn(
+                    'min-h-[50vh] flex-1 w-full outline-none text-text selection:bg-accent/20 body break-words overflow-x-hidden editor-content',
+                    isReadonly ? 'cursor-default' : 'cursor-text'
+                )}
                 style={{ fontSize: `${fontSize}px`, fontFamily: currentFont }}
                 data-placeholder={t.placeholder}
               />
           </div>
       </div>
 
-      <Dialog open={isTaskPanelOpen} onClose={() => setIsTaskPanelOpen(false)} title={t.tasks} size="md"
+      <Dialog 
+        open={isTaskPanelOpen} 
+        onClose={() => setIsTaskPanelOpen(false)} 
+        title={t.tasks} 
+        size="md"
         footer={!isReadonly && (
-            <>
-                <button
-                    onClick={() => setIsTaskPanelOpen(false)}
-                    className="px-4 py-2 rounded-lg border border-skin-border text-skin-muted hover:text-skin-text hover:border-accent transition-all"
-                    type="button"
-                >
-                    Close
-                </button>
-            </>
+            <Button variant="secondary" onClick={() => setIsTaskPanelOpen(false)}>Close</Button>
         )}
       >
           <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-accent/15 text-accent flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[var(--radius-md)] bg-accent/15 text-accent flex items-center justify-center">
                   <CheckSquare size={16} />
               </div>
               <div className="flex-1">
@@ -589,37 +553,41 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
                       <div className="w-24 h-1.5 bg-surface-2 rounded-full overflow-hidden">
                           <div className="h-full bg-accent transition-all duration-500" style={{ width: `${taskProgress}%` }}></div>
                       </div>
-                      <span className="text-[10px] font-mono text-text-muted">{Math.round(taskProgress)}%</span>
+                      <span className="caption text-text-muted">{Math.round(taskProgress)}%</span>
                   </div>
               </div>
           </div>
 
           <div className="space-y-2.5 max-h-[50vh] overflow-y-auto custom-scroll">
               {tasks.map(task => (
-                  <div key={task.id} className={`group flex items-start gap-3 p-3 rounded-xl border transition-all ${task.isCompleted ? 'bg-skin-surface border-skin-border opacity-70' : 'bg-skin-card border-skin-border hover:border-accent/40'}`}>
-                      <button 
+                  <div key={task.id} className={cn('group flex items-start gap-3 p-3 rounded-[var(--radius-md)] border transition-all', task.isCompleted ? 'bg-surface-2 border-border opacity-70' : 'bg-surface border-border')}>
+                      <Button 
                         onClick={() => !isReadonly && toggleTask(task.id)}
-                        className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-all shrink-0 ${task.isCompleted ? 'bg-accent border-accent text-black' : 'border-skin-border hover:border-accent'}`}
+                        variant="ghost"
+                        size="sm"
+                        className={cn('mt-0.5 w-5 h-5 p-0 border', task.isCompleted ? 'bg-accent text-text-invert border-accent' : 'border-border')}
                         type="button"
                       >
-                          {task.isCompleted && <Check size={12} strokeWidth={3} />}
-                      </button>
-                      <span className={`text-sm font-medium leading-relaxed flex-1 break-words ${task.isCompleted ? 'text-text-muted line-through' : 'text-text'}`}>
+                          {task.isCompleted && <Check size={12} strokeWidth={2.5} />}
+                      </Button>
+                      <span className={cn('body leading-relaxed flex-1 break-words', task.isCompleted ? 'text-text-muted line-through' : 'text-text')}>
                           {task.text}
                       </span>
                       {!isReadonly && (
-                          <button 
+                          <Button 
                             onClick={() => deleteTask(task.id)} 
-                            className="w-6 h-6 flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                            title="Delete Task"
+                            variant="ghost"
+                            size="sm"
+                            className="w-7 h-7 p-0 text-text-muted hover:text-danger"
+                            title="Delete task"
                             type="button"
                           >
                               <Trash2 size={12} />
-                          </button>
+                          </Button>
                       )}
                   </div>
               ))}
-              {tasks.length === 0 && <div className="text-center py-10 text-[11px] font-semibold text-text-muted uppercase tracking-widest opacity-70">No tasks yet</div>}
+              {tasks.length === 0 && <div className="text-center py-10 caption text-text-muted">No tasks yet</div>}
           </div>
 
           {!isReadonly && (
@@ -632,75 +600,107 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
                 }}
                 className="flex gap-2 mt-4"
               >
-                  <input 
+                  <Input 
                     name="taskInput"
-                    placeholder="Add new task..."
-                    className="flex-1 bg-skin-surface border border-skin-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-all"
+                    placeholder="Add a task"
+                    className="flex-1"
                     autoComplete="off"
                   />
-                  <button type="submit" className="w-12 flex items-center justify-center bg-accent text-text-invert rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg">
+                  <Button type="submit" variant="primary" size="md" className="w-12 p-0">
                       <Plus size={18} />
-                  </button>
+                  </Button>
               </form>
           )}
       </Dialog>
 
-      {/* Hanisah Writer Overlay */}
-      {showHanisahOverlay && (
-        <div className="fixed inset-0 z-[2500] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in">
-            <div className="w-full max-w-4xl bg-skin-card rounded-[32px] border border-skin-border overflow-hidden shadow-2xl flex flex-col md:flex-row h-[85vh] md:h-[600px] ring-1 ring-skin-border">
-                <div className="w-full md:w-[400px] flex flex-col border-r border-skin-border bg-skin-surface/50">
-                    <div className="p-6 border-b border-skin-border flex items-center justify-between shrink-0">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20"><Flame size={20} /></div>
-                            <div><h3 className="text-xs font-black uppercase tracking-[0.2em] text-skin-text">HANISAH_WRITER</h3><p className="text-[9px] text-skin-muted font-mono uppercase tracking-widest mt-0.5">NEURAL EDITING MODULE</p></div>
+      <Dialog
+        open={showHanisahOverlay}
+        onClose={() => setShowHanisahOverlay(false)}
+        title="Writing assistant"
+        size="lg"
+      >
+        <div className="grid gap-6 md:grid-cols-[320px_1fr]">
+            <div className="space-y-4">
+                <Card padding="md" className="space-y-2">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-[var(--radius-md)] bg-accent/10 text-accent flex items-center justify-center">
+                            <Flame size={20} />
                         </div>
-                        <button onClick={() => setShowHanisahOverlay(false)} className="w-8 h-8 rounded-full hover:bg-skin-surface-hover flex items-center justify-center text-skin-muted transition-all"><X size={18}/></button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto custom-scroll p-6 space-y-6">
-                         <div className="space-y-3">
-                            <label className="text-[9px] font-black text-skin-muted uppercase tracking-[0.2em] pl-1">QUICK_PROTOCOLS</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                {WRITER_PRESETS.map(preset => (
-                                    <button key={preset.id} onClick={() => handleHanisahProcess(preset.prompt)} disabled={isHanisahProcessing} className="p-3 rounded-xl bg-skin-card border border-skin-border hover:border-orange-500/30 hover:bg-orange-500/5 transition-all text-left group">
-                                        <div className="flex items-center gap-2 text-skin-muted group-hover:text-orange-500 mb-1">{preset.icon}<span className="text-[9px] font-black uppercase tracking-widest">{preset.label}</span></div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            <label className="text-[9px] font-black text-skin-muted uppercase tracking-[0.2em] pl-1">CUSTOM_DIRECTIVE</label>
-                            <textarea value={hanisahInstruction} onChange={(e) => setHanisahInstruction(e.target.value)} className="w-full h-24 bg-skin-card rounded-xl p-4 text-xs font-medium border border-skin-border focus:outline-none focus:border-orange-500/50 resize-none transition-all placeholder:text-skin-muted" placeholder="E.g., Rewrite this to be funnier..." />
-                            <button onClick={() => handleHanisahProcess()} disabled={!hanisahInstruction || isHanisahProcessing} className="w-full py-4 bg-skin-text text-skin-card rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg hover:scale-[1.02] active:scale-95 disabled:opacity-50">
-                                {isHanisahProcessing ? <RefreshCw size={14} className="animate-spin" /> : <Wand2 size={14} />} {isHanisahProcessing ? 'SYNTHESIZING...' : 'EXECUTE'}
-                            </button>
+                        <div>
+                            <div className="section-title text-text">Hanisah</div>
+                            <p className="caption text-text-muted">Writing helper</p>
                         </div>
                     </div>
-                </div>
-                <div className="flex-1 bg-skin-surface flex flex-col overflow-hidden relative">
-                    <div className="h-14 border-b border-skin-border flex items-center justify-between px-6 bg-skin-card">
-                        <span className="text-[9px] font-black text-skin-muted uppercase tracking-[0.2em]">RESULT_MATRIX</span>
+                </Card>
+
+                <Card padding="md" className="space-y-3">
+                    <p className="caption text-text-muted">Quick actions</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {WRITER_PRESETS.map(preset => (
+                            <Button
+                                key={preset.id}
+                                onClick={() => handleHanisahProcess(preset.prompt)}
+                                disabled={isHanisahProcessing}
+                                variant="secondary"
+                                size="sm"
+                                className="justify-start"
+                            >
+                                {preset.icon}
+                                <span className="caption">{preset.label}</span>
+                            </Button>
+                        ))}
                     </div>
-                    <div className="flex-1 overflow-y-auto custom-scroll p-6 md:p-8">
-                        {hanisahResult ? (
-                            <div className="prose dark:prose-invert prose-sm max-w-none text-skin-text leading-relaxed bg-skin-card p-6 rounded-2xl border border-skin-border shadow-sm whitespace-pre-wrap break-words">
-                                {sanitizeInput(hanisahResult)}
-                            </div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center opacity-30 text-center gap-4">
-                                <Sparkles size={48} strokeWidth={1} />
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em]">AWAITING_INSTRUCTION</p>
-                            </div>
-                        )}
+                </Card>
+
+                <Card padding="md" className="space-y-3">
+                    <p className="caption text-text-muted">Custom instruction</p>
+                    <Textarea
+                        value={hanisahInstruction}
+                        onChange={(e) => setHanisahInstruction(e.target.value)}
+                        placeholder="Describe what you want changed."
+                        className="min-h-[120px]"
+                    />
+                    <Button
+                        onClick={() => handleHanisahProcess()}
+                        disabled={!hanisahInstruction || isHanisahProcessing}
+                        variant="primary"
+                        size="md"
+                        className="w-full"
+                    >
+                        {isHanisahProcessing ? <RefreshCw size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                        {isHanisahProcessing ? 'Working.' : 'Generate'}
+                    </Button>
+                </Card>
+            </div>
+
+            <div className="flex flex-col gap-4">
+                <Card padding="md" className="flex-1">
+                    <p className="caption text-text-muted mb-3">Result</p>
+                    {hanisahResult ? (
+                        <div className="body text-text whitespace-pre-wrap break-words">
+                            {sanitizeInput(hanisahResult)}
+                        </div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-center gap-3 text-text-muted">
+                            <Sparkles size={32} />
+                            <p className="body">Awaiting instruction.</p>
+                        </div>
+                    )}
+                </Card>
+
+                {hanisahResult && (
+                    <div className="flex gap-3">
+                        <Button onClick={() => applyHanisahResult('INSERT')} variant="secondary" size="md" className="flex-1">
+                            Insert below
+                        </Button>
+                        <Button onClick={() => applyHanisahResult('REPLACE')} variant="primary" size="md" className="flex-1">
+                            Replace selection
+                        </Button>
                     </div>
-                    {hanisahResult && <div className="p-4 border-t border-skin-border bg-skin-card flex gap-3">
-                        <button onClick={() => applyHanisahResult('INSERT')} className="flex-1 py-3 bg-skin-surface hover:bg-skin-surface-hover text-skin-text rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">INSERT BELOW</button>
-                        <button onClick={() => applyHanisahResult('REPLACE')} className="flex-1 py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-md">REPLACE SELECTION</button>
-                    </div>}
-                </div>
+                )}
             </div>
         </div>
-      )}
+      </Dialog>
     </div>
   );
 };

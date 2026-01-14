@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Shield, Lock, Unlock, AlertCircle, Fingerprint, Settings } from 'lucide-react';
 import { verifyVaultAccess, isSystemPinConfigured } from '../utils/crypto';
 import { Dialog } from './ui/Dialog';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface VaultPinModalProps {
     isOpen: boolean;
@@ -58,42 +60,41 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({ isOpen, onClose, o
         <Dialog
             open={isOpen}
             onClose={onClose}
-            title="Unlock Vault"
+            title="Vault access"
             size="sm"
             footer={
-                <button 
+                <Button
                     onClick={() => handleSubmit()}
                     disabled={verifying}
-                    className="px-4 py-2 rounded-lg bg-accent text-black font-semibold text-sm tracking-wide hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-                    type="button"
+                    color={error ? 'danger' : 'primary'}
                 >
-                    {isConfigured ? (error ? <Lock size={14} /> : <Unlock size={14} />) : <Settings size={14} />} 
-                    {isConfigured ? (verifying ? 'Verifying...' : (error ? 'Retry' : 'Unlock')) : 'Proceed'}
-                </button>
+                    {isConfigured ? (error ? <Lock size={14} /> : <Unlock size={14} />) : <Settings size={14} />}
+                    {isConfigured ? (verifying ? 'Verifying...' : (error ? 'Try again' : 'Unlock')) : 'Continue'}
+                </Button>
             }
         >
             <div className="flex flex-col items-center gap-4">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${error ? 'bg-danger/10 text-danger shadow-[0_0_30px_rgba(255,0,30,0.15)]' : 'bg-accent/10 text-accent shadow-[0_0_30px_var(--accent-glow)]'}`}>
+                <div className={`w-16 h-16 rounded-[var(--radius-md)] flex items-center justify-center transition-all duration-300 ${error ? 'bg-danger/10 text-danger' : 'bg-accent/10 text-accent'}`}>
                     {isConfigured ? (error ? <AlertCircle size={28} /> : <Shield size={28} />) : <Settings size={28} />}
                 </div>
 
                 <div className="text-center space-y-1">
-                    <h3 className="heading-3 text-text">
-                        {isConfigured ? (error ? 'Authentication failed' : 'Enter vault PIN') : 'Vault not configured'}
+                    <h3 className="section-title text-text">
+                        {isConfigured ? (error ? 'Verification failed' : 'Enter your vault PIN') : 'Vault is not configured'}
                     </h3>
                     <p className="caption text-text-muted">
-                        {isConfigured ? 'Keep your data secure with your PIN.' : 'Set up a PIN in Settings to secure your data.'}
+                        {isConfigured ? 'Use your PIN to access encrypted data.' : 'Set a PIN in Settings to enable vault protection.'}
                     </p>
                 </div>
 
                 {isConfigured ? (
                     <form onSubmit={handleSubmit} className="w-full relative">
-                        <input 
+                        <Input 
                             ref={inputRef}
                             type="password" 
                             value={pin}
                             onChange={(e) => { setPin(e.target.value); setError(false); }}
-                            className={`w-full bg-skin-surface border border-skin-border rounded-xl px-4 py-4 text-center text-2xl font-black text-text tracking-[0.5em] focus:outline-none focus:border-accent transition-all placeholder:text-text-muted ${shake ? 'animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]' : ''}`}
+                            className={`w-full px-4 py-4 text-center tracking-[0.5em] text-lg font-semibold ${shake ? 'animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]' : ''}`}
                             placeholder="******"
                             maxLength={10}
                             autoComplete="off"
@@ -102,8 +103,8 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({ isOpen, onClose, o
                         <Fingerprint className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted/50 pointer-events-none" size={20} />
                     </form>
                 ) : (
-                    <div className="text-center text-sm text-text-muted px-2">
-                        Security is disabled. Configure a PIN in Settings to protect your vault.
+                    <div className="text-center body text-text-muted px-2">
+                        Vault protection is disabled. Configure a PIN in Settings to secure your data.
                     </div>
                 )}
             </div>
