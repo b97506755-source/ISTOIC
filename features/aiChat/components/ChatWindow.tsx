@@ -180,7 +180,7 @@ const MessageBubble = memo(
                           {children}
                         </a>
                       ),
-                      code({ inline, className, children, ...props }) {
+                      code({ inline, className, children, ...props }: any) {
                         if (inline) {
                           return (
                             <code className="px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--text)] text-[12px]" {...props}>

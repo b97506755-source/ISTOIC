@@ -58,6 +58,9 @@ export interface MessageMetadata {
     systemStatus?: string; // E.g., "Rerouting to Llama 3..."
     createdAt?: string; // ISO Date String
     hasAttachment?: boolean;
+    // Optional context used to retry failed generations (prompt, model, etc.)
+    // Kept broad here to avoid tight coupling with UI-level types.
+    retryContext?: any;
 }
 
 export interface ChatMessage {

@@ -27,8 +27,7 @@ import { useFeatures } from '../../contexts/FeatureContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import { Input } from '../../components/ui/Input';
 
-const cardClass = 'bg-[var(--surface)] border border-[color:var(--border)] rounded-[var(--radius-lg)] shadow-[var(--shadow-soft)]';
-const sectionTitle = 'text-lg font-bold text-[var(--text)]';
+const cardClass = 'bg-surface border border-border rounded-[var(--radius-lg)] shadow-[var(--shadow-soft)]';
 const labelText = 'caption text-text-muted';
 
 const LiveSparkline: React.FC<{ data: number[]; color?: string }> = ({ data, color = 'var(--accent)' }) => {
@@ -54,19 +53,19 @@ const LiveSparkline: React.FC<{ data: number[]; color?: string }> = ({ data, col
 const ProviderCard: React.FC<{ provider: ProviderStatus }> = ({ provider }) => {
   const healthy = provider.status === 'HEALTHY';
   const cooldown = provider.status === 'COOLDOWN';
-  const tone = healthy ? 'text-[var(--success)]' : cooldown ? 'text-[var(--warning)]' : 'text-[var(--danger)]';
+  const tone = healthy ? 'text-success' : cooldown ? 'text-warning' : 'text-danger';
 
   return (
     <div className={`${cardClass} p-4`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Server size={14} className={tone} />
-          <span className="text-[12px] font-semibold text-[var(--text)]">{provider.id}</span>
+          <span className="body-sm font-semibold text-text">{provider.id}</span>
         </div>
-        <div className={`w-2 h-2 rounded-full ${healthy ? 'bg-[var(--success)]' : cooldown ? 'bg-[var(--warning)]' : 'bg-[var(--danger)]'}`} />
+        <div className={`w-2 h-2 rounded-full ${healthy ? 'bg-success' : cooldown ? 'bg-warning' : 'bg-danger'}`} />
       </div>
-      <p className="text-[12px] text-[var(--text-muted)] mt-2">Keys available: {provider.keyCount}</p>
-      <p className={`text-[12px] font-semibold mt-1 ${tone}`}>
+      <p className="caption text-text-muted mt-2">Keys available: {provider.keyCount}</p>
+      <p className={`caption font-semibold mt-1 ${tone}`}>
         {healthy ? 'Online' : cooldown ? `Cooling (${provider.cooldownRemaining}m)` : 'Unavailable'}
       </p>
     </div>
@@ -80,7 +79,7 @@ const ActionButton: React.FC<{ label: string; desc: string; onClick: () => Promi
   tone = 'neutral'
 }) => {
   const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle');
-  const colors = tone === 'accent' ? 'bg-[var(--accent)] text-[var(--on-accent-color)]' : 'bg-[var(--surface-2)] text-[var(--text)]';
+  const colors = tone === 'accent' ? 'bg-accent text-text-invert' : 'bg-surface-2 text-text';
 
   const handle = async () => {
     if (state !== 'idle') return;
@@ -93,12 +92,12 @@ const ActionButton: React.FC<{ label: string; desc: string; onClick: () => Promi
   return (
     <button
       onClick={handle}
-      className={`${cardClass} p-4 flex flex-col gap-1 items-start hover:scale-[1.01] transition-transform ${colors} ${tone === 'accent' ? '' : ''}`}
+      className={`${cardClass} p-4 flex flex-col gap-1 items-start hover:scale-[1.01] transition-transform ${colors}`}
     >
-      <span className="text-[13px] font-semibold">{label}</span>
-      <span className="text-[12px] text-[var(--text-muted)]">{state === 'done' ? 'Completed' : desc}</span>
-      {state === 'loading' && <RefreshCw size={14} className="animate-spin text-[var(--accent)] mt-1" />}
-      {state === 'done' && <CheckCircle2 size={14} className="text-[var(--success)] mt-1" />}
+      <span className="body-sm font-semibold">{label}</span>
+      <span className="caption text-text-muted">{state === 'done' ? 'Completed' : desc}</span>
+      {state === 'loading' && <RefreshCw size={14} className="animate-spin text-accent mt-1" />}
+      {state === 'done' && <CheckCircle2 size={14} className="text-success mt-1" />}
     </button>
   );
 };
@@ -218,13 +217,13 @@ export const SystemHealthView: React.FC = () => {
   }, [logs, logFilter, logSearch]);
 
   return (
-    <div className="h-full flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] md:px-8 lg:px-12 bg-[var(--bg)] text-[var(--text)]">
+    <div className="h-full flex flex-col px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] md:px-8 lg:px-12 bg-bg text-text">
       <div className="max-w-[1400px] mx-auto w-full h-full flex flex-col gap-6">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-[color:var(--border)] pb-4">
           <div className="space-y-2">
             <p className={labelText}>System Status</p>
-            <h1 className="text-3xl font-bold text-[var(--text)]">Health & Diagnostics</h1>
-            <p className="text-[13px] text-[var(--text-muted)]">Monitor providers, latency, and recent activity.</p>
+            <h1 className="page-title text-text">Health & Diagnostics</h1>
+            <p className="body-sm text-text-muted">Monitor providers, latency, and recent activity.</p>
           </div>
           <div className="flex bg-[var(--surface)] border border-[color:var(--border)] rounded-xl p-1">
             {[
@@ -235,8 +234,8 @@ export const SystemHealthView: React.FC = () => {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`px-4 py-2 rounded-lg text-[12px] font-semibold flex items-center gap-2 transition-all ${
-                  activeTab === tab.key ? 'bg-[var(--accent)] text-[var(--on-accent-color)]' : 'text-[var(--text-muted)]'
+                className={`px-4 py-2 rounded-lg caption font-semibold flex items-center gap-2 transition-all ${
+                  activeTab === tab.key ? 'bg-accent text-text-invert' : 'text-text-muted'
                 }`}
               >
                 {tab.icon}
@@ -254,35 +253,35 @@ export const SystemHealthView: React.FC = () => {
                   <div className={`${cardClass} p-4`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Network size={14} className="text-[var(--text-muted)]" />
+                        <Network size={14} className="text-text-muted" />
                         <span className={labelText}>Latency</span>
                       </div>
-                      <div className={`w-2 h-2 rounded-full ${health.avgLatency > 1000 ? 'bg-[var(--danger)]' : 'bg-[var(--success)]'}`} />
+                      <div className={`w-2 h-2 rounded-full ${health.avgLatency > 1000 ? 'bg-danger' : 'bg-success'}`} />
                     </div>
-                    <p className="text-2xl font-bold mt-2">{health.avgLatency} ms</p>
+                    <p className="page-title text-text mt-2">{health.avgLatency} ms</p>
                     <LiveSparkline data={latencyHistory} />
                   </div>
                   <div className={`${cardClass} p-4`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <HardDrive size={14} className="text-[var(--text-muted)]" />
+                        <HardDrive size={14} className="text-text-muted" />
                         <span className={labelText}>Memory</span>
                       </div>
                     </div>
-                    <p className="text-2xl font-bold mt-2">{health.memoryMb ? `${health.memoryMb} MB` : 'N/A'}</p>
+                    <p className="page-title text-text mt-2">{health.memoryMb ? `${health.memoryMb} MB` : 'N/A'}</p>
                     <LiveSparkline data={memoryHistory} color="var(--accent-2)" />
                   </div>
                   <div className={`${cardClass} p-4`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Wifi size={14} className="text-[var(--text-muted)]" />
+                        <Wifi size={14} className="text-text-muted" />
                         <span className={labelText}>Ping</span>
                       </div>
                     </div>
-                    <p className="text-2xl font-bold mt-2">{realPing === null ? '--' : realPing === -1 ? 'Error' : `${realPing} ms`}</p>
+                    <p className="page-title text-text mt-2">{realPing === null ? '--' : realPing === -1 ? 'Error' : `${realPing} ms`}</p>
                     <button
                       onClick={handlePing}
-                      className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[color:var(--border)] text-[12px] text-[var(--text)] hover:border-[color:var(--accent)]"
+                      className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border caption text-text hover:border-accent"
                     >
                       Check connection
                     </button>
@@ -293,11 +292,11 @@ export const SystemHealthView: React.FC = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className={labelText}>Providers</p>
-                      <p className="text-sm text-[var(--text)] font-semibold">API Availability</p>
+                      <p className="body-sm text-text font-semibold">API Availability</p>
                     </div>
                     <button
                       onClick={() => executeRepair('REFRESH_KEYS')}
-                      className="px-3 py-2 rounded-lg border border-[color:var(--border)] text-[12px] flex items-center gap-2 hover:border-[color:var(--accent)]"
+                      className="px-3 py-2 rounded-lg border border-border caption font-semibold flex items-center gap-2 hover:border-accent"
                     >
                       <RefreshCw size={14} /> Refresh
                     </button>
@@ -321,33 +320,33 @@ export const SystemHealthView: React.FC = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className={labelText}>Diagnostics</p>
-                      <p className="text-sm font-semibold text-[var(--text)]">AI Health Summary</p>
+                      <p className="body-sm font-semibold text-text">AI Health Summary</p>
                     </div>
                     {hanisahDiagnosis && (
                       <button
                         onClick={() => speakWithHanisah(hanisahDiagnosis.replace(/[*#_`]/g, ''))}
-                        className="p-2 rounded-lg border border-[color:var(--border)] text-[var(--text-muted)] hover:border-[color:var(--accent)]"
+                        className="p-2 rounded-lg border border-border text-text-muted hover:border-accent"
                         title="Play diagnosis"
                       >
                         <Stethoscope size={16} />
                       </button>
                     )}
                   </div>
-                  <div className="flex-1 overflow-y-auto custom-scroll text-[13px] leading-relaxed">
+                  <div className="flex-1 overflow-y-auto custom-scroll body-sm text-text leading-relaxed">
                     {hanisahDiagnosis ? (
                       <Markdown className="prose dark:prose-invert prose-sm max-w-none">{hanisahDiagnosis}</Markdown>
                     ) : (
-                      <p className="text-[var(--text-muted)]">Run diagnostics to see a summary.</p>
+                      <p className="caption text-text-muted">Run diagnostics to see a summary.</p>
                     )}
                   </div>
                   <div className="pt-3">
                     <button
                       onClick={runDiagnostics}
                       disabled={isScanning}
-                      className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-[13px] font-semibold ${
+                      className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg body-sm font-semibold ${
                         isScanning
-                          ? 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                          : 'bg-[var(--accent)] text-[var(--on-accent-color)] hover:opacity-90'
+                          ? 'bg-surface-2 text-text-muted'
+                          : 'bg-accent text-text-invert hover:opacity-90'
                       }`}
                     >
                       {isScanning ? <RefreshCw size={14} className="animate-spin" /> : <Stethoscope size={14} />}
@@ -369,8 +368,8 @@ export const SystemHealthView: React.FC = () => {
                       <button
                         key={level}
                         onClick={() => setLogFilter(level)}
-                        className={`px-3 py-1 rounded-lg text-[12px] font-semibold ${
-                          logFilter === level ? 'bg-[var(--surface-2)] text-[var(--text)]' : 'text-[var(--text-muted)]'
+                        className={`px-3 py-1 rounded-lg caption font-semibold ${
+                          logFilter === level ? 'bg-surface-2 text-text' : 'text-text-muted'
                         }`}
                       >
                         {level}
@@ -387,28 +386,28 @@ export const SystemHealthView: React.FC = () => {
                   />
                   <button
                     onClick={() => setIsStreamFrozen((p) => !p)}
-                    className="px-2 py-1 rounded-lg border border-[color:var(--border)] text-[12px]"
+                    className="px-2 py-1 rounded-lg border border-border caption"
                   >
                     {isStreamFrozen ? <Play size={12} /> : <Pause size={12} />}
                   </button>
-                  <button onClick={() => executeRepair('CLEAR_LOGS')} className="px-2 py-1 rounded-lg border border-[color:var(--border)] text-[12px]">
+                  <button onClick={() => executeRepair('CLEAR_LOGS')} className="px-2 py-1 rounded-lg border border-border caption">
                     Clear
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scroll text-[12px]">
+              <div className="flex-1 overflow-y-auto custom-scroll caption text-text">
                 {filteredLogs.map((log) => (
                   <div key={log.id} className="grid grid-cols-[140px_80px_1fr] gap-2 px-3 py-1 border-b border-[color:var(--border)]/50">
-                    <span className="text-[var(--text-muted)]">{log.timestamp.replace('T', ' ').replace('Z', '')}</span>
+                    <span className="text-text-muted">{log.timestamp.replace('T', ' ').replace('Z', '')}</span>
                     <span
                       className={`text-center font-semibold ${
-                        log.level === 'ERROR' ? 'text-[var(--danger)]' : log.level === 'WARN' ? 'text-[var(--warning)]' : 'text-[var(--success)]'
+                        log.level === 'ERROR' ? 'text-danger' : log.level === 'WARN' ? 'text-warning' : 'text-success'
                       }`}
                     >
                       {log.level}
                     </span>
-                    <span className="text-[var(--text)]">{log.message}</span>
+                    <span className="text-text">{log.message}</span>
                   </div>
                 ))}
                 <div ref={logEndRef} />
@@ -440,14 +439,14 @@ export const SystemHealthView: React.FC = () => {
                   }}
                   className="flex items-center gap-2"
                 >
-                  <span className="text-[var(--accent)] font-bold">{'>'}</span>
+                  <span className="text-accent font-bold">{'>'}</span>
                   <Input
                     value={cliInput}
                     onChange={(e) => setCliInput(e.target.value)}
                     placeholder="Type a command (clear, refresh, diagnose, reload)"
                     className="flex-1 text-sm"
                   />
-                  <button type="submit" className="px-3 py-2 rounded-lg bg-[var(--accent)] text-[var(--on-accent-color)] text-[12px] font-semibold hover:opacity-90">
+                  <button type="submit" className="px-3 py-2 rounded-lg bg-accent text-text-invert caption font-semibold hover:opacity-90">
                     <ArrowRight size={12} />
                   </button>
                 </form>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, Suspense, lazy, useTransition, useRef, useCallback } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
@@ -386,29 +386,37 @@ const App: React.FC = () => {
     // ANDROID BACK BUTTON HANDLER (Capacitor)
     useEffect(() => {
         if (!Capacitor.isNativePlatform()) return;
-        const backHandler = CapApp.addListener('backButton', ({ canGoBack }) => {
-            if (isDebugOpen) {
-                setIsDebugOpen(false);
-                return;
-            }
-            if (incomingConnection) {
-                clearIncoming();
-                return;
-            }
-            if (sessionMode === 'ISTOK' || sessionMode === 'TELEPONAN') {
-                setSessionMode('ISTOIC');
-                return;
-            }
-            if (sessionMode === 'ISTOIC') {
-                if (canGoBack) {
-                    window.history.back();
-                } else {
-                    setSessionMode('SELECT');
+
+        let backHandler: PluginListenerHandle | undefined;
+
+        const setupBackHandler = async () => {
+            backHandler = await CapApp.addListener('backButton', ({ canGoBack }) => {
+                if (isDebugOpen) {
+                    setIsDebugOpen(false);
+                    return;
                 }
-            }
-        });
+                if (incomingConnection) {
+                    clearIncoming();
+                    return;
+                }
+                if (sessionMode === 'ISTOK' || sessionMode === 'TELEPONAN') {
+                    setSessionMode('ISTOIC');
+                    return;
+                }
+                if (sessionMode === 'ISTOIC') {
+                    if (canGoBack) {
+                        window.history.back();
+                    } else {
+                        setSessionMode('SELECT');
+                    }
+                }
+            });
+        };
+
+        void setupBackHandler();
+
         return () => {
-            backHandler.remove();
+            backHandler?.remove();
         };
     }, [sessionMode, isDebugOpen, incomingConnection, clearIncoming]);
     
