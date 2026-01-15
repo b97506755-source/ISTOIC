@@ -23,6 +23,7 @@ import { Button } from '../../components/ui/Button';
 import { Input, Textarea } from '../../components/ui/Input';
 import { Dialog } from '../../components/ui/Dialog';
 import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
 
 interface SettingsViewProps {
     onNavigate: (feature: FeatureID) => void;
@@ -314,8 +315,8 @@ const SettingsView: React.FC<SettingsViewProps> = memo(({ onNavigate }) => {
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Badge variant="neutral">{language.toUpperCase()}</Badge>
-                            <Badge variant="neutral">{themeMode}</Badge>
+                            <Badge variant="neutral">{appLanguage.toUpperCase()}</Badge>
+                            <Badge variant="neutral">{colorScheme}</Badge>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
