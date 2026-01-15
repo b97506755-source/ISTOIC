@@ -1,0 +1,95 @@
+You are acting as:
+Senior Frontend Architect (React + Vite),
+Mobile/PWA Engineer (Capacitor iOS/Android),
+UI/UX System Designer,
+QA Engineer,
+Release Engineer.
+
+CONTEXT UPDATE (READ FIRST)
+- Auth module (Login/Register/Forgot) has already been redesigned and implemented in the repo.
+- A design system foundation already exists in the repo:
+  semantic tokens (CSS variables) + base UI primitives (Button/Input/Modal).
+- DO NOT redo Auth. DO NOT replace tokens.
+- Use existing tokens & primitives; extend only if needed and keep backward compatible.
+- Hard rule: Do not change business logic, data models, or feature behavior; only UI/UX + stability fixes.
+
+PROJECT
+ISTOIC is a client-side productivity + AI assistant app.
+Stack: React + Vite, Tailwind CSS, IndexedDB/local-first, PWA (iOS/Android), Capacitor (Android/iOS), Vercel /api.
+Goal: production-ready premium UI (light & dark) similar/superior to ChatGPT iOS latest. Clean, calm, consistent, fast.
+
+SCOPE (THIS PASS)
+DASHBOARD module ONLY.
+- Visual redesign to match the new design system.
+- Fix layout/scroll/spacing issues.
+- Improve perceived performance (no jitter), but do NOT add/remove dashboard features.
+Do NOT touch Notes/Chat modules yet.
+
+ABSOLUTE HARD RULES
+1) No feature removal, no logic changes unless fixing a UI-breaking bug.
+2) No random colors; all colors must come from semantic tokens.
+3) Must be perfect on:
+   - Web Desktop
+   - iOS Safari
+   - iOS PWA standalone (safe-area, keyboard not relevant but viewport is)
+   - Android Chrome
+   - Android/iOS Capacitor
+4) Fix any runtime crashes caused by rendering undefined values (e.g. toFixed on undefined) ONLY if it is a real bug in Dashboard rendering.
+
+PHASE 0 — REPO SCAN
+1) Locate dashboard entry component(s), typical files:
+   - DashboardOverview.tsx
+   - DashboardPage.tsx
+   - widgets/cards components
+2) Identify current layout structure:
+   - containers, grids, cards, charts, lists, device list, activity list, etc.
+3) Identify known bugs:
+   - "Cannot read properties of undefined (reading 'toFixed')" in DashboardOverview
+   - any list key warnings
+   Fix only within Dashboard scope.
+
+PHASE 1 — DASHBOARD VISUAL SYSTEM (USING EXISTING TOKENS)
+Implement consistent layout:
+- Desktop: centered content, max-width, comfortable gutters.
+- Mobile: full width with 16px padding, respect safe-area.
+- Cards: consistent padding, radius, border, subtle shadow (only if needed).
+- Typography: consistent scale, headings, meta text.
+- Buttons/filters: use existing Button component.
+
+PHASE 2 — DASHBOARD COMPONENT REFINEMENT
+Refactor dashboard into a clean structure:
+- Header: title + small subtitle (optional) + quick actions (if existing).
+- Section blocks: each with consistent spacing and dividers.
+- Cards: consistent skeleton/loading states if already present.
+- Lists: consistent item spacing, separators, badges (if any).
+
+PHASE 3 — SCROLL & RESPONSIVE STABILITY
+- Remove nested scroll containers where possible.
+- Ensure dashboard content scrolls smoothly inside the main app shell.
+- Avoid using fixed heights that break on iOS Safari.
+- Use dvh/svh strategy only if needed; follow existing global approach.
+
+PHASE 4 — BUGFIXES (DASHBOARD ONLY)
+A) Fix toFixed undefined crash safely:
+- If a numeric value can be undefined/null, guard it with:
+  - default value (0) OR
+  - conditional render (show "—")
+Choose the most user-friendly display.
+Do NOT change underlying data fetching logic.
+
+B) Fix list key warning in dashboard lists by using stable keys from data.
+If no stable id exists, create a stable composite key from known fields.
+
+PHASE 5 — OUTPUT REQUIREMENTS
+1) Provide exact changed file list.
+2) Provide full code changes (no placeholders).
+3) Provide How-to-test checklist for all platforms.
+4) Keep scope strictly to Dashboard + shared primitives only if needed (backward compatible).
+
+COMMIT STRATEGY
+- Commit 1: dashboard layout + tokens usage cleanup
+- Commit 2: card/list polish + responsive fixes
+- Commit 3: dashboard bugfixes (toFixed guard, keys) + QA pass
+
+START NOW:
+Implement the Dashboard redesign and bugfixes under this scope.
