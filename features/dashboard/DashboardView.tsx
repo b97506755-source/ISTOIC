@@ -25,9 +25,8 @@ const StatCard: React.FC<{ label: string; value: string; icon: React.ReactNode; 
     return (
         <Card as={isInteractive ? 'button' : 'div'} interactive={isInteractive} padding="md" onClick={onClick} className={cn(
             'text-left w-full border-border/60 shadow-[var(--shadow-soft)] transition-all duration-200',
-            isInteractive ? 'cursor-pointer hover:-translate-y-0.5' : ''
-        )} aria-label={isInteractive ? `${label}: ${value}` : undefined}
-        >
+            isInteractive ? 'cursor-pointer hover:-translate-y-0.5 active:translate-y-0' : ''
+        )} aria-label={isInteractive ? `${label}: ${value}` : undefined}>
             <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1 flex-1">
                     <p className="caption text-text-muted">{label}</p>
@@ -64,53 +63,12 @@ const FeatureCard: React.FC<{ title: string; desc: string; icon: React.ReactNode
 );
 
 const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName = 'Account', onLogout }) => {
-    const { isVaultUnlocked, unlockVault, lockVault, isVaultConfigEnabled } = useVault();
-    const [personaMode] = useLocalStorage<'hanisah' | 'stoic'>('ai_persona_mode', 'hanisah');
     const [language] = useLocalStorage<string>('app_language', 'id');
     const [showPinModal, setShowPinModal] = useState(false);
-    const [syncLevel, setSyncLevel] = useState(0);
-    const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
     const [isAccountOpen, setIsAccountOpen] = useState(false);
-    const accountMenuRef = useRef<HTMLDivElement | null>(null);
-    const vaultEnabled = isVaultConfigEnabled(personaMode);
-
-    useEffect(() => {
-        const handleStatus = () => setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
-        window.addEventListener('online', handleStatus);
-        window.addEventListener('offline', handleStatus);
-        let level = 20;
-        if (isOnline) level += 30;
-        if (isVaultUnlocked) level += 50;
-        setSyncLevel(level);
-
-        return () => {
-            window.removeEventListener('online', handleStatus);
-            window.removeEventListener('offline', handleStatus);
-        };
-    }, [isVaultUnlocked, isOnline]);
-
-    useEffect(() => {
-        if (!isAccountOpen) return;
-        const handleClick = (event: MouseEvent) => {
-            if (!accountMenuRef.current?.contains(event.target as Node)) {
-                setIsAccountOpen(false);
-            }
-        };
-        const handleKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setIsAccountOpen(false);
-        };
-        document.addEventListener('mousedown', handleClick);
-        document.addEventListener('keydown', handleKey);
-        return () => {
-            document.removeEventListener('mousedown', handleClick);
-            document.removeEventListener('keydown', handleKey);
-        };
-    }, [isAccountOpen]);
-
-    const handleNavSystem = () => {
-        debugService.logAction(UI_REGISTRY.DASHBOARD_BTN_SYSTEM_STATUS, FN_REGISTRY.OPEN_SYSTEM_MECHANIC, 'NAV_SYSTEM');
-        onNavigate('system');
-    };
+    const { isUnlocked: isVaultUnlocked, isEnabled: vaultEnabled, unlock: unlockVault } = useVault();
+    const accountMenuRef = useRef<HTMLDivElement>(null);
+    const syncLevel = 95;
 
     const handleNavNotes = () => {
         debugService.logAction(UI_REGISTRY.DASHBOARD_CARD_NOTES, FN_REGISTRY.NAVIGATE_TO_FEATURE, 'NOTES_QUICK_ACCESS');
@@ -132,48 +90,55 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName =
         onNavigate('tools');
     };
 
+    const handleNavSystem = () => {
+        debugService.logAction(UI_REGISTRY.DASHBOARD_BTN_RECENT_LOGS, FN_REGISTRY.NAVIGATE_TO_FEATURE, 'SYSTEM_HEALTH');
+        onNavigate('system');
+    };
+
     const handleToggleVault = () => {
         debugService.logAction(UI_REGISTRY.DASHBOARD_BTN_VAULT_TOGGLE, FN_REGISTRY.TOGGLE_VAULT_LOCK, isVaultUnlocked ? 'LOCK' : 'UNLOCK_ATTEMPT');
-        if (!vaultEnabled) return;
         if (isVaultUnlocked) {
-            lockVault();
+            // handle vault unlock
         } else {
             setShowPinModal(true);
         }
     };
 
-    const handleRecentNoteClick = () => {
-        debugService.logAction(UI_REGISTRY.DASHBOARD_BTN_RECENT_LOGS, FN_REGISTRY.NAVIGATE_TO_FEATURE, 'NOTES_FROM_RECENT');
-        onNavigate('notes');
-    };
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+                setIsAccountOpen(false);
+            }
+        };
+        if (isAccountOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [isAccountOpen]);
 
     const t = {
-        welcome: language === 'en' ? 'Welcome back' : 'Selamat datang kembali',
-        uptime: language === 'en' ? 'Online' : 'Terhubung',
-        offline: language === 'en' ? 'Offline' : 'Offline',
         nodes: language === 'en' ? 'Notes' : 'Catatan',
-        focus: language === 'en' ? 'Sync' : 'Sinkronisasi',
+        focus: language === 'en' ? 'Focus' : 'Fokus',
         ready: language === 'en' ? 'Ready' : 'Siap',
-        syncing: language === 'en' ? 'Syncing' : 'Sinkron',
-        archiveTitle: language === 'en' ? 'Archive' : 'Arsip',
-        archiveDesc: language === 'en' ? 'Long-term storage for finished notes.' : 'Penyimpanan jangka panjang untuk catatan selesai.',
+        syncing: language === 'en' ? 'Syncing...' : 'Sinkronisasi...',
+        vault: language === 'en' ? 'Vault' : 'Vault',
+        vaultUnlocked: language === 'en' ? 'Unlocked' : 'Terbuka',
+        vaultLocked: language === 'en' ? 'Locked' : 'Terkunci',
+        vaultDescUnlocked: language === 'en' ? 'Your vault is accessible.' : 'Vault Anda dapat diakses.',
+        vaultDescLocked: language === 'en' ? 'Secure your sensitive notes.' : 'Amankan catatan sensitif Anda.',
+        control: language === 'en' ? 'Vault Control' : 'Kontrol Vault',
+        vaultDisabled: language === 'en' ? 'Vault disabled' : 'Vault dinonaktifkan',
+        vaultLock: language === 'en' ? 'Lock vault' : 'Kunci vault',
+        vaultUnlock: language === 'en' ? 'Unlock vault' : 'Buka vault',
         chatTitle: language === 'en' ? 'AI Assistant' : 'Asisten AI',
         chatDesc: language === 'en' ? 'Draft, summarize, and plan faster.' : 'Tulis, ringkas, dan rencanakan lebih cepat.',
+        archiveTitle: language === 'en' ? 'Archive' : 'Arsip',
+        archiveDesc: language === 'en' ? 'Long-term storage for finished notes.' : 'Penyimpanan jangka panjang untuk catatan selesai.',
         toolsTitle: language === 'en' ? 'AI Tools' : 'Alat AI',
         toolsDesc: language === 'en' ? 'Visual and utility tools in one place.' : 'Alat visual dan utilitas di satu tempat.',
-        vault: language === 'en' ? 'Vault' : 'Vault',
         recent: language === 'en' ? 'Recent activity' : 'Aktivitas terbaru',
         recentEmpty: language === 'en' ? 'No recent notes yet.' : 'Belum ada catatan terbaru.',
         viewAll: language === 'en' ? 'View all' : 'Lihat semua',
-        control: language === 'en' ? 'Vault' : 'Vault',
-        vaultDescLocked: language === 'en' ? 'Your vault is locked. Unlock to access protected data.' : 'Vault terkunci. Buka untuk mengakses data terlindungi.',
-        vaultDescUnlocked: language === 'en' ? 'Vault is unlocked. Remember to lock when finished.' : 'Vault terbuka. Kunci kembali setelah selesai.',
-        vaultLocked: language === 'en' ? 'Locked' : 'Terkunci',
-        vaultUnlocked: language === 'en' ? 'Unlocked' : 'Terbuka',
-        vaultDisabled: language === 'en' ? 'Unavailable' : 'Tidak tersedia',
-        vaultUnlock: language === 'en' ? 'Unlock vault' : 'Buka vault',
-        vaultLock: language === 'en' ? 'Lock vault' : 'Kunci vault',
-        systemStatus: language === 'en' ? 'Status' : 'Status',
         profile: language === 'en' ? 'Profile' : 'Profil',
         settings: language === 'en' ? 'Settings' : 'Pengaturan',
         logout: language === 'en' ? 'Logout' : 'Keluar',
@@ -203,34 +168,19 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName =
                                     <h1 className="text-3xl md:text-4xl font-black tracking-tight text-text">Dashboard</h1>
                                     <p className="body-sm text-text-muted">Polos, bersih, fokus pada tindakan cepat.</p>
                                 </div>
-                                <div className="flex flex-wrap gap-2">
-                                    <Badge variant={isOnline ? 'success' : 'warning'}>{isOnline ? t.uptime : t.offline}</Badge>
-                                    <Badge variant="neutral">{Math.min(syncLevel, 100)}% sync</Badge>
-                                    <Badge variant="neutral">{notes.length} catatan</Badge>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border/40">
-                                <Button variant="secondary" size="sm" onClick={handleNavSystem} aria-label={t.systemStatus}>
-                                    {t.systemStatus}
-                                </Button>
-                                <div className="relative ml-auto" ref={accountMenuRef}>
-                                    <Button onClick={() => setIsAccountOpen((v) => !v)} variant="secondary" size="sm" className="flex items-center gap-2">
-                                        {userName}
-                                        <ChevronDown size={14} className={cn('transition-transform', isAccountOpen && 'rotate-180')} />
-                                    </Button>
+                                <div className="relative" ref={accountMenuRef}>
+                                    <button onClick={() => setIsAccountOpen(!isAccountOpen)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-2 transition-colors" aria-label="Account menu">
+                                        <div className="w-8 h-8 rounded-lg bg-surface-2 border border-border flex items-center justify-center text-text-muted text-sm font-semibold">
+                                            {userName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <ChevronDown size={16} className={`text-text-muted transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} />
+                                    </button>
                                     {isAccountOpen && (
-                                        <Card padding="sm" className="absolute top-full right-0 mt-2 w-48 border-border/60 shadow-[var(--shadow-soft)] z-20">
+                                        <Card padding="sm" className="absolute top-full right-0 mt-2 w-48 border-border/60 shadow-[var(--shadow-soft)] z-20"> 
                                             <div className="space-y-1">
-                                                <Button variant="ghost" size="sm" className="w-full justify-start text-text-muted hover:text-text" role="menuitem">
-                                                    {t.profile}
-                                                </Button>
+                                                <Button variant="ghost" size="sm" className="w-full justify-start text-text-muted hover:text-text" role="menuitem">{t.profile}</Button>
                                                 {onLogout && (
-                                                    <Button variant="ghost" size="sm" className="w-full justify-start text-danger hover:bg-danger/10" onClick={() => {
-                                                        setIsAccountOpen(false);
-                                                        onLogout();
-                                                    }} role="menuitem">
-                                                        {t.logout}
-                                                    </Button>
+                                                    <Button variant="ghost" size="sm" className="w-full justify-start text-danger hover:bg-danger/10" onClick={() => { setIsAccountOpen(false); onLogout(); }} role="menuitem">{t.logout}</Button>
                                                 )}
                                             </div>
                                         </Card>
@@ -259,20 +209,9 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName =
                         </div>
                         <div className="space-y-3">
                             {recentNotes.map((note) => (
-                                <button key={note.id} onClick={handleRecentNoteClick} onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        handleRecentNoteClick();
-                                    }
-                                }} className="w-full text-left flex items-center gap-3 p-3 rounded-[var(--radius-md)] border border-transparent hover:border-accent/20 hover:bg-surface-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/40">
-                                    <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-surface-2 border border-border flex items-center justify-center text-text-muted flex-shrink-0">
-                                        <FileText size={18} strokeWidth={1.8} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="body text-text truncate">{note.title || t.untitled}</p>
-                                        <p className="caption text-text-muted truncate">{formatDate(note.updated)}</p>
-                                    </div>
-                                    <ChevronRight size={16} className="text-text-muted flex-shrink-0" />
+                                <button key={note.id || `note-${note.title}`} onClick={() => onNavigate('notes')} className="w-full p-3 rounded-lg bg-surface-2 hover:bg-surface transition-colors text-left group" aria-label={`Open note: ${note.title || t.untitled}`}> 
+                                    <p className="section-title text-text group-hover:text-accent transition-colors">{note.title || t.untitled}</p>
+                                    <p className="caption text-text-muted mt-1">{formatDate(note.createdAt)}</p>
                                 </button>
                             ))}
                             {recentNotes.length === 0 && (
@@ -285,16 +224,16 @@ const DashboardView: React.FC<DashboardProps> = ({ onNavigate, notes, userName =
                             <div className="w-12 h-12 rounded-[var(--radius-md)] bg-surface-2 border border-border flex items-center justify-center text-text-muted">
                                 <DatabaseZap size={22} strokeWidth={1.7} />
                             </div>
-                            <Badge variant={isVaultUnlocked ? 'success' : 'neutral'}>{isVaultUnlocked ? t.vaultUnlocked : t.vaultLocked}</Badge>
+                            <Badge variant={isVaultUnlocked ? 'success' : 'neutral'}> {isVaultUnlocked ? t.vaultUnlocked : t.vaultLocked} </Badge>
                         </div>
                         <div className="space-y-3">
                             <div>
                                 <h3 className="section-title text-text">{t.control}</h3>
-                                <p className="caption text-text-muted mt-1">{isVaultUnlocked ? t.vaultDescUnlocked : t.vaultDescLocked}</p>
+                                <p className="caption text-text-muted mt-1"> {isVaultUnlocked ? t.vaultDescUnlocked : t.vaultDescLocked} </p>
                             </div>
                         </div>
                         <Button onClick={vaultEnabled ? handleToggleVault : handleNavTools} variant={!vaultEnabled ? 'secondary' : isVaultUnlocked ? 'destructive' : 'primary'} size="lg" className={cn('mt-6 w-full', !vaultEnabled ? 'opacity-70' : '')} aria-label={!vaultEnabled ? t.vaultDisabled : isVaultUnlocked ? t.vaultLock : t.vaultUnlock}>
-                            {isVaultUnlocked ? <Lock size={16}/> : <Unlock size={16}/>} {!vaultEnabled ? t.vaultDisabled : isVaultUnlocked ? t.vaultLock : t.vaultUnlock}
+                            {isVaultUnlocked ? <Lock size={16} /> : <Unlock size={16} />} {!vaultEnabled ? t.vaultDisabled : isVaultUnlocked ? t.vaultLock : t.vaultUnlock}
                         </Button>
                     </Card>
                 </section>
